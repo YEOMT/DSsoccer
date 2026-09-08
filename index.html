@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.3 Student-First Realtime Sync</title>
+  <title>Class Football Simulator - v2.5.5 Classroom UX & Quiz Flow</title>
   <style>
     :root{
       --bg:#10141b;
@@ -859,6 +859,33 @@
   
     /* v2.5 student controller flow */
     .student-roster-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.student-roster-team{border:1px solid #30425a;background:#0d1723;border-radius:11px;padding:9px}.student-roster-team h4{margin:0 0 7px;font-size:9px;letter-spacing:.08em}.student-roster-team.blue h4{color:#8bc6ff}.student-roster-team.red h4{color:#ff929a}.student-roster-name{display:flex;justify-content:space-between;gap:5px;padding:4px 0;border-top:1px solid rgba(255,255,255,.045);font-size:9px;color:#a8b6c8}.student-roster-name:first-of-type{border-top:0}.student-roster-name.me{color:#ffd76a;font-weight:950}.student-role-grid,.student-vote-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.student-role-card,.student-vote-card{border:1px solid #354760;background:#142131;color:#eaf1fa;border-radius:11px;padding:11px;text-align:left}.student-role-card.selected,.student-vote-card.selected{border-color:#e5c55d;background:rgba(229,197,93,.11);box-shadow:0 0 0 1px rgba(229,197,93,.11)}.student-role-card b,.student-vote-card b{display:block;font-size:12px}.student-role-card span,.student-vote-card span{display:block;margin-top:4px;color:#8fa1b7;font-size:8px;line-height:1.4}.student-formation-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.student-mini-team{border:1px solid #30425a;background:#0c1621;border-radius:12px;padding:8px}.student-mini-team h4{margin:0 0 6px;font-size:9px}.student-mini-pitch{position:relative;height:190px;border:1px solid #315b46;border-radius:8px;background:linear-gradient(90deg,rgba(28,96,62,.7),rgba(20,78,51,.7));overflow:hidden}.student-mini-pitch:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.22)}.student-mini-node{position:absolute;transform:translate(-50%,-50%);max-width:58px;padding:3px 4px;border-radius:6px;background:#152435;border:1px solid #52667f;color:#eef5ff;font-size:7px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.student-mini-node.me{border-color:#ffd76a;color:#ffd76a;box-shadow:0 0 0 1px rgba(255,215,106,.18)}.student-tactic-banner{margin-top:9px;padding:9px;border:1px solid #45546a;border-radius:10px;background:#111d2a;text-align:center;font-size:10px;color:#b9c7d8}.student-awards{display:grid;gap:7px;margin-top:10px}.student-award{border:1px solid #43506a;background:#111c29;border-radius:10px;padding:9px}.student-award b{font-size:10px;color:#ffd76a}.student-award span{display:block;margin-top:3px;font-size:9px;color:#9bacc0}.host-stage-section{margin-top:12px;border:1px solid #33455d;background:#0d1723;border-radius:13px;padding:12px}.host-stage-section h3{margin:0 0 8px;font-size:11px;color:#ffd76a}.host-vote-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.host-vote-team{border:1px solid #34465f;border-radius:11px;padding:10px;background:#101b28}.host-vote-row{display:grid;grid-template-columns:1fr auto;gap:8px;font-size:9px;padding:4px 0;border-top:1px solid rgba(255,255,255,.04)}.host-vote-row:first-of-type{border-top:0}.host-vote-bar{height:5px;background:#263548;border-radius:5px;overflow:hidden;margin-top:3px}.host-vote-bar i{display:block;height:100%;background:currentColor}.host-role-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.host-role-item{display:flex;justify-content:space-between;gap:6px;border:1px solid #304159;background:#111b28;border-radius:8px;padding:7px;font-size:9px}.host-role-item .ok{color:#9cf2bb}.host-role-item .wait{color:#f5c66b}
+
+    /* v2.5.5 classroom UX */
+    .student-connection{color:#75d79d;font-weight:850;min-height:14px}
+    .student-quiz-progress{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0;font-size:10px;color:#91a3b8}
+    .student-quiz-progress b{color:#fff}
+    .student-quiz-nav{display:grid;grid-template-columns:1fr auto 1fr;gap:7px;align-items:center;margin-top:9px}
+    .student-quiz-nav button{padding:8px;font-size:10px;font-weight:900}.student-quiz-nav span{text-align:center;font-size:9px;color:#8fa0b5}
+    .student-build-cards{display:grid;grid-template-columns:1fr;gap:7px;margin-top:10px}
+    .student-build-card{display:grid;grid-template-columns:78px 1fr auto;gap:10px;align-items:center;width:100%;padding:10px 11px;text-align:left;border:1px solid #354760;background:#142131;border-radius:11px}
+    .student-build-card .stat-key{font-size:11px;font-weight:1000;color:#eaf1fa}.student-build-card .stat-effect{font-size:8px;line-height:1.45;color:#8fa1b7}.student-build-card .stat-plus{font-size:20px;font-weight:1000;color:#9dffc2;min-width:38px;text-align:right}
+    .student-build-card:disabled{opacity:.48}.student-build-card:not(:disabled):hover{border-color:#5c7ea7;background:#19283a}
+    .host-quiz-overview{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}.host-quiz-kpi{border:1px solid #33455d;background:#101b28;border-radius:11px;padding:10px;text-align:center}.host-quiz-kpi span{display:block;font-size:8px;color:#8fa0b5}.host-quiz-kpi b{display:block;font-size:20px;margin-top:3px}
+    .host-response-item .progress{font-variant-numeric:tabular-nums;font-weight:950;color:#c6d4e5}.host-response-item .complete{color:#9dffc2}
+    body.broadcast-mode{overflow:hidden}
+    body.broadcast-mode .app{height:100vh;min-height:100vh;grid-template-rows:1fr}
+    body.broadcast-mode .app>header,body.broadcast-mode .app aside,body.broadcast-mode .live-strip,body.broadcast-mode .metrics,body.broadcast-mode .fm-dashboard .fm-card:nth-child(2){display:none!important}
+    body.broadcast-mode .layout{grid-template-columns:1fr;height:100vh;min-height:0}
+    body.broadcast-mode main{height:100vh;padding:8px;gap:7px;overflow:hidden}
+    body.broadcast-mode .scorebar{flex:0 0 auto;padding:8px 16px}
+    body.broadcast-mode #possessionText{display:none}
+    body.broadcast-mode .pitch-wrap{flex:1 1 auto;min-height:0}
+    body.broadcast-mode canvas{height:100%;min-height:0}
+    body.broadcast-mode .fm-dashboard{display:grid;grid-template-columns:1fr;flex:0 0 172px;min-height:172px;max-height:172px;gap:0}
+    body.broadcast-mode .fm-card{height:172px}
+    body.broadcast-mode .commentary-list{height:138px;max-height:138px}
+    body.broadcast-mode .ticker-board{flex:0 0 auto}
+    @media(max-width:760px){.host-quiz-overview{grid-template-columns:1fr 1fr}.student-build-card{grid-template-columns:68px 1fr auto}}
 </style>
 </head>
 <body class="lobby-open">
@@ -866,7 +893,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.3</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.5</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1025,7 +1052,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.3 · Student-First Realtime Sync</p>
+      <p>v2.5.5 · Classroom UX & Quiz Flow</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -2303,7 +2330,7 @@
   const DEFAULT_QUIZ_BANK_TEXT="영단어 'apple'의 뜻으로 가장 알맞은 것은? | 사과 | 바나나 | 포도 | 우유\n영단어 'book'의 뜻으로 가장 알맞은 것은? | 책 | 연필 | 책상 | 문\n영단어 'school'의 뜻으로 가장 알맞은 것은? | 학교 | 병원 | 공원 | 시장\n영단어 'teacher'의 뜻으로 가장 알맞은 것은? | 선생님 | 학생 | 의사 | 요리사\n영단어 'student'의 뜻으로 가장 알맞은 것은? | 학생 | 경찰관 | 선생님 | 운전기사\n영단어 'friend'의 뜻으로 가장 알맞은 것은? | 친구 | 가족 | 이웃 | 손님\n영단어 'family'의 뜻으로 가장 알맞은 것은? | 가족 | 친구 | 학교 | 음식\n영단어 'water'의 뜻으로 가장 알맞은 것은? | 물 | 우유 | 주스 | 빵\n영단어 'food'의 뜻으로 가장 알맞은 것은? | 음식 | 의자 | 시간 | 날씨\n영단어 'house'의 뜻으로 가장 알맞은 것은? | 집 | 학교 | 자동차 | 가방\n영단어 'dog'의 뜻으로 가장 알맞은 것은? | 개 | 고양이 | 새 | 물고기\n영단어 'cat'의 뜻으로 가장 알맞은 것은? | 고양이 | 개 | 토끼 | 말\n영단어 'happy'의 뜻으로 가장 알맞은 것은? | 행복한 | 슬픈 | 화난 | 피곤한\n영단어 'sad'의 뜻으로 가장 알맞은 것은? | 슬픈 | 행복한 | 신나는 | 따뜻한\n영단어 'big'의 뜻으로 가장 알맞은 것은? | 큰 | 작은 | 빠른 | 낮은\n영단어 'small'의 뜻으로 가장 알맞은 것은? | 작은 | 큰 | 긴 | 강한\n영단어 'fast'의 뜻으로 가장 알맞은 것은? | 빠른 | 느린 | 조용한 | 어두운\n영단어 'slow'의 뜻으로 가장 알맞은 것은? | 느린 | 빠른 | 밝은 | 높은\n영단어 'run'의 뜻으로 가장 알맞은 것은? | 달리다 | 걷다 | 앉다 | 자다\n영단어 'walk'의 뜻으로 가장 알맞은 것은? | 걷다 | 달리다 | 수영하다 | 날다\n영단어 'read'의 뜻으로 가장 알맞은 것은? | 읽다 | 쓰다 | 듣다 | 말하다\n영단어 'write'의 뜻으로 가장 알맞은 것은? | 쓰다 | 읽다 | 열다 | 닫다\n영단어 'speak'의 뜻으로 가장 알맞은 것은? | 말하다 | 듣다 | 보다 | 먹다\n영단어 'listen'의 뜻으로 가장 알맞은 것은? | 듣다 | 말하다 | 만들다 | 사다\n영단어 'morning'의 뜻으로 가장 알맞은 것은? | 아침 | 저녁 | 밤 | 점심\n영단어 'night'의 뜻으로 가장 알맞은 것은? | 밤 | 아침 | 낮 | 봄\n영단어 'Monday'의 뜻으로 가장 알맞은 것은? | 월요일 | 금요일 | 일요일 | 8월\n영단어 'summer'의 뜻으로 가장 알맞은 것은? | 여름 | 겨울 | 봄 | 가을\n영단어 'winter'의 뜻으로 가장 알맞은 것은? | 겨울 | 여름 | 봄 | 가을\n영단어 'red'의 뜻으로 가장 알맞은 것은? | 빨간색 | 파란색 | 초록색 | 노란색\n영단어 'blue'의 뜻으로 가장 알맞은 것은? | 파란색 | 빨간색 | 검은색 | 흰색\n영단어 'green'의 뜻으로 가장 알맞은 것은? | 초록색 | 주황색 | 보라색 | 회색\n영단어 'beautiful'의 뜻으로 가장 알맞은 것은? | 아름다운 | 어려운 | 가능한 | 중요한\n영단어 'difficult'의 뜻으로 가장 알맞은 것은? | 어려운 | 쉬운 | 빠른 | 친절한\n영단어 'easy'의 뜻으로 가장 알맞은 것은? | 쉬운 | 어려운 | 강한 | 비싼\n영단어 'important'의 뜻으로 가장 알맞은 것은? | 중요한 | 가능한 | 조용한 | 젊은\n영단어 'possible'의 뜻으로 가장 알맞은 것은? | 가능한 | 불가능한 | 필요한 | 유명한\n영단어 'before'의 뜻으로 가장 알맞은 것은? | ~전에 | ~후에 | ~동안 | ~없이\n영단어 'after'의 뜻으로 가장 알맞은 것은? | ~후에 | ~전에 | ~사이에 | ~위에\n영단어 'always'의 뜻으로 가장 알맞은 것은? | 항상 | 결코 ~않는 | 가끔 | 거의 ~않는\n영단어 'never'의 뜻으로 가장 알맞은 것은? | 결코 ~않는 | 항상 | 자주 | 때때로\n영단어 'often'의 뜻으로 가장 알맞은 것은? | 자주 | 가끔 | 결코 ~않는 | 곧\n영단어 'sometimes'의 뜻으로 가장 알맞은 것은? | 때때로 | 항상 | 이미 | 함께\n영단어 'because'의 뜻으로 가장 알맞은 것은? | 왜냐하면, ~때문에 | 비록 ~이지만 | 만약 ~라면 | ~전에\n영단어 'although'의 뜻으로 가장 알맞은 것은? | 비록 ~이지만 | 왜냐하면, ~때문에 | 만약 ~라면 | ~까지\n영단어 'if'의 뜻으로 가장 알맞은 것은? | 만약 ~라면 | 비록 ~이지만 | ~때문에 | ~처럼\n영단어 'when'의 뜻으로 가장 알맞은 것은? | ~할 때 | ~없이 | ~보다 | ~에게\n'much'가 주로 꾸미는 명사로 알맞은 것은? | 셀 수 없는 명사 | 셀 수 있는 복수 명사 | 고유명사만 | 사람 이름만\n'many'가 주로 꾸미는 명사로 알맞은 것은? | 셀 수 있는 복수 명사 | 셀 수 없는 명사 | 동사만 | 부사만\n영단어 'enough'의 뜻으로 가장 알맞은 것은? | 충분한 | 너무 많은 | 거의 없는 | 다른\n영단어 'early'의 뜻으로 가장 알맞은 것은? | 일찍 | 늦게 | 천천히 | 함께\n영단어 'late'의 뜻으로 가장 알맞은 것은? | 늦게 | 일찍 | 멀리 | 다시\n영단어 'strong'의 뜻으로 가장 알맞은 것은? | 강한 | 약한 | 느린 | 짧은\n영단어 'weak'의 뜻으로 가장 알맞은 것은? | 약한 | 강한 | 무거운 | 밝은\n영단어 'buy'의 뜻으로 가장 알맞은 것은? | 사다 | 팔다 | 빌리다 | 주다\n영단어 'sell'의 뜻으로 가장 알맞은 것은? | 팔다 | 사다 | 찾다 | 기다리다\n영단어 'open'의 뜻으로 가장 알맞은 것은? | 열다 | 닫다 | 시작하다 | 끝내다\n영단어 'close'의 뜻으로 가장 알맞은 것은? | 닫다 | 열다 | 가져오다 | 보내다\n영단어 'begin'의 뜻으로 가장 알맞은 것은? | 시작하다 | 끝내다 | 멈추다 | 고치다\n영단어 'finish'의 뜻으로 가장 알맞은 것은? | 끝내다 | 시작하다 | 잊다 | 계속하다";
   const QUIZ_STORAGE_KEY="classFootballQuizBankV23";
   const QUIZ_PHASE_COUNTS={PRE_QUIZ:20,BREAK25:10,HALF:10,BREAK70:10};
-  const QUIZ_SECONDS_PER_QUESTION=6;
+  const QUIZ_TOTAL_SECONDS={PRE_QUIZ:100,BREAK25:60,HALF:60,BREAK70:60};
   const quizSystem={
     bank:[],phaseQuestions:{},current:null,timerHandle:null,lastParseErrors:[]
   };
@@ -2521,7 +2548,7 @@
     ready:false,error:null,db:null,auth:null,user:null,mode:"host",
     hostRoomCode:null,roomUnsub:null,participantsUnsub:null,pendingQuickJoin:null,
     studentRoomCode:null,studentParticipantId:null,studentDocUnsub:null,studentRoomUnsub:null,
-    studentData:null,studentRoomData:null,studentTimerHandle:null,
+    studentData:null,studentRoomData:null,studentTimerHandle:null,studentQuizCursor:{},
     suppressRemoteRender:false,lastMatchSyncAt:0,matchSyncBusy:false,hostRenderQueued:false,roomWriteChain:Promise.resolve(),roomWriteSerial:0,studentLastSyncSerial:0,lastRoomSyncError:null,clientBroadcastState:{phase:"LOBBY",syncSerial:0,quiz:null,breakKey:null,lineups:null,tacticResults:{},match:null,result:null},lastParticipantLiveMirrorAt:0,debugMock:false,mockRoom:{},mockParticipantPatches:{}
   };
 
@@ -2640,9 +2667,10 @@
     }
     const run=async()=>{
       try{
-        await firebaseRoomRef(roomCode).set({...payload,updatedAt:firebaseTimestamp()},{merge:true});
+        const roomWrite=firebaseRoomRef(roomCode).set({...payload,updatedAt:firebaseTimestamp()},{merge:true});
+        const mirrorWrite=options.mirror!==false?mirrorClientViewToParticipants():Promise.resolve(true);
+        await Promise.all([roomWrite,mirrorWrite]);
         onlineRoomState.lastRoomSyncError=null;
-        if(options.mirror!==false)await mirrorClientViewToParticipants();
         if(hostRoomStatus&&payload.phase){hostRoomStatus.textContent=`● ${payload.phase}`;hostRoomStatus.className="online-status live";}
         return true;
       }catch(e){
@@ -2699,12 +2727,14 @@
     const card=teamName=>{
       const sts=participationStudents().filter(s=>s.team===teamName);
       const key=quizSystem.current?.key||currentQuizKey();
-      const qi=quizSystem.current?.index??-1;
+      const qi=quizSystem.current?.index??-1,totalQuiz=quizSystem.current?.questions?.length||0;
       const answered=qi>=0?sts.filter(s=>Number.isInteger(quizAnswerFor(s,key,qi))).length:0;
+      const quizAnsweredTotal=totalQuiz?sts.reduce((sum,s)=>sum+quizAnsweredCount(s,key,totalQuiz),0):0;
+      const quizCompleted=totalQuiz?sts.filter(s=>quizAnsweredCount(s,key,totalQuiz)>=totalQuiz).length:0;
       const ready=gameFlow.phase==="BUILD"?sts.filter(s=>s.buildReady).length:gameFlow.phase==="BREAK_BUILD"?sts.filter(s=>s.breakReady?.[gameFlow.currentBreak]).length:0;
       const growth=sts.reduce((sum,s)=>sum+growthTotal(s.statsBonus||s.startAllocation),0);
       const qavg=sts.length?sts.reduce((sum,s)=>sum+(key==="PRE_QUIZ"?(s.preQuizCorrect||0):(s.breakScores?.[key]||0)),0)/sts.length:0;
-      return `<div class="host-team-power ${teamName}"><h3>${teamName.toUpperCase()} TEAM</h3><div class="host-power-number">${hostTeamPower(teamName).toFixed(1)}</div><div class="host-power-meta">학생 ${sts.length}명 · 누적 성장 +${growth}${qi>=0?`<br>현재 응답 ${answered}/${sts.length}`:""}${gameFlow.phase==="BUILD"||gameFlow.phase==="BREAK_BUILD"?`<br>READY ${ready}/${sts.length}`:""}${quizSystem.current?.stage==="RESULT"?`<br>평균 정답 ${qavg.toFixed(1)}`:""}</div></div>`;
+      return `<div class="host-team-power ${teamName}"><h3>${teamName.toUpperCase()} TEAM</h3><div class="host-power-number">${hostTeamPower(teamName).toFixed(1)}</div><div class="host-power-meta">학생 ${sts.length}명 · 누적 성장 +${growth}${quizSystem.current?.stage==="RUNNING"&&totalQuiz?`<br>퀴즈 진행 ${quizAnsweredTotal}/${sts.length*totalQuiz} · 완료 ${quizCompleted}/${sts.length}`:(qi>=0?`<br>현재 응답 ${answered}/${sts.length}`:"")}${gameFlow.phase==="BUILD"||gameFlow.phase==="BREAK_BUILD"?`<br>READY ${ready}/${sts.length}`:""}${quizSystem.current?.stage==="RESULT"?`<br>평균 정답 ${qavg.toFixed(1)}`:""}</div></div>`;
     };
     return `<div class="host-sync-grid">${card("blue")}${card("red")}</div>`;
   }
@@ -2766,7 +2796,7 @@
     return mergeRemoteProgress(student,d);
   }
   function publicRosterState(){return lobbyState.students.filter(s=>s.remote).map(s=>({participantId:s.remoteId,name:s.name,team:s.team||null,preferredPosition:s.preferredPosition||"FLEX",status:s.status||"joined"}));}
-  async function syncPublicRoster(){if(remoteParticipationActive()||(!lobbyState.started&&onlineHostSession()))await syncRoomState({roster:publicRosterState(),playerCount:lobbyState.students.length});}
+  async function syncPublicRoster(){if(remoteParticipationActive()||(!lobbyState.started&&onlineHostSession()))await syncRoomState({roster:publicRosterState(),playerCount:lobbyState.students.length},{mirror:false});}
   function publicLineupState(){
     const out={};for(const teamName of ["blue","red"]){const formation=document.getElementById(teamName+"Formation")?.value||"433",slots=FORMATIONS[formation]||[];out[teamName]={formation,slots:slots.map((slot,i)=>{const sid=lineupState.assignments[teamName]?.[i],st=sid?lobbyState.students.find(x=>x.id===sid):null;return {role:slot.role,name:st?.name||aiNameForSlot(teamName,i),participantId:st?.remoteId||null,ai:!st,tacticalRole:st?resolvedStudentTacticalRole(st,slot.role,formation,i):defaultTacticalRole(slot.role,formation,i)};})};}return out;
   }
@@ -2837,7 +2867,7 @@
     try{
       const code=await generateRoomCode();
       await firebaseRoomRef(code).set({
-        code,status:"WAITING",phase:"LOBBY",acceptingPlayers:true,hostUid:onlineRoomState.user.uid,version:"2.5.4",
+        code,status:"WAITING",phase:"LOBBY",acceptingPlayers:true,hostUid:onlineRoomState.user.uid,version:"2.5.5",
         maxPlayers:MAX_STUDENTS,quiz:null,match:null,playerSnapshots:{},roster:[],lineups:null,tacticResults:{},result:null,createdAt:firebaseTimestamp(),updatedAt:firebaseTimestamp()
       });
       onlineRoomState.hostRoomCode=code;
@@ -2952,7 +2982,7 @@
     stopStudentStageTimer();
     const tick=()=>{
       const el=document.getElementById("studentQuizTimer");if(!el)return stopStudentStageTimer();
-      const left=Math.max(0,(Number(endsAtMs||0)-Date.now())/1000);el.textContent=left.toFixed(1);el.classList.toggle("urgent",left<=2);
+      const left=Math.max(0,(Number(endsAtMs||0)-Date.now())/1000);el.textContent=Math.ceil(left);el.classList.toggle("urgent",left<=10);
       if(left<=0)stopStudentStageTimer();
     };tick();onlineRoomState.studentTimerHandle=setInterval(tick,100);
   }
@@ -2965,9 +2995,16 @@
     const bonus=data?.statsBonus||{};
     return `<div class="student-stat-grid">${GROWTH_STATS.map(k=>`<div class="student-stat"><span>${GROWTH_LABELS[k]}</span><b>${vals?Math.round(vals[k]||0):`+${Number(bonus[k])||0}`}</b></div>`).join("")}</div>`;
   }
+  const GROWTH_EFFECTS={
+    speed:"주력 · 가속 · 침투 · 수비 복귀 · 루즈볼 경합",
+    technique:"퍼스트터치 · 볼키핑 · 드리블 · 태클 정교함",
+    kick:"패스/슛 정확도와 파워 · 롱패스 · 크로스 · 세트피스",
+    physical:"몸싸움 · 제공권 · 지구력 · 버티기 · 반복 스프린트",
+    intelligence:"위치선정 · 판단 · 패스 선택 · 압박/마킹 · 세컨드볼 반응"
+  };
   function studentBuildHtml(data,points,allocation,ready,mode,key=""){
     const spent=growthTotal(allocation),remain=Math.max(0,points-spent);
-    return `<div class="student-stage-title">${mode==="START"?"PLAYER BUILD":"BREAK GROWTH"}</div><div class="student-stage-head"><strong>성장 포인트 +${points}</strong><span class="student-stage-chip">남음 ${remain}</span></div>${studentStatsHtml(null,{statsBonus:allocation})}<div class="student-build-grid">${GROWTH_STATS.map(k=>`<button class="student-build-btn" data-student-build-stat="${k}" data-build-mode="${mode}" data-build-key="${key}" ${ready||remain<=0?"disabled":""}>${GROWTH_LABELS[k]}<b>+${allocation?.[k]||0}</b></button>`).join("")}</div><div class="student-build-meta"><button class="lobby-mini" data-student-build-reset="${mode}" data-build-key="${key}" ${ready?"disabled":""}>↺ 초기화</button><span>${spent} / ${points} 사용</span></div><button class="primary student-ready ${ready?"done":""}" data-student-build-ready="${mode}" data-build-key="${key}" ${ready?"disabled":""}>${ready?"✓ READY 완료":remain?"포인트를 모두 사용해주세요":"READY"}</button>`;
+    return `<div class="student-stage-title">${mode==="START"?"PLAYER BUILD":"BREAK GROWTH"}</div><div class="student-stage-head"><strong>성장 포인트 +${points}</strong><span class="student-stage-chip">남음 ${remain}</span></div><div class="student-build-cards">${GROWTH_STATS.map(k=>`<button class="student-build-card" data-student-build-stat="${k}" data-build-mode="${mode}" data-build-key="${key}" ${ready||remain<=0?"disabled":""}><span class="stat-key">${GROWTH_LABELS[k]}</span><span class="stat-effect">${GROWTH_EFFECTS[k]}</span><span class="stat-plus">+${allocation?.[k]||0}</span></button>`).join("")}</div><div class="student-build-meta"><button class="lobby-mini" data-student-build-reset="${mode}" data-build-key="${key}" ${ready?"disabled":""}>↺ 초기화</button><span>${spent} / ${points} 사용</span></div><button class="primary student-ready ${ready?"done":""}" data-student-build-ready="${mode}" data-build-key="${key}" ${ready?"disabled":""}>${ready?"✓ READY 완료":remain?"포인트를 모두 사용해주세요":"READY"}</button>`;
   }
   function effectiveStudentRoomState(){
     const room=onlineRoomState.studentRoomData||{};
@@ -3000,8 +3037,15 @@
     if(["PRE_QUIZ","BREAK25","HALF","BREAK70"].includes(phase)){
       studentWaitingText.textContent=phase==="PRE_QUIZ"?"시작 전 퀴즈에 참여하세요.":"경기가 잠시 멈췄습니다. 중간 퀴즈에 참여하세요.";
       if(quiz.stage==="RUNNING"){
-        const selected=studentQuizAnswerValue(data,quiz.key,quiz.index),letters=["A","B","C","D"];
-        studentStageArea.innerHTML=`<div class="student-stage-head"><div><div class="student-stage-title">${quiz.key==="PRE_QUIZ"?"START QUIZ":"BREAK QUIZ"}</div><strong>QUESTION ${Number(quiz.index)+1} / ${quiz.total}</strong></div><div><span id="studentQuizTimer" class="student-timer">0.0</span><div class="student-muted" style="margin-top:0">SECONDS</div></div></div><div class="student-question">${escapeLobbyHtml(quiz.prompt||"")}</div><div class="student-quiz-options">${(quiz.options||[]).map((opt,i)=>`<button class="student-quiz-option ${selected===i?"selected":""}" data-student-quiz-answer="${i}" ${Date.now()>Number(quiz.endsAtMs||0)+250?"disabled":""}><b>${letters[i]}</b><span>${escapeLobbyHtml(opt)}</span></button>`).join("")}</div><div class="student-muted">답을 누르면 즉시 제출됩니다. 제한시간 안에는 답을 바꿀 수 있습니다.</div>`;
+        const questions=Array.isArray(quiz.questions)&&quiz.questions.length?quiz.questions:[{prompt:quiz.prompt||"",options:quiz.options||[]}];
+        const total=Number(quiz.total)||questions.length,answers=data?.quizAnswers?.[quiz.key]||{},letters=["A","B","C","D"];
+        const cursorKey=`${quiz.session||0}:${quiz.key}`;let cursor=Number(onlineRoomState.studentQuizCursor?.[cursorKey]);
+        if(!Number.isInteger(cursor)||cursor<0||cursor>=questions.length){cursor=questions.findIndex((_,i)=>!Number.isInteger(Number(Array.isArray(answers)?answers[i]:answers[String(i)])));if(cursor<0)cursor=0;}
+        onlineRoomState.studentQuizCursor[cursorKey]=cursor;
+        const q=questions[cursor]||questions[0],selected=studentQuizAnswerValue(data,quiz.key,cursor);
+        const answeredCount=questions.reduce((n,_,i)=>n+(Number.isInteger(studentQuizAnswerValue(data,quiz.key,i))?1:0),0);
+        const expired=Date.now()>Number(quiz.endsAtMs||0)+250;
+        studentStageArea.innerHTML=`<div class="student-stage-head"><div><div class="student-stage-title">${quiz.key==="PRE_QUIZ"?"START QUIZ":"BREAK QUIZ"}</div><strong>QUESTION ${cursor+1} / ${total}</strong></div><div><span id="studentQuizTimer" class="student-timer">0</span><div class="student-muted" style="margin-top:0">TOTAL SEC</div></div></div><div class="student-quiz-progress"><span>내 진행률 <b>${answeredCount}/${total}</b></span><span>${answeredCount===total?"✓ 전부 답함":"100초 안에 자유롭게 풀기"}</span></div><div class="student-question">${escapeLobbyHtml(q?.prompt||"")}</div><div class="student-quiz-options">${(q?.options||[]).map((opt,i)=>`<button class="student-quiz-option ${selected===i?"selected":""}" data-student-quiz-answer="${i}" data-quiz-question-index="${cursor}" ${expired?"disabled":""}><b>${letters[i]}</b><span>${escapeLobbyHtml(opt)}</span></button>`).join("")}</div><div class="student-quiz-nav"><button data-student-quiz-nav="-1" ${cursor<=0?"disabled":""}>← 이전</button><span>${answeredCount===total?"답안 수정 가능":"답을 누르면 다음 문제로 이동"}</span><button data-student-quiz-nav="1" ${cursor>=questions.length-1?"disabled":""}>다음 →</button></div>`;
         startStudentStageTimer(quiz.endsAtMs);return;
       }
       if(quiz.stage==="RESULT"){
@@ -3055,17 +3099,15 @@
     }
     studentWaitingText.innerHTML=`호스트가 다음 단계를 진행하고 있습니다.<br><b>${escapeLobbyHtml(phase)}</b>`;studentStageArea.innerHTML="";
   }
-  async function submitStudentQuizAnswer(optionIndex){
-    const room=onlineRoomState.studentRoomData||{},quiz=room.quiz||{},code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId;
+  async function submitStudentQuizAnswer(optionIndex,questionIndex=null){
+    const room=effectiveStudentRoomState(),quiz=room.quiz||{},code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId;
     if(!code||!id||quiz.stage!=="RUNNING"||Date.now()>Number(quiz.endsAtMs||0)+250)return;
-    const key=quiz.key,index=Number(quiz.index);if(!key||!Number.isInteger(index))return;
+    const key=quiz.key,cursorKey=`${quiz.session||0}:${key}`,index=Number.isInteger(Number(questionIndex))?Number(questionIndex):Number(onlineRoomState.studentQuizCursor?.[cursorKey]||0);if(!key||!Number.isInteger(index))return;
     const data=onlineRoomState.studentData||(onlineRoomState.studentData={});
-    if(!data.quizAnswers)data.quizAnswers={};if(!data.quizAnswers[key])data.quizAnswers[key]={};data.quizAnswers[key][String(index)]=Number(optionIndex);renderStudentStage();
-    try{
-      // Write the answer map as data instead of using a numeric dotted field path
-      // such as quizAnswers.PRE_QUIZ.0, which is brittle across Firestore SDKs.
-      await firebaseParticipants(code).doc(id).set({quizAnswers:data.quizAnswers,lastQuizAnswer:`${key}:${index}`,updatedAt:firebaseTimestamp()},{merge:true});
-    }catch(e){setStudentMessage(`답안 전송 실패: ${e.message}`);}
+    if(!data.quizAnswers)data.quizAnswers={};if(!data.quizAnswers[key])data.quizAnswers[key]={};data.quizAnswers[key][String(index)]=Number(optionIndex);
+    const total=Number(quiz.total)||quiz.questions?.length||0;let next=index;for(let step=1;step<=total;step++){const j=(index+step)%total;if(!Number.isInteger(studentQuizAnswerValue(data,key,j))){next=j;break;}}onlineRoomState.studentQuizCursor[cursorKey]=next;renderStudentStage();
+    try{await firebaseParticipants(code).doc(id).set({quizAnswers:data.quizAnswers,lastQuizAnswer:`${key}:${index}`,updatedAt:firebaseTimestamp()},{merge:true});}
+    catch(e){setStudentMessage(`답안 전송 실패: ${e.message}`);}
   }
   async function saveStudentAllocation(mode,key,allocation,ready=false){
     const code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId;if(!code||!id)return;
@@ -3096,7 +3138,7 @@
       if(!snap.exists)return;onlineRoomState.studentData=snap.data();renderStudentWaiting(onlineRoomState.studentData);
       if(studentConnectionText){
         const cv=onlineRoomState.studentData?.clientView||{},p=cv.phase||onlineRoomState.studentRoomData?.phase||"LOBBY",ser=Number(cv.syncSerial)||0;
-        studentConnectionText.textContent=`Firebase · 개인동기화 · ${p}${ser?` · #${ser}`:""}`;
+        studentConnectionText.textContent="● 온라인 연결됨";
       }
     },e=>setStudentMessage(`참가자 상태 수신 실패: ${e.message}`));
     onlineRoomState.studentRoomUnsub=firebaseRoomRef(code).onSnapshot(snap=>{
@@ -3108,7 +3150,7 @@
       if(studentConnectionText){
         const cv=onlineRoomState.studentData?.clientView||{},cvSerial=Number(cv.syncSerial)||0;
         const effective=cvSerial>serial?cv:next,p=effective.phase||effective.status||"LOBBY",effectiveSerial=Math.max(serial,cvSerial);
-        studentConnectionText.textContent=`Firebase · 실시간 연결 · ${p}${effectiveSerial?` · #${effectiveSerial}`:""}`;
+        studentConnectionText.textContent="● 온라인 연결됨";
       }
       renderStudentStage();
     },e=>setStudentMessage(`방 상태 수신 실패: ${e.message}`));
@@ -3135,7 +3177,7 @@
         name,preferredPosition:pref,status:"joined",team:null,source:"student",uid:id,
         quizAnswers:{PRE_QUIZ:{},BREAK25:{},HALF:{},BREAK70:{}},startAllocation:{speed:0,technique:0,kick:0,physical:0,intelligence:0},
         statsBonus:{speed:0,technique:0,kick:0,physical:0,intelligence:0},breakAllocations:{},breakReady:{},buildReady:false,
-        preferredRole:"AUTO",roleReady:false,tacticVotes:{},lineupStatus:"UNSET",assignedRole:null,assignedTacticalRole:null,shirtNumber:null,clientView:{phase:"LOBBY",syncSerial:0,quiz:null},joinedAt:firebaseTimestamp(),updatedAt:firebaseTimestamp(),version:"2.5.4"
+        preferredRole:"AUTO",roleReady:false,tacticVotes:{},lineupStatus:"UNSET",assignedRole:null,assignedTacticalRole:null,shirtNumber:null,clientView:{phase:"LOBBY",syncSerial:0,quiz:null},joinedAt:firebaseTimestamp(),updatedAt:firebaseTimestamp(),version:"2.5.5"
       },{merge:true});
       subscribeStudentState(code,id);onlineRoomState.pendingQuickJoin=null;setStudentMessage("",false);
     }catch(e){setStudentMessage(e.message||String(e));}finally{studentJoinBtn.disabled=false;}
@@ -3164,7 +3206,7 @@
       onlineRoomState.user=cred.user||onlineRoomState.auth.currentUser;
       onlineRoomState.ready=!!onlineRoomState.user;
       setFirebaseBadge("● Firebase 온라인","live");
-      if(studentConnectionText)studentConnectionText.textContent="Firebase · 온라인";
+      if(studentConnectionText)studentConnectionText.textContent="● 온라인 연결됨";
       if(onlineRoomState.mode==="student"){
         await restoreStudentParticipant();
         if(!onlineRoomState.studentParticipantId&&onlineRoomState.pendingQuickJoin)await joinStudentRoom();
@@ -3302,7 +3344,7 @@
     lobbyState.started=false;
     gameFlow.active=false;
     gameFlow.phase="LOBBY";
-    document.body.classList.remove("participation-open","student-open");
+    document.body.classList.remove("participation-open","student-open","broadcast-mode");
     resultModal.classList.remove("active");
     document.body.classList.add("lobby-open");
     if(onlineRoomState.hostRoomCode&&onlineRoomState.ready){
@@ -3318,17 +3360,15 @@
       setLobbyError(`문제은행이 ${quizSystem.bank.length}문항입니다. 실제 경기에는 최소 50문항이 필요합니다.`);
       return;
     }
-    if(onlineRoomState.hostRoomCode&&onlineRoomState.ready){
-      const synced=await syncRoomState({status:"LIVE",phase:"PRE_QUIZ",playerCount:lobbyState.students.length,quiz:null,match:null,playerSnapshots:{}});
-      if(!synced){
-        setLobbyError(`학생 화면을 PRE_QUIZ로 전환하지 못했습니다. Firebase 동기화 오류를 확인해주세요.${onlineRoomState.lastRoomSyncError?` · ${onlineRoomState.lastRoomSyncError}`:""}`);
-        return;
-      }
-    }
     lobbyState.started=true;
     document.body.classList.remove("lobby-open");
     initializeParticipationSession();
-    if(remoteParticipationActive())await resetRemoteSessionProgress();
+    if(remoteParticipationActive()){
+      showParticipationOverlay();
+      participationKicker.textContent="ONLINE SESSION · SYNC";participationTitle.textContent="학생 화면 준비 중";participationDesc.textContent="참가자 데이터를 초기화하고 퀴즈를 동기화하고 있습니다.";participationPhaseChip.textContent="SYNCING";participationContent.innerHTML=`${hostTeamDashboardHtml("quiz")}<div class="host-stage-section"><h3>SESSION SYNC</h3><div class="host-ready-summary">학생 기기 연결을 준비하고 있습니다. 이 화면은 곧 자동으로 퀴즈 진행 현황으로 바뀝니다.</div></div>`;participationPrimaryBtn.style.display="none";participationAutoBtn.style.display="none";participationBackBtn.style.display="none";
+      await resetRemoteSessionProgress();
+      participationPrimaryBtn.style.display="";
+    }
     showPreMatchQuiz();
   }
 
@@ -3519,47 +3559,41 @@
       return `<div class="participation-card ${s.team}"><div class="participation-card-head"><span class="participation-name">${escapeLobbyHtml(s.name)}</span><span class="participation-team">${idx+1}위 · ${s.team.toUpperCase()}</span></div><div class="quiz-result-score">정답 <b>${score}</b> / ${max} · <span class="quiz-result-points">성장 +${pts}</span></div>${!isPre?`<select class="growth-focus-select" data-focus-student="${s.id}">${growthFocusOptions(s.growthFocus)}</select><div class="growth-summary">현재 성장 · ${growthSummaryHtml(s.statsBonus)}</div>`:""}</div>`;
     }).join("")}</div>`;
   }
+  function quizAnsweredCount(student,key,total){let n=0;for(let i=0;i<total;i++)if(Number.isInteger(quizAnswerFor(student,key,i)))n++;return n;}
   function renderLiveQuiz(){
     const qz=quizSystem.current;if(!qz||qz.stage!=="RUNNING")return;
-    const q=qz.questions[qz.index];if(!q)return;
-    const key=qz.key,letters=["A","B","C","D"];
-    const students=participationStudents(),answered=students.filter(st=>Number.isInteger(quizAnswerFor(st,key,qz.index))).length;
-    participationPhaseChip.textContent=`Q ${qz.index+1}/${qz.questions.length} · ${Math.max(0,qz.remaining).toFixed(1)}s`;
+    const key=qz.key,total=qz.questions.length,students=participationStudents();
+    const completed=students.filter(st=>quizAnsweredCount(st,key,total)>=total).length;
+    const answeredSlots=students.reduce((sum,st)=>sum+quizAnsweredCount(st,key,total),0),allSlots=Math.max(1,students.length*total);
+    const teamSummary=team=>{const sts=students.filter(s=>s.team===team),done=sts.filter(s=>quizAnsweredCount(s,key,total)>=total).length,ans=sts.reduce((n,s)=>n+quizAnsweredCount(s,key,total),0);return {count:sts.length,done,ans,max:sts.length*total};};
+    const blue=teamSummary("blue"),red=teamSummary("red");
+    participationPhaseChip.textContent=`${Math.ceil(Math.max(0,qz.remaining))}s · 완료 ${completed}/${students.length}`;
     if(remoteParticipationActive()){
-      const teamProgress=team=>{const sts=students.filter(s=>s.team===team),done=sts.filter(s=>Number.isInteger(quizAnswerFor(s,key,qz.index))).length;return `${done}/${sts.length}`;};
-      participationContent.innerHTML=`${hostTeamDashboardHtml("quiz")}<div class="host-stage-section"><h3>LIVE QUIZ · 진행자 화면</h3><div class="host-ready-summary"><b>QUESTION ${qz.index+1} / ${qz.questions.length}</b> · 학생 기기에서 문제와 보기가 표시됩니다.<br>전체 응답 <b>${answered}/${students.length}</b> · BLUE <b>${teamProgress("blue")}</b> · RED <b>${teamProgress("red")}</b></div><div id="liveQuizTimer" class="live-timer ${qz.remaining<=2?"urgent":""}" style="max-width:180px;margin:12px auto"><b>${Math.max(0,qz.remaining).toFixed(1)}</b><span>SECONDS</span></div><div class="host-response-list">${students.map(st=>`<div class="host-response-item"><span>${escapeLobbyHtml(st.name)}</span><span class="${Number.isInteger(quizAnswerFor(st,key,qz.index))?"ok":"wait"}">${Number.isInteger(quizAnswerFor(st,key,qz.index))?"✓ 제출":"대기"}</span></div>`).join("")}</div></div>`;
-      participationPrimaryBtn.textContent=qz.index===qz.questions.length-1?"현재 문제 종료 · 자동채점":"현재 문제 넘기기 →";
-      return;
+      participationContent.innerHTML=`${hostTeamDashboardHtml("quiz")}<div class="host-stage-section"><h3>LIVE QUIZ · 진행자 화면</h3><div class="host-quiz-overview"><div class="host-quiz-kpi"><span>남은 시간</span><b id="liveQuizTimer">${Math.ceil(Math.max(0,qz.remaining))}</b></div><div class="host-quiz-kpi"><span>완료 학생</span><b>${completed}/${students.length}</b></div><div class="host-quiz-kpi"><span>전체 답변</span><b>${answeredSlots}/${allSlots}</b></div></div><div class="host-ready-summary">문제와 보기는 학생 기기에만 표시됩니다.<br>BLUE <b>${blue.done}/${blue.count}명 완료 · ${blue.ans}/${blue.max||0}답</b> · RED <b>${red.done}/${red.count}명 완료 · ${red.ans}/${red.max||0}답</b></div><div class="host-response-list">${students.map(st=>{const n=quizAnsweredCount(st,key,total),done=n>=total;return `<div class="host-response-item"><span>${escapeLobbyHtml(st.name)}</span><span class="progress ${done?"complete":""}">${done?"✓ ":""}${n}/${total}</span></div>`}).join("")}</div></div>`;
+      participationPrimaryBtn.textContent="퀴즈 조기 종료 · 자동채점";return;
     }
-    const responseHtml=remoteParticipationActive()
-      ? `<div class="quiz-answer-meta"><span>STUDENT DEVICES · 실시간 제출 현황</span><strong>${answered} / ${students.length}명 응답</strong></div><div class="host-response-list">${students.map(st=>`<div class="host-response-item"><span>${escapeLobbyHtml(st.name)}</span><span class="${Number.isInteger(quizAnswerFor(st,key,qz.index))?"ok":"wait"}">${Number.isInteger(quizAnswerFor(st,key,qz.index))?"✓ 제출":"대기"}</span></div>`).join("")}</div>`
-      : `<div class="quiz-answer-meta"><span>HOST PREVIEW · 학생별 응답 버튼</span><strong>${answered} / ${students.length}명 응답</strong></div><div class="quiz-response-grid">${students.map(st=>{const selected=quizAnswerFor(st,key,qz.index);return `<div class="quiz-response-row ${st.team}"><span class="quiz-response-name">${escapeLobbyHtml(st.name)}</span>${letters.map((L,i)=>`<button class="quiz-answer-btn ${selected===i?"selected":""}" data-live-answer="${st.id}" data-answer-index="${i}">${L}</button>`).join("")}</div>`}).join("")}</div>`;
-    participationContent.innerHTML=remoteParticipationActive()
-      ?`${hostTeamDashboardHtml("quiz")}<div class="live-quiz-wrap"><div class="live-quiz-top"><div class="live-question"><div class="live-question-no">QUESTION ${qz.index+1} / ${qz.questions.length}</div><div class="live-question-text">학생 기기에서 문제와 보기가 표시되고 있습니다.</div></div><div id="liveQuizTimer" class="live-timer ${qz.remaining<=2?"urgent":""}"><b>${Math.max(0,qz.remaining).toFixed(1)}</b><span>SECONDS</span></div></div>${responseHtml}</div>`
-      :`<div class="live-quiz-wrap"><div class="live-quiz-top"><div class="live-question"><div class="live-question-no">QUESTION ${qz.index+1} / ${qz.questions.length}</div><div class="live-question-text">${escapeLobbyHtml(q.prompt)}</div></div><div id="liveQuizTimer" class="live-timer ${qz.remaining<=2?"urgent":""}"><b>${Math.max(0,qz.remaining).toFixed(1)}</b><span>SECONDS</span></div></div><div class="quiz-option-grid">${q.options.map((opt,i)=>`<div class="quiz-option"><b>${letters[i]}</b><span>${escapeLobbyHtml(opt)}</span></div>`).join("")}</div>${responseHtml}</div>`;
-    participationPrimaryBtn.textContent=qz.index===qz.questions.length-1?"퀴즈 종료 · 자동채점":"다음 문제 →";
+    const q=qz.questions[qz.index]||qz.questions[0],letters=["A","B","C","D"];
+    participationContent.innerHTML=`<div class="live-quiz-wrap"><div class="live-quiz-top"><div class="live-question"><div class="live-question-no">OFFLINE QUIZ PREVIEW · ${qz.index+1}/${total}</div><div class="live-question-text">${escapeLobbyHtml(q?.prompt||"")}</div></div><div class="live-timer"><b id="liveQuizTimer">${Math.ceil(Math.max(0,qz.remaining))}</b><span>TOTAL SEC</span></div></div><div class="quiz-option-grid">${(q?.options||[]).map((opt,i)=>`<div class="quiz-option"><b>${letters[i]}</b><span>${escapeLobbyHtml(opt)}</span></div>`).join("")}</div></div>`;
+    participationPrimaryBtn.textContent=qz.index>=total-1?"퀴즈 종료 · 자동채점":"다음 문제 →";
   }
   function updateLiveQuizTimerDom(){
     const qz=quizSystem.current;if(!qz||qz.stage!=="RUNNING")return;
     qz.remaining=Math.max(0,(qz.endsAt-performance.now())/1000);
-    const timer=document.getElementById("liveQuizTimer");
-    if(timer){timer.querySelector("b").textContent=qz.remaining.toFixed(1);timer.classList.toggle("urgent",qz.remaining<=2);}
-    participationPhaseChip.textContent=`Q ${qz.index+1}/${qz.questions.length} · ${qz.remaining.toFixed(1)}s`;
-    if(qz.remaining<=0)advanceLiveQuiz(true);
+    const timer=document.getElementById("liveQuizTimer");if(timer)timer.textContent=Math.ceil(qz.remaining);
+    participationPhaseChip.textContent=`${Math.ceil(qz.remaining)}s · 전체 제한시간`;
+    if(qz.remaining<=0)finishLiveQuiz();
   }
-  function stopLiveQuizTimer(){
-    if(quizSystem.timerHandle){clearInterval(quizSystem.timerHandle);quizSystem.timerHandle=null;}
-  }
+  function stopLiveQuizTimer(){if(quizSystem.timerHandle){clearInterval(quizSystem.timerHandle);quizSystem.timerHandle=null;}}
   function publicQuizState(qz,stage="RUNNING"){
-    const q=qz?.questions?.[qz.index];
-    return qz?{key:qz.key,index:qz.index,total:qz.questions.length,stage,prompt:stage==="RUNNING"?(q?.prompt||""):"",options:stage==="RUNNING"?(q?.options||[]):[],endsAtMs:stage==="RUNNING"?(Number(qz.wallEndsAt)||Date.now()+QUIZ_SECONDS_PER_QUESTION*1000):0,session:gameFlow.sessionSerial}:null;
+    if(!qz)return null;const questions=stage==="RUNNING"?qz.questions.map(q=>({prompt:q.prompt,options:q.options})):[];
+    return {key:qz.key,index:0,total:qz.questions.length,stage,questions,prompt:"",options:[],endsAtMs:stage==="RUNNING"?(Number(qz.wallEndsAt)||Date.now()+(QUIZ_TOTAL_SECONDS[qz.key]||60)*1000):0,session:gameFlow.sessionSerial};
   }
   function armLiveQuizQuestion(){
-    const qz=quizSystem.current;if(!qz)return;
-    qz.remaining=QUIZ_SECONDS_PER_QUESTION;qz.endsAt=performance.now()+QUIZ_SECONDS_PER_QUESTION*1000;qz.wallEndsAt=Date.now()+QUIZ_SECONDS_PER_QUESTION*1000;
+    const qz=quizSystem.current;if(!qz)return;const seconds=QUIZ_TOTAL_SECONDS[qz.key]||60;
+    qz.remaining=seconds;qz.endsAt=performance.now()+seconds*1000;qz.wallEndsAt=Date.now()+seconds*1000;qz.index=0;
     const pub=publicQuizState(qz,"RUNNING");
     if(remoteParticipationActive())syncRoomState({status:"LIVE",phase:qz.key,quiz:pub,breakKey:qz.key==="PRE_QUIZ"?null:qz.key});
-    renderLiveQuiz();stopLiveQuizTimer();quizSystem.timerHandle=setInterval(updateLiveQuizTimerDom,100);
+    renderLiveQuiz();stopLiveQuizTimer();quizSystem.timerHandle=setInterval(updateLiveQuizTimerDom,250);
   }
   async function refreshRemoteProgressBeforeGrade(){
     if(!remoteParticipationActive()||onlineRoomState.debugMock)return;
@@ -3587,9 +3621,10 @@
   }
   function advanceLiveQuiz(fromTimer=false){
     const qz=quizSystem.current;if(!qz||qz.stage!=="RUNNING")return;
-    stopLiveQuizTimer();
+    if(fromTimer){finishLiveQuiz();return;}
+    if(remoteParticipationActive()){finishLiveQuiz();return;}
     if(qz.index>=qz.questions.length-1){finishLiveQuiz();return;}
-    qz.index++;armLiveQuizQuestion();
+    qz.index++;renderLiveQuiz();
   }
   function autoCompleteLiveQuiz(){
     const qz=quizSystem.current;if(!qz||qz.stage!=="RUNNING")return;
@@ -3613,7 +3648,7 @@
     for(const s of participationStudents()){
       ensureStudentProgress(s);s.quizAnswers[key]=Array(qs.length).fill(null);
     }
-    quizSystem.current={key,questions:qs,index:0,stage:"RUNNING",remaining:QUIZ_SECONDS_PER_QUESTION,endsAt:0};
+    quizSystem.current={key,questions:qs,index:0,stage:"RUNNING",remaining:QUIZ_TOTAL_SECONDS[key]||60,endsAt:0};
     participationAutoBtn.style.display=remoteParticipationActive()?"none":"";participationAutoBtn.textContent="🎲 테스트 퀴즈 자동완주";
     armLiveQuizQuestion();
   }
@@ -3621,9 +3656,9 @@
     gameFlow.phase="PRE_QUIZ";
     gameFlow.currentBreak=null;
     showParticipationOverlay();
-    participationKicker.textContent="LIVE QUIZ · 20 QUESTIONS · 120 SEC";
+    participationKicker.textContent="LIVE QUIZ · 20 QUESTIONS · 100 SEC";
     participationTitle.textContent="START QUIZ";
-    participationDesc.textContent="20문항이 한 문제씩 6초 동안 진행됩니다. 학생별 A/B/C/D 응답을 기록하고 종료 즉시 자동채점합니다.";
+    participationDesc.textContent="학생은 자기 기기에서 20문항을 자유롭게 이동하며 100초 안에 풉니다. 호스트는 전체 진행률만 확인합니다.";
     participationPhaseChip.textContent="PRE-MATCH QUIZ";
     participationRoadmap.innerHTML=phaseRoadmapHtml("Q1");
     participationBackBtn.style.display=remoteParticipationActive()?"none":"";
@@ -3821,7 +3856,7 @@
     showParticipationOverlay();
     participationKicker.textContent=`LIVE QUIZ · 10 QUESTIONS · 60 SEC`;
     participationTitle.textContent=breakTitle(key);
-    participationDesc.textContent="10문항이 한 문제씩 6초 동안 진행됩니다. 자동채점 후 3문제당 성장 +1, 최대 +3을 즉시 적용합니다.";
+    participationDesc.textContent="학생은 자기 기기에서 10문항을 60초 안에 자유롭게 풉니다. 자동채점 후 3문제당 성장 +1, 최대 +3을 즉시 적용합니다.";
     participationPhaseChip.textContent=key==="HALF"?`HALF TIME · ${match.blueScore}-${match.redScore}`:`${Math.floor(match.elapsedSeconds/60)}' · ${match.blueScore}-${match.redScore}`;
     participationRoadmap.innerHTML=phaseRoadmapHtml(key);
     participationBackBtn.style.display="none";
@@ -4040,6 +4075,8 @@
     gamePhaseBadge.textContent=gameFlow.active?gameFlowLabel():"FREE PLAY";
     const cls=gameFlow.phase.toLowerCase().replace(/[^a-z0-9]/g,"");
     gamePhaseBadge.className=`game-phase-badge ${["PRE_QUIZ","ROLE_SELECT","BUILD","LINEUP","BREAK25","HALF","BREAK70","BREAK_BUILD","TACTIC_VOTE","SUBSTITUTION"].includes(gameFlow.phase)?"quiz":cls}`;
+    const broadcast=gameFlow.active&&["Q1","Q2","Q3","Q4","SHOOTOUT"].includes(gameFlow.phase)&&!document.body.classList.contains("participation-open")&&!document.body.classList.contains("lobby-open");
+    document.body.classList.toggle("broadcast-mode",broadcast);
   }
   function randomizeVisibleQuizScores(){
     autoCompleteLiveQuiz();
@@ -18812,7 +18849,8 @@
   studentJoinBtn?.addEventListener("click",joinStudentRoom);
   studentNameInput?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();joinStudentRoom();}});
   studentStageArea?.addEventListener("click",e=>{
-    const quizBtn=e.target.closest("[data-student-quiz-answer]");if(quizBtn){submitStudentQuizAnswer(Number(quizBtn.dataset.studentQuizAnswer));return;}
+    const quizBtn=e.target.closest("[data-student-quiz-answer]");if(quizBtn){submitStudentQuizAnswer(Number(quizBtn.dataset.studentQuizAnswer),Number(quizBtn.dataset.quizQuestionIndex));return;}
+    const quizNav=e.target.closest("[data-student-quiz-nav]");if(quizNav){const room=effectiveStudentRoomState(),quiz=room.quiz||{},total=Number(quiz.total)||quiz.questions?.length||0,key=quiz.key,cursorKey=`${quiz.session||0}:${key}`;if(key&&total){const cur=Number(onlineRoomState.studentQuizCursor?.[cursorKey]||0);onlineRoomState.studentQuizCursor[cursorKey]=clamp(cur+Number(quizNav.dataset.studentQuizNav||0),0,total-1);renderStudentStage();}return;}
     const roleBtn=e.target.closest("[data-student-role]");if(roleBtn){saveStudentRole(roleBtn.dataset.studentRole,false);return;}
     const roleReady=e.target.closest("[data-student-role-ready]");if(roleReady){const data=onlineRoomState.studentData||{};saveStudentRole(data.preferredRole||defaultDetailedRoleForPref(data.preferredPosition),true);return;}
     const voteBtn=e.target.closest("[data-student-tactic-vote]");if(voteBtn){saveStudentTacticVote(voteBtn.dataset.studentTacticVote);return;}
@@ -21320,9 +21358,9 @@
       showStudentRoute(String(code));setStudentMessage("이름과 희망 포지션을 입력해주세요.",false);return this.state();
     },
     previewStudentWaiting(){onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentRoomData={status:"WAITING",phase:"LOBBY"};renderStudentWaiting({name:"민수",preferredPosition:"CM",team:"blue",status:"joined",preQuizPoints:8,startAllocation:blankGrowth(),statsBonus:blankGrowth()});},
-    previewStudentFallback(){onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentRoomData={status:"WAITING",phase:"LOBBY",syncSerial:2,roster:[]};onlineRoomState.studentData={name:"민수",preferredPosition:"CM",team:"blue",status:"joined",quizAnswers:{PRE_QUIZ:{}},clientView:{phase:"PRE_QUIZ",syncSerial:7,quiz:{key:"PRE_QUIZ",index:0,total:20,stage:"RUNNING",prompt:"beautiful의 뜻은?",options:["아름다운","어려운","가능한","중요한"],endsAtMs:Date.now()+6000}}};renderStudentWaiting(onlineRoomState.studentData);return {text:studentStageArea?.innerText||"",phase:effectiveStudentRoomState().phase,serial:effectiveStudentRoomState().syncSerial};},
+    previewStudentFallback(){onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentRoomData={status:"WAITING",phase:"LOBBY",syncSerial:2,roster:[]};onlineRoomState.studentData={name:"민수",preferredPosition:"CM",team:"blue",status:"joined",quizAnswers:{PRE_QUIZ:{}},clientView:{phase:"PRE_QUIZ",syncSerial:7,quiz:{key:"PRE_QUIZ",index:0,total:20,stage:"RUNNING",questions:[{prompt:"beautiful의 뜻은?",options:["아름다운","어려운","가능한","중요한"]}],prompt:"",options:[],endsAtMs:Date.now()+100000,session:1}}};renderStudentWaiting(onlineRoomState.studentData);return {text:studentStageArea?.innerText||"",phase:effectiveStudentRoomState().phase,serial:effectiveStudentRoomState().syncSerial};},
     clientMirrorState(){return {room:onlineRoomState.mockRoom,patches:onlineRoomState.mockParticipantPatches,broadcast:onlineRoomState.clientBroadcastState};},
-    previewStudentPhase(phase="BUILD"){onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentData={name:"민수",preferredPosition:"CM",team:"blue",status:"joined",preQuizCorrect:16,preQuizPoints:8,startAllocation:{speed:2,technique:2,kick:1,physical:1,intelligence:1},statsBonus:{speed:2,technique:2,kick:1,physical:1,intelligence:1},buildReady:false,breakPoints:{BREAK25:2},breakAllocations:{BREAK25:blankGrowth()},breakReady:{}};onlineRoomState.studentRoomData={status:"LIVE",phase,breakKey:"BREAK25",quiz:phase==="PRE_QUIZ"?{key:"PRE_QUIZ",index:0,total:20,stage:"RUNNING",prompt:"beautiful의 뜻은?",options:["아름다운","어려운","가능한","중요한"],endsAtMs:Date.now()+6000}:null,match:{clock:"63:20",blueScore:1,redScore:1},playerSnapshots:{demo1:{status:"PLAYING",role:"CM",number:8,stats:{speed:64,technique:70,kick:65,physical:60,intelligence:72},stamina:78,rating:7.4,matchStats:{passesCompleted:25,passesAttempted:28,keyPasses:2,shots:1,tacklesWon:2,interceptions:1,goals:0,assists:1}}}};renderStudentWaiting(onlineRoomState.studentData);return phase;}
+    previewStudentPhase(phase="BUILD"){onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentData={name:"민수",preferredPosition:"CM",team:"blue",status:"joined",preQuizCorrect:16,preQuizPoints:8,startAllocation:{speed:2,technique:2,kick:1,physical:1,intelligence:1},statsBonus:{speed:2,technique:2,kick:1,physical:1,intelligence:1},buildReady:false,breakPoints:{BREAK25:2},breakAllocations:{BREAK25:blankGrowth()},breakReady:{}};onlineRoomState.studentRoomData={status:"LIVE",phase,breakKey:"BREAK25",quiz:phase==="PRE_QUIZ"?{key:"PRE_QUIZ",index:0,total:20,stage:"RUNNING",prompt:"beautiful의 뜻은?",options:["아름다운","어려운","가능한","중요한"],endsAtMs:Date.now()+100000}:null,match:{clock:"63:20",blueScore:1,redScore:1},playerSnapshots:{demo1:{status:"PLAYING",role:"CM",number:8,stats:{speed:64,technique:70,kick:65,physical:60,intelligence:72},stamina:78,rating:7.4,matchStats:{passesCompleted:25,passesAttempted:28,keyPasses:2,shots:1,tacklesWon:2,interceptions:1,goals:0,assists:1}}}};renderStudentWaiting(onlineRoomState.studentData);return phase;}
   };
 
   syncTacticUI("blue");
