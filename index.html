@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.7 Session Reliability</title>
+  <title>Class Football Simulator - v2.5.9 Stadium Audio &amp; Honors</title>
   <style>
     :root{
       --bg:#10141b;
@@ -532,11 +532,6 @@
     .award-card .award-desc{
       margin-top:4px;color:#aab6c5;font-size:9px;line-height:1.35;
     }
-    .award-card.xman{
-      border-color:#71414c;background:#1b1117;
-    }
-    .award-card.xman .award-title{color:#ff919c}
-
     .story-grid{
       display:grid;grid-template-columns:1fr 1fr;gap:8px;
     }
@@ -860,7 +855,7 @@
     /* v2.5 student controller flow */
     .student-roster-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.student-roster-team{border:1px solid #30425a;background:#0d1723;border-radius:11px;padding:9px}.student-roster-team h4{margin:0 0 7px;font-size:9px;letter-spacing:.08em}.student-roster-team.blue h4{color:#8bc6ff}.student-roster-team.red h4{color:#ff929a}.student-roster-name{display:flex;justify-content:space-between;gap:5px;padding:4px 0;border-top:1px solid rgba(255,255,255,.045);font-size:9px;color:#a8b6c8}.student-roster-name:first-of-type{border-top:0}.student-roster-name.me{color:#ffd76a;font-weight:950}.student-role-grid,.student-vote-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.student-role-card,.student-vote-card{border:1px solid #354760;background:#142131;color:#eaf1fa;border-radius:11px;padding:11px;text-align:left}.student-role-card.selected,.student-vote-card.selected{border-color:#e5c55d;background:rgba(229,197,93,.11);box-shadow:0 0 0 1px rgba(229,197,93,.11)}.student-role-card b,.student-vote-card b{display:block;font-size:12px}.student-role-card span,.student-vote-card span{display:block;margin-top:4px;color:#8fa1b7;font-size:8px;line-height:1.4}.student-formation-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.student-mini-team{border:1px solid #30425a;background:#0c1621;border-radius:12px;padding:8px}.student-mini-team h4{margin:0 0 6px;font-size:9px}.student-mini-pitch{position:relative;height:190px;border:1px solid #315b46;border-radius:8px;background:linear-gradient(90deg,rgba(28,96,62,.7),rgba(20,78,51,.7));overflow:hidden}.student-mini-pitch:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.22)}.student-mini-node{position:absolute;transform:translate(-50%,-50%);max-width:58px;padding:3px 4px;border-radius:6px;background:#152435;border:1px solid #52667f;color:#eef5ff;font-size:7px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.student-mini-node.me{border-color:#ffd76a;color:#ffd76a;box-shadow:0 0 0 1px rgba(255,215,106,.18)}.student-tactic-banner{margin-top:9px;padding:9px;border:1px solid #45546a;border-radius:10px;background:#111d2a;text-align:center;font-size:10px;color:#b9c7d8}.student-awards{display:grid;gap:7px;margin-top:10px}.student-award{border:1px solid #43506a;background:#111c29;border-radius:10px;padding:9px}.student-award b{font-size:10px;color:#ffd76a}.student-award span{display:block;margin-top:3px;font-size:9px;color:#9bacc0}.host-stage-section{margin-top:12px;border:1px solid #33455d;background:#0d1723;border-radius:13px;padding:12px}.host-stage-section h3{margin:0 0 8px;font-size:11px;color:#ffd76a}.host-vote-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.host-vote-team{border:1px solid #34465f;border-radius:11px;padding:10px;background:#101b28}.host-vote-row{display:grid;grid-template-columns:1fr auto;gap:8px;font-size:9px;padding:4px 0;border-top:1px solid rgba(255,255,255,.04)}.host-vote-row:first-of-type{border-top:0}.host-vote-bar{height:5px;background:#263548;border-radius:5px;overflow:hidden;margin-top:3px}.host-vote-bar i{display:block;height:100%;background:currentColor}.host-role-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.host-role-item{display:flex;justify-content:space-between;gap:6px;border:1px solid #304159;background:#111b28;border-radius:8px;padding:7px;font-size:9px}.host-role-item .ok{color:#9cf2bb}.host-role-item .wait{color:#f5c66b}
 
-    /* v2.5.7 session reliability */
+    /* v2.5.9 student focus + session reliability */
     .student-connection{color:#75d79d;font-weight:850;min-height:14px}
     .student-quiz-progress{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0;font-size:10px;color:#91a3b8}
     .student-quiz-progress b{color:#fff}
@@ -887,11 +882,83 @@
     body.broadcast-mode .ticker-board{flex:0 0 auto}
     .student-session-return{display:none!important;margin-top:14px}
     .student-session-return.visible{display:block!important}
-    .host-fast-sim{display:none;position:fixed;right:14px;top:12px;z-index:140;border:1px solid rgba(255,255,255,.20);background:rgba(8,15,25,.84);backdrop-filter:blur(7px);color:#eef6ff;padding:8px 12px;border-radius:10px;font-weight:800;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+    .host-match-tools{display:none;position:fixed;right:14px;top:12px;z-index:140;align-items:center;justify-content:flex-end;gap:8px}
+    body.broadcast-mode .host-match-tools{display:flex}
+    .host-match-speed{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid rgba(255,255,255,.20);border-radius:10px;background:rgba(8,15,25,.86);backdrop-filter:blur(7px);box-shadow:0 4px 18px rgba(0,0,0,.25)}
+    .host-match-speed>span{padding:0 5px;color:#aebfd2;font-size:9px;font-weight:900;white-space:nowrap}
+    .host-match-speed button{min-width:39px;padding:5px 8px;border-radius:7px;background:#172335;color:#9fb0c4;font-size:11px;font-weight:950}
+    .host-match-speed button.active{outline:0;border-color:#e2bd4e;background:#705b20;color:#fff6c8;box-shadow:inset 0 0 0 1px rgba(255,224,112,.12)}
+    .host-fast-sim{display:block;position:static;border:1px solid rgba(255,255,255,.20);background:rgba(8,15,25,.84);backdrop-filter:blur(7px);color:#eef6ff;padding:8px 12px;border-radius:10px;font-weight:800;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
     .host-fast-sim:hover{background:rgba(25,42,62,.94)}
     .host-fast-sim:disabled{opacity:.58;cursor:wait}
-    body.broadcast-mode .host-fast-sim{display:block}
-    @media(max-width:760px){.host-quiz-overview{grid-template-columns:1fr 1fr}.student-build-card{grid-template-columns:68px 1fr auto}}
+    @media(max-width:760px){.host-quiz-overview{grid-template-columns:1fr 1fr}.student-build-card{grid-template-columns:68px 1fr auto}.host-match-tools{left:8px;right:8px;top:8px;gap:5px}.host-fast-sim{padding:7px 9px;font-size:10px}.host-match-speed>span{display:none}}
+
+    /* v2.5.9 compact student identity and gameplay-first layout */
+    body.student-open .student-screen.session-active{align-items:flex-start;padding:10px}
+    .student-screen.session-active .student-shell{width:min(100%,600px);margin:auto}
+    .student-screen.session-active .student-card{position:relative;padding:12px;border-radius:16px}
+    .student-screen.session-active .student-brand{display:none}
+    .student-screen.session-active .student-room-chip{position:absolute;top:12px;right:12px;z-index:2;margin:0;padding:4px 7px;font-size:8px;letter-spacing:.06em}
+    .student-player-summary{display:grid;grid-template-columns:44px minmax(0,1fr);gap:9px;align-items:center;min-height:44px;padding-right:82px;text-align:left}
+    .student-screen.session-active .student-player-badge{width:42px;height:42px;margin:0;border-width:2px;font-size:17px;box-shadow:0 0 16px rgba(76,155,230,.12)}
+    .student-player-copy{min-width:0}
+    .student-screen.session-active .student-wait-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px;line-height:1.15}
+    .student-player-details{display:flex;align-items:center;gap:5px;min-width:0;margin-top:4px}
+    .student-screen.session-active .student-wait-meta{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0;font-size:8px}
+    .student-screen.session-active .student-team-big{flex:0 0 auto;margin:0;padding:3px 6px;font-size:8px}
+    .student-screen.session-active .student-wait-text{margin:6px 0 0;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.025);font-size:9px;line-height:1.35}
+    .student-screen.session-active .student-stage-area{margin-top:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.065)}
+    .student-screen.session-active .student-connection{margin-top:7px;min-height:10px;font-size:8px}
+    .student-formation-grid{grid-template-columns:1fr;gap:10px}
+    .student-mini-team{padding:10px;border-radius:13px}
+    .student-mini-team.blue{box-shadow:inset 3px 0 0 rgba(77,163,255,.55)}
+    .student-mini-team.red{box-shadow:inset 3px 0 0 rgba(255,93,102,.55)}
+    .student-mini-team.own{border-color:#d7b64f;box-shadow:inset 3px 0 0 #d7b64f,0 0 0 1px rgba(215,182,79,.16)}
+    .student-mini-team-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+    .student-mini-team-head h4{margin:0;font-size:11px;letter-spacing:.06em}
+    .student-own-team-chip{padding:3px 7px;border-radius:999px;background:rgba(240,201,94,.12);color:#ffd76a;font-size:8px;font-weight:950}
+    .student-mini-pitch{height:clamp(190px,46vw,225px);border-radius:10px;background:repeating-linear-gradient(90deg,rgba(31,100,65,.78) 0,rgba(31,100,65,.78) 10%,rgba(23,85,56,.78) 10%,rgba(23,85,56,.78) 20%)}
+    .student-mini-pitch:after{content:"";position:absolute;left:50%;top:50%;width:16%;aspect-ratio:1;border:1px solid rgba(255,255,255,.22);border-radius:50%;transform:translate(-50%,-50%)}
+    .student-mini-node{max-width:82px;padding:4px 6px;border-radius:7px;font-size:8px;line-height:1.25}
+    .student-mini-node.me{z-index:2;background:#3b3217;border-color:#ffe17d;color:#fff2aa;box-shadow:0 0 0 2px rgba(255,215,106,.18)}
+    @media(max-width:380px){.student-player-summary{padding-right:72px}.student-screen.session-active .student-room-chip{right:9px}.student-mini-node{max-width:68px;padding:3px 4px;font-size:7px}.student-mini-pitch{height:185px}}
+
+    /* v2.5.9 personal match record + honors ceremony */
+    .student-match-record{margin-top:10px;padding:11px;border:1px solid #3a506b;border-radius:14px;background:linear-gradient(145deg,#132235,#0b151f);box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+    .student-match-record.final{border-color:#8a7130;background:linear-gradient(145deg,rgba(104,78,20,.24),#101a27 46%,#0a131d)}
+    .student-record-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+    .student-record-head strong{font-size:12px;color:#f5f8fc;letter-spacing:.04em}.student-record-head span{font-size:8px;color:#8fa2b9;font-weight:900}
+    .student-record-hero{display:grid;grid-template-columns:82px minmax(0,1fr);gap:9px;align-items:stretch}
+    .student-record-rating{display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #735f2b;border-radius:11px;background:linear-gradient(145deg,#4b3c16,#1b1b1a);color:#ffe68c}
+    .student-record-rating span{font-size:8px;font-weight:950;letter-spacing:.09em}.student-record-rating b{font-size:28px;line-height:1.05;margin-top:2px}
+    .student-record-condition{display:flex;flex-direction:column;justify-content:center;padding:9px 10px;border:1px solid #30445d;border-radius:11px;background:rgba(8,17,27,.58)}
+    .student-record-condition>div:first-child{display:flex;justify-content:space-between;gap:8px;color:#9fb1c6;font-size:9px;font-weight:900}.student-record-condition b{color:#fff}
+    .student-stamina-track{height:8px;margin-top:7px;border-radius:999px;overflow:hidden;background:#202d3e}.student-stamina-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#45c77a,#bfe55e);box-shadow:0 0 12px rgba(69,199,122,.24)}
+    .student-record-role{margin-top:6px;color:#8295ac;font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .student-record-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:8px}
+    .student-record-stat{min-width:0;padding:7px 3px;border:1px solid #2f4259;border-radius:9px;background:#0d1925;text-align:center}
+    .student-record-stat .icon{display:block;font-size:13px;line-height:1}.student-record-stat b{display:block;margin-top:4px;color:#fff;font-size:14px;line-height:1.05;white-space:nowrap}.student-record-stat small{display:block;margin-top:3px;color:#8194aa;font-size:7px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .student-record-stat.goal b{color:#ffe37a}.student-record-stat.assist b{color:#8fd4ff}.student-record-stat.pass b{color:#9df1bd}.student-record-stat.defence b{color:#ffaaa5}
+    .student-ability-details{margin-top:7px;border:1px solid #293b50;border-radius:10px;background:#0b151f;padding:0 8px 8px}.student-ability-details summary{cursor:pointer;padding:8px 2px 2px;color:#879ab0;font-size:8px;font-weight:900;letter-spacing:.05em}.student-ability-details .student-stat-grid{margin-top:7px}
+
+    .result-pom-wrap{margin:0 0 16px}
+    .result-pom-hero,.student-pom-hero{position:relative;overflow:hidden;border:1px solid #d2ae42;border-radius:16px;background:radial-gradient(circle at 12% 20%,rgba(255,231,125,.24),transparent 30%),linear-gradient(135deg,#5b4512,#241d14 48%,#101824);box-shadow:0 0 0 1px rgba(255,215,91,.13),0 14px 34px rgba(0,0,0,.28);color:#fff6c6}
+    .result-pom-hero{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:14px;align-items:center;padding:17px 20px}
+    .student-pom-hero{margin-top:11px;padding:15px;text-align:center}.student-pom-hero>*{position:relative;z-index:1}
+    .result-pom-hero:after,.student-pom-hero:after{content:"";position:absolute;inset:-80% -35%;background:linear-gradient(110deg,transparent 42%,rgba(255,255,255,.15) 50%,transparent 58%);animation:pomHonorShine 5.4s ease-in-out infinite;pointer-events:none}
+    .pom-crown{position:relative;z-index:1;font-size:43px;text-align:center;filter:drop-shadow(0 3px 8px rgba(255,205,56,.32))}.pom-copy{position:relative;z-index:1;min-width:0}.pom-label{font-size:9px;font-weight:1000;letter-spacing:.16em;color:#ffd96a}.pom-name{margin-top:3px;font-size:27px;line-height:1.05;font-weight:1000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pom-team{margin-top:5px;color:#d8c98f;font-size:10px;font-weight:900}.pom-rating{position:relative;z-index:1;min-width:72px;padding:9px 11px;border:1px solid rgba(255,230,133,.38);border-radius:12px;background:rgba(5,10,16,.36);text-align:center}.pom-rating span{display:block;font-size:8px;color:#d4c58d;font-weight:900}.pom-rating b{display:block;margin-top:2px;font-size:27px;color:#fff}.student-pom-hero .pom-crown{font-size:38px}.student-pom-hero .pom-name{font-size:25px}.student-pom-hero .pom-rating{display:inline-block;margin-top:9px}.pom-mine-badge{display:inline-block;margin-top:7px;padding:4px 8px;border-radius:999px;background:#ffe27a;color:#3a2d08;font-size:8px;font-weight:1000}
+    @keyframes pomHonorShine{0%,62%{transform:translateX(-45%);opacity:0}72%{opacity:1}88%,100%{transform:translateX(45%);opacity:0}}
+
+    .award-passer{--award-accent:#69bcff;--award-bg:#102b43}.award-wall{--award-accent:#7ee3a7;--award-bg:#123125}.award-engine{--award-accent:#ffbd69;--award-bg:#3a2411}.award-magic{--award-accent:#cf9cff;--award-bg:#2b183c}.award-keeper{--award-accent:#68e3dc;--award-bg:#103337}.award-clutch{--award-accent:#ff8fa2;--award-bg:#3c1721}.award-hero{--award-accent:#8eafff;--award-bg:#172648}
+    .award-card{position:relative;overflow:hidden;min-height:94px;padding:12px;border-color:var(--award-accent,#53647a);background:linear-gradient(145deg,var(--award-bg,#111b28),#0a121b 72%)}
+    .award-card:after,.student-award:after{content:"";position:absolute;right:-24px;top:-28px;width:72px;height:72px;border-radius:50%;background:var(--award-accent,#64768c);opacity:.09;pointer-events:none}
+    .award-card .award-title{display:flex;align-items:center;gap:6px;color:var(--award-accent,#aebccc);font-size:10px;font-weight:1000}.award-card .award-icon{font-size:21px;line-height:1}.award-card .award-player{margin-top:7px;font-size:14px;font-weight:1000}.award-card .award-desc{margin-top:5px;color:#c0ccda;font-size:9px;font-weight:800}
+    .student-awards{grid-template-columns:1fr 1fr;gap:8px}.student-awards-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:14px;color:#ffd76a;font-size:10px;font-weight:1000;letter-spacing:.08em}.student-awards-title span{color:#8ea0b6;font-size:8px;letter-spacing:0}
+    .student-award{position:relative;overflow:hidden;min-height:108px;padding:10px;border-color:var(--award-accent,#52657c);background:linear-gradient(145deg,var(--award-bg,#111c29),#0b141e 78%)}
+    .student-award.mine{box-shadow:0 0 0 2px #ffe27a,0 0 18px rgba(255,210,71,.18)}.student-award-title{display:flex;align-items:flex-start;gap:5px;color:var(--award-accent,#ffd76a)}.student-award-title i{font-style:normal;font-size:19px;line-height:1}.student-award-title b{color:inherit;font-size:9px;font-weight:1000;line-height:1.25}.student-award strong{position:relative;z-index:1;display:block;margin-top:8px;color:#fff;font-size:12px;font-weight:1000}.student-award span{position:relative;z-index:1;margin-top:5px;color:#b8c5d5;font-size:8px;font-weight:800;line-height:1.35}.student-award-mine{display:inline-block!important;width:max-content;margin-top:6px!important;padding:3px 6px;border-radius:999px;background:#ffe27a;color:#3b2e08!important;font-size:7px!important;font-weight:1000!important}
+    @media(max-width:520px){.result-pom-hero{grid-template-columns:50px minmax(0,1fr);padding:14px}.result-pom-hero .pom-rating{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:8px}.result-pom-hero .pom-rating b{margin:0}.pom-name{font-size:22px}}
+    @media(max-width:380px){.student-record-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.student-awards{grid-template-columns:1fr}.student-record-hero{grid-template-columns:72px minmax(0,1fr)}}
+    @media(prefers-reduced-motion:reduce){.result-pom-hero:after,.student-pom-hero:after{animation:none}}
 </style>
 </head>
 <body class="lobby-open">
@@ -899,7 +966,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.7</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.9</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1018,10 +1085,16 @@
         <div id="studentJoinMessage" class="student-message"></div>
       </div>
       <div id="studentWaiting" class="student-waiting">
-        <div id="studentNumberBadge" class="student-player-badge">?</div>
-        <div id="studentWaitingName" class="student-wait-name">PLAYER</div>
-        <div id="studentWaitingMeta" class="student-wait-meta">희망 포지션 · 상관없음</div>
-        <div id="studentAssignedTeam" class="student-team-big pending">팀 배정 대기</div>
+        <div class="student-player-summary">
+          <div id="studentNumberBadge" class="student-player-badge">?</div>
+          <div class="student-player-copy">
+            <div id="studentWaitingName" class="student-wait-name">PLAYER</div>
+            <div class="student-player-details">
+              <div id="studentWaitingMeta" class="student-wait-meta">희망 포지션 · 상관없음</div>
+              <div id="studentAssignedTeam" class="student-team-big pending">팀 배정 대기</div>
+            </div>
+          </div>
+        </div>
         <div id="studentWaitingText" class="student-wait-text">호스트 로비에 참가했습니다.<br>다른 친구들이 입장할 때까지 기다려주세요.</div>
         <div id="studentStageArea" class="student-stage-area"></div>
         <div id="studentConnectionText" class="student-connection">Firebase · 연결 확인 중</div>
@@ -1058,7 +1131,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.7 · Session Reliability</p>
+      <p>v2.5.9 · Stadium Audio &amp; Honors</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -1076,8 +1149,8 @@
           <div style="height:8px"></div>
           <button id="autoDemoBtn" class="active" style="width:100%">자동 플레이 AI ON</button>
           <div style="height:8px"></div>
-          <button id="soundToggleBtn" class="active" style="width:100%">🔊 효과음 ON</button>
-          <div class="sound-note">브라우저 정책상 첫 클릭 이후부터 간단한 비트 음이 재생됩니다.</div>
+          <button id="soundToggleBtn" class="active" style="width:100%">🔊 경기장 사운드 ON</button>
+          <div class="sound-note">호스트가 화면을 한 번 클릭하면 내장 킥 사운드와 관중 반응이 재생됩니다. 학생 기기에서는 소리가 나지 않습니다.</div>
           <div style="height:8px"></div>
           <button id="endMatchBtn" class="danger" style="width:100%">경기 종료 · 결과 보기</button>
         </section>
@@ -1253,7 +1326,14 @@
     </aside>
 
     <main>
-      <button id="hostFastSimBtn" class="host-fast-sim" title="남은 경기를 빠르게 시뮬레이션하고 최종 결과를 엽니다.">⚡ 경기 강제 시뮬레이션 후 결과 보기</button>
+      <div class="host-match-tools">
+        <div class="host-match-speed" role="group" aria-label="경기 속도">
+          <span>경기 속도</span>
+          <button id="matchSpeed1Btn" class="active" type="button" aria-pressed="true" title="기본 경기 속도">1×</button>
+          <button id="matchSpeed2Btn" type="button" aria-pressed="false" title="경기 진행을 2배 빠르게">2×</button>
+        </div>
+        <button id="hostFastSimBtn" class="host-fast-sim" title="남은 경기를 빠르게 시뮬레이션하고 최종 결과를 엽니다.">⚡ 경기 강제 시뮬레이션 후 결과 보기</button>
+      </div>
       <div class="scorebar">
         <div class="teamlabel" style="color:var(--blue)">BLUE <span id="blueScore">0</span></div>
         <div class="center-status">
@@ -1342,7 +1422,7 @@
       <div style="color:var(--red)">RED</div>
     </div>
     <div id="resultShootout" class="result-shootout"></div>
-    <div id="resultPom" style="text-align:center;margin-bottom:16px"></div>
+    <div id="resultPom" class="result-pom-wrap"></div>
 
     <div class="result-hero-grid">
       <div class="result-box">
@@ -1406,6 +1486,11 @@
   const AI_HZ = 10;
   const PHYSICS_DT = 1 / PHYSICS_HZ;
   const AI_DT = 1 / AI_HZ;
+  // v2.5.9 keeps the balance change deliberately small: slightly cleaner
+  // execution/receiving and about 7% less waiting before the next decision.
+  const PASS_EXECUTION_ERROR_FACTOR = .965;
+  const PASS_RECEIVE_SCORE_BONUS = 1.2;
+  const AI_DECISION_TEMPO_MULTIPLIER = 1.07;
 
   const canvas = document.getElementById("pitch");
   const ctx = canvas.getContext("2d");
@@ -1508,6 +1593,8 @@
   const momentumChart = document.getElementById("momentumChart");
   const momentumText = document.getElementById("momentumText");
   const soundToggleBtn = document.getElementById("soundToggleBtn");
+  const matchSpeed1Btn = document.getElementById("matchSpeed1Btn");
+  const matchSpeed2Btn = document.getElementById("matchSpeed2Btn");
   const shootoutBoard = document.getElementById("shootoutBoard");
   const shootoutBlueMarks = document.getElementById("shootoutBlueMarks");
   const shootoutRedMarks = document.getElementById("shootoutRedMarks");
@@ -1531,6 +1618,7 @@
 
   let running = true;
   let autoPlay = true;
+  let matchSpeedMultiplier = 1;
   let showDebug = false;
   let showLabels = true;
   let selectedPlayerId = null;
@@ -1545,6 +1633,13 @@
   // v1.1 spectacle state
   let soundEnabled=true;
   let audioCtx=null;
+  let audioMaster=null;
+  let audioCompressor=null;
+  let embeddedNoiseBuffer=null;
+  const audioFxState={
+    lastKickAt:-Infinity,lastCrowdAt:-Infinity,lastCrowdPriority:0,
+    kickCount:0,crowdCount:0,lastCue:"NONE"
+  };
   const kickVisuals=[];
   const momentumHistory=Array(18).fill(0);
   let momentumTimer=0;
@@ -1567,8 +1662,21 @@
   };
 
 
+  function hostAudioAllowed(){
+    return soundEnabled&&
+      !document.body.classList.contains("student-open")&&
+      !gameFlow.fastSimulating;
+  }
+
+  function setAudioMasterLevel(enabled){
+    if(!audioCtx||!audioMaster||audioCtx.state==="closed")return;
+    const t=audioCtx.currentTime;
+    audioMaster.gain.cancelScheduledValues(t);
+    audioMaster.gain.setTargetAtTime(enabled ? .72 : .0001,t,.018);
+  }
+
   function ensureAudio(){
-    if(!soundEnabled)return null;
+    if(!hostAudioAllowed())return null;
 
     if(!audioCtx){
       const AudioContextClass=window.AudioContext||window.webkitAudioContext;
@@ -1576,63 +1684,175 @@
       audioCtx=new AudioContextClass();
     }
 
-    if(audioCtx.state==="suspended"){
-      audioCtx.resume().catch(()=>{});
+    if(!audioMaster){
+      audioMaster=audioCtx.createGain();
+      audioCompressor=audioCtx.createDynamicsCompressor();
+      audioMaster.gain.value=.72;
+      audioCompressor.threshold.value=-22;
+      audioCompressor.knee.value=16;
+      audioCompressor.ratio.value=5;
+      audioCompressor.attack.value=.006;
+      audioCompressor.release.value=.24;
+      audioMaster.connect(audioCompressor);
+      audioCompressor.connect(audioCtx.destination);
     }
+
+    if(audioCtx.state==="suspended")audioCtx.resume().catch(()=>{});
+    setAudioMasterLevel(true);
     return audioCtx;
   }
 
-  function playTone(freq=180,duration=.055,volume=.018,wave="sine",delay=0){
-    if(!soundEnabled)return;
-    const ac=ensureAudio();
-    if(!ac||ac.state!=="running")return;
+  function embeddedNoise(ac){
+    if(embeddedNoiseBuffer)return embeddedNoiseBuffer;
+    const seconds=4.25,length=Math.ceil(ac.sampleRate*seconds);
+    const buffer=ac.createBuffer(1,length,ac.sampleRate);
+    const data=buffer.getChannelData(0);
+    let brown=0,slow=0;
+    for(let i=0;i<length;i++){
+      const white=Math.random()*2-1;
+      brown=(brown+white*.028)/1.022;
+      slow=slow*.992+brown*.008;
+      data[i]=clamp(white*.16+brown*1.9+slow*2.6,-1,1)*.62;
+    }
+    embeddedNoiseBuffer=buffer;
+    return buffer;
+  }
 
-    const osc=ac.createOscillator();
+  function connectAudioNode(ac,node,pan=0){
+    if(ac.createStereoPanner){
+      const panner=ac.createStereoPanner();
+      panner.pan.value=clamp(pan,-1,1);
+      node.connect(panner);panner.connect(audioMaster);
+      return;
+    }
+    node.connect(audioMaster);
+  }
+
+  function playFilteredNoise(ac,{delay=0,duration=.08,volume=.02,frequency=900,q=.8,pan=0,attack=.008,playbackRate=1}={}){
+    const source=ac.createBufferSource();
+    const filter=ac.createBiquadFilter();
     const gain=ac.createGain();
-    const t=ac.currentTime+delay;
+    const t=ac.currentTime+Math.max(0,delay),end=t+duration;
+    source.buffer=embeddedNoise(ac);
+    source.playbackRate.value=playbackRate;
+    filter.type="bandpass";filter.frequency.value=frequency;filter.Q.value=q;
+    gain.gain.setValueAtTime(.0001,t);
+    gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),t+Math.min(attack,duration*.35));
+    gain.gain.exponentialRampToValueAtTime(.0001,end);
+    source.connect(filter);filter.connect(gain);connectAudioNode(ac,gain,pan);
+    const maxOffset=Math.max(.05,embeddedNoise(ac).duration-duration-.05);
+    source.start(t,Math.random()*maxOffset);
+    source.stop(end+.03);
+  }
 
-    osc.type=wave;
-    osc.frequency.setValueAtTime(freq,t);
+  function playTone(freq=180,duration=.055,volume=.018,wave="sine",delay=0,endFreq=null,pan=0){
+    const ac=ensureAudio();
+    if(!ac||ac.state==="closed")return;
+    const osc=ac.createOscillator(),gain=ac.createGain();
+    const t=ac.currentTime+delay,end=t+duration;
+    osc.type=wave;osc.frequency.setValueAtTime(freq,t);
+    if(Number.isFinite(endFreq))osc.frequency.exponentialRampToValueAtTime(Math.max(20,endFreq),end);
     gain.gain.setValueAtTime(.0001,t);
     gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),t+.008);
-    gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
+    gain.gain.exponentialRampToValueAtTime(.0001,end);
+    osc.connect(gain);connectAudioNode(ac,gain,pan);osc.start(t);osc.stop(end+.02);
+  }
 
-    osc.connect(gain);
-    gain.connect(ac.destination);
-    osc.start(t);
-    osc.stop(t+duration+.02);
+  function addCrowdVoiceCluster(ac,t,duration,kind){
+    const voices=kind==="GOAL"?10:kind==="SAVE"||kind==="HYPE"?6:4;
+    const voicePeak=kind==="GOAL"?.0022:kind==="SAVE"||kind==="HYPE"?.00155:.00105;
+    for(let i=0;i<voices;i++){
+      const osc=ac.createOscillator(),gain=ac.createGain(),filter=ac.createBiquadFilter();
+      const start=t+Math.random()*(kind==="GOAL"?.18:.08),end=t+duration;
+      const base=125+Math.random()*145;
+      osc.type=i%3===0?"sawtooth":"triangle";
+      osc.frequency.setValueAtTime(base,start);
+      osc.frequency.linearRampToValueAtTime(base*(.88+Math.random()*.20),end);
+      filter.type="lowpass";filter.frequency.value=720+Math.random()*520;filter.Q.value=.4;
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(voicePeak*(.7+Math.random()*.6),start+.06+Math.random()*.09);
+      if(kind==="GOAL")gain.gain.setValueAtTime(voicePeak*(.45+Math.random()*.35),Math.max(start+.16,end-.70));
+      gain.gain.exponentialRampToValueAtTime(.0001,end);
+      osc.connect(filter);filter.connect(gain);connectAudioNode(ac,gain,Math.random()*1.7-.85);
+      osc.start(start);osc.stop(end+.03);
+    }
+  }
+
+  function playCrowdReaction(kind="CHANCE"){
+    if(!hostAudioAllowed())return false;
+    const profiles={
+      CHANCE:{priority:1,duration:.68,peak:.031,attack:.08,bands:[520,1050]},
+      TACKLE:{priority:1,duration:.38,peak:.022,attack:.025,bands:[610,1280]},
+      MURMUR:{priority:2,duration:1.10,peak:.026,attack:.18,bands:[330,720]},
+      HYPE:{priority:2,duration:1.02,peak:.047,attack:.055,bands:[560,1180]},
+      SAVE:{priority:3,duration:1.12,peak:.060,attack:.045,bands:[590,1260]},
+      GOAL:{priority:4,duration:3.65,peak:.105,attack:.095,bands:[510,980,1680]}
+    };
+    const profile=profiles[kind]||profiles.CHANCE;
+    const now=performance.now(),since=now-audioFxState.lastCrowdAt;
+    if(kind!=="GOAL"&&since<360&&profile.priority<=audioFxState.lastCrowdPriority)return false;
+    const ac=ensureAudio();if(!ac||ac.state==="closed")return false;
+    audioFxState.lastCrowdAt=now;audioFxState.lastCrowdPriority=profile.priority;
+    audioFxState.crowdCount++;audioFxState.lastCue=`CROWD_${kind}`;
+    const start=ac.currentTime+(kind==="GOAL"?.035:.02);
+    profile.bands.forEach((frequency,i)=>playFilteredNoise(ac,{
+      delay:start-ac.currentTime+i*(kind==="GOAL"?.045:.025),
+      duration:profile.duration-i*.035,
+      volume:profile.peak*(i===0?1:i===1?.68:.43),
+      frequency,q:kind==="MURMUR"?.62:.82,
+      pan:profile.bands.length===2?(i? .42:-.42):(i-1)*.38,
+      attack:profile.attack,
+      playbackRate:.90+Math.random()*.18
+    }));
+    addCrowdVoiceCluster(ac,start,profile.duration,kind);
+    return true;
   }
 
   function playKickSound(kind,power=20){
-    if(!soundEnabled)return;
+    if(!hostAudioAllowed())return false;
+    const now=performance.now();
+    const minGap=kind==="PASS"?42:kind==="KILL"?48:58;
+    if(now-audioFxState.lastKickAt<minGap)return false;
+    const ac=ensureAudio();if(!ac||ac.state==="closed")return false;
+    audioFxState.lastKickAt=now;audioFxState.kickCount++;audioFxState.lastCue=`KICK_${kind}`;
     const strength=clamp((power-12)/30,0,1);
-
-    if(kind==="POWER"){
-      playTone(82,.075,.025,"triangle");
-      playTone(122,.065,.017,"square",.025);
-    }else if(kind==="SHOT"){
-      playTone(105+strength*42,.055,.017,"triangle");
-    }else if(kind==="KILL"){
-      playTone(190,.045,.012,"sine");
-      playTone(260,.045,.010,"sine",.035);
-    }else{
-      playTone(145+strength*35,.032,.008,"triangle");
-    }
+    const shot=kind==="SHOT"||kind==="POWER";
+    const thumpVolume=kind==="POWER"?.046:kind==="SHOT"?.034:kind==="KILL"?.023:.014;
+    const thumpDuration=shot?.090:kind==="KILL"?.064:.045;
+    const startFreq=(shot?128:kind==="KILL"?158:175)+strength*38;
+    playTone(startFreq,thumpDuration,thumpVolume,shot?"sine":"triangle",0,shot?54:92);
+    playFilteredNoise(ac,{
+      duration:shot?.068:.038,
+      volume:shot?.030:kind==="KILL"?.020:.012,
+      frequency:shot?720:kind==="KILL"?1380:1040,
+      q:shot?.72:1.05,
+      attack:.002,
+      playbackRate:.96+strength*.13
+    });
+    if(kind==="POWER")playFilteredNoise(ac,{delay:.012,duration:.085,volume:.021,frequency:390,q:.68,attack:.003});
+    if(shot)playCrowdReaction("CHANCE");
+    return true;
   }
 
   function playEventSound(kind){
-    if(!soundEnabled)return;
+    if(!hostAudioAllowed())return false;
     if(kind==="GOAL"){
-      [196,247,294,392].forEach((f,i)=>playTone(f,.13,.021,"sine",i*.075));
+      playTone(196,.18,.018,"sine",.02,220,-.45);
+      playTone(294,.22,.017,"triangle",.10,392,.42);
+      playCrowdReaction("GOAL");
     }else if(kind==="SAVE"){
-      playTone(132,.07,.014,"square");
-      playTone(198,.08,.012,"triangle",.045);
+      playTone(118,.075,.017,"square",0,82);
+      playTone(202,.10,.012,"triangle",.04,150);
+      playCrowdReaction("SAVE");
     }else if(kind==="TACKLE"){
-      playTone(116,.045,.012,"square");
+      playTone(105,.052,.015,"square",0,66);
+      playCrowdReaction("TACKLE");
     }else if(kind==="CARD"){
-      playTone(310,.07,.012,"sine");
-      playTone(250,.09,.011,"sine",.08);
+      playTone(1480,.16,.010,"sine",0,960,-.25);
+      playTone(1320,.14,.008,"sine",.13,890,.22);
+      playCrowdReaction("MURMUR");
     }
+    return true;
   }
 
   function addKickVisual(owner,kind,power=20,dx=1,dy=0){
@@ -2548,7 +2768,7 @@
   // Host runs the authoritative match engine; students only join the room.
   // ============================================================
   const DSSOCCER_DEPLOY_URL="https://yeomt.github.io/DSsoccer/";
-  const DSSOCCER_BUILD="2.5.7";
+  const DSSOCCER_BUILD="2.5.9";
   const FIREBASE_CONFIG={
     apiKey:"AIzaSyBtK7NAfw4wDsS4LRacWF78PHT3zls50IQ",
     authDomain:"dsgames-fecef.firebaseapp.com",
@@ -3071,6 +3291,7 @@
   function showStudentRoute(code){
     onlineRoomState.mode="student";onlineRoomState.studentRoomCode=code;onlineRoomState.studentLastSyncSerial=0;onlineRoomState.studentSessionId=null;onlineRoomState.studentSessionStartedAtMs=0;onlineRoomState.studentSessionEnded=false;onlineRoomState.studentRoomData=null;
     document.body.classList.remove("lobby-open","participation-open");document.body.classList.add("student-open");
+    studentScreen?.classList.remove("session-active");studentJoinForm?.classList.remove("hidden");studentWaiting?.classList.remove("active");
     if(studentRoomCodeEl)studentRoomCodeEl.textContent=code;
     if(studentPositionSelect)studentPositionSelect.innerHTML=positionPrefOptions("FLEX");
     if(studentJoinMessage)studentJoinMessage.textContent="Firebase 연결 중...";
@@ -3083,7 +3304,7 @@
   function renderStudentWaiting(data){
     if(!data)return;
     onlineRoomState.studentData={...(onlineRoomState.studentData||{}),...data};
-    studentJoinForm?.classList.add("hidden");studentWaiting?.classList.add("active");
+    studentJoinForm?.classList.add("hidden");studentWaiting?.classList.add("active");studentScreen?.classList.add("session-active");
     if(studentWaitingName)studentWaitingName.textContent=data.name||"PLAYER";
     if(studentWaitingMeta)studentWaitingMeta.textContent=`희망 포지션 · ${POSITION_PREFS[data.preferredPosition]||"상관없음"}`;
     const team=data.team;
@@ -3116,6 +3337,58 @@
     const vals=snapshot?.stats||null;
     const bonus=data?.statsBonus||{};
     return `<div class="student-stat-grid">${GROWTH_STATS.map(k=>`<div class="student-stat"><span>${GROWTH_LABELS[k]}</span><b>${vals?Math.round(vals[k]||0):`+${Number(bonus[k])||0}`}</b></div>`).join("")}</div>`;
+  }
+  function awardThemeClass(award){
+    const explicit=String(award?.theme||"").toLowerCase();
+    if(["passer","wall","engine","magic","keeper","clutch","hero"].includes(explicit))return `award-${explicit}`;
+    const title=String(award?.title||"").toUpperCase();
+    if(title.includes("PASSER"))return "award-passer";
+    if(title.includes("WALL"))return "award-wall";
+    if(title.includes("MARATHON"))return "award-engine";
+    if(title.includes("MAGICIAN"))return "award-magic";
+    if(title.includes("KEEPER"))return "award-keeper";
+    if(title.includes("CLUTCH"))return "award-clutch";
+    return "award-hero";
+  }
+  function studentMatchRecordHtml(snapshot,data,final=false){
+    const snap=snapshot||{},ms=snap.matchStats||{};
+    const completed=Number(ms.passesCompleted)||0,attempted=Number(ms.passesAttempted)||0;
+    const passRate=attempted?`${Math.round(completed/attempted*100)}%`:"-";
+    const shots=Number(ms.shots)||0,shotsOnTarget=Number(ms.shotsOnTarget)||0;
+    const dribblesWon=Number(ms.dribblesWon)||0,dribblesAttempted=Number(ms.dribblesAttempted)||0;
+    const role=snap.role||data?.assignedRole||"BENCH",tactical=snap.tacticalRole||data?.assignedTacticalRole||data?.preferredRole||"AUTO";
+    const ratingKnown=snap.rating!==null&&snap.rating!==undefined&&Number.isFinite(Number(snap.rating));
+    const rating=ratingKnown?Number(snap.rating).toFixed(1):"-";
+    const staminaKnown=snap.stamina!==null&&snap.stamina!==undefined&&Number.isFinite(Number(snap.stamina)),stamina=staminaKnown?clamp(Math.round(Number(snap.stamina)),0,100):0;
+    const isKeeper=role==="GK";
+    const stats=[
+      {icon:"⚽",value:Number(ms.goals)||0,label:"골",cls:"goal"},
+      {icon:"🅰️",value:Number(ms.assists)||0,label:"도움",cls:"assist"},
+      {icon:"🎯",value:passRate,label:`패스 ${completed}/${attempted}`,cls:"pass"},
+      {icon:"🥅",value:`${shotsOnTarget}/${shots}`,label:"유효/전체 슈팅",cls:"goal"},
+      {icon:"🔑",value:Number(ms.keyPasses)||0,label:"키패스",cls:"assist"},
+      isKeeper
+        ? {icon:"🧤",value:Number(ms.saves)||0,label:"선방",cls:"pass"}
+        : {icon:"✨",value:dribblesAttempted?`${dribblesWon}/${dribblesAttempted}`:dribblesWon,label:"드리블 성공",cls:"pass"},
+      {icon:"🛡️",value:Number(ms.tacklesWon)||0,label:"태클 성공",cls:"defence"},
+      {icon:"⚡",value:Number(ms.interceptions)||0,label:"인터셉트",cls:"defence"}
+    ];
+    const roleText=`#${snap.number||data?.shirtNumber||"-"} · ${role} · ${detailedRoleLabel(tactical)}`;
+    return `<section class="student-match-record ${final?"final":""}"><div class="student-record-head"><strong>${final?"🏁 나의 최종 경기 기록":"⚽ 나의 실시간 경기 기록"}</strong><span>${escapeLobbyHtml(snap.status||data?.lineupStatus||"BENCH")}</span></div><div class="student-record-hero"><div class="student-record-rating"><span>MATCH RATING</span><b>${rating}</b></div><div class="student-record-condition"><div><span>현재 체력</span><b>${staminaKnown?`${stamina}%`:"-"}</b></div><div class="student-stamina-track"><i style="width:${stamina}%"></i></div><div class="student-record-role">${escapeLobbyHtml(roleText)}</div></div></div><div class="student-record-grid">${stats.map(s=>`<div class="student-record-stat ${s.cls}"><span class="icon">${s.icon}</span><b>${s.value}</b><small>${s.label}</small></div>`).join("")}</div></section>`;
+  }
+  function studentAwardMine(award,data){
+    if(award?.participantId)return award.participantId===onlineRoomState.studentParticipantId;
+    return String(award?.name||"")===String(data?.name||"")&&String(award?.team||"").toLowerCase()===String(data?.team||"").toLowerCase();
+  }
+  function studentHonorsHtml(result,data){
+    const res=result||{},raw=Array.isArray(res.awards)?res.awards:[];
+    const pom=res.pom||raw.find(a=>a.theme==="pom"||String(a.title||"").toUpperCase().includes("PLAYER OF THE MATCH"))||null;
+    const awards=raw.filter(a=>a!==pom&&a.theme!=="pom"&&!String(a.title||"").toUpperCase().includes("PLAYER OF THE MATCH"));
+    const pomMine=pom&&studentAwardMine(pom,data);
+    const pomRating=pom?.rating!==null&&pom?.rating!==undefined&&Number.isFinite(Number(pom.rating))?Number(pom.rating).toFixed(1):"-";
+    const pomHtml=pom?`<section class="student-pom-hero"><div class="pom-crown">👑</div><div class="pom-label">PLAYER OF THE MATCH</div><div class="pom-name">${escapeLobbyHtml(pom.name||"")}</div><div class="pom-team">${escapeLobbyHtml(String(pom.team||"").toUpperCase())} TEAM · 오늘 경기 최고의 선수</div><div class="pom-rating"><span>MATCH RATING</span><b>${pomRating}</b></div>${pomMine?`<span class="pom-mine-badge">🏆 내가 오늘의 POM!</span>`:""}</section>`:"";
+    const awardHtml=awards.length?awards.map(a=>{const mine=studentAwardMine(a,data);return `<article class="student-award ${awardThemeClass(a)} ${mine?"mine":""}"><div class="student-award-title"><i>${a.icon||"🏅"}</i><b>${escapeLobbyHtml(a.title||"")}</b></div><strong>${escapeLobbyHtml(String(a.team||"").toUpperCase())} · ${escapeLobbyHtml(a.name||"")}</strong><span>${escapeLobbyHtml(a.desc||"")}</span>${mine?`<span class="student-award-mine">★ 나의 수상</span>`:""}</article>`;}).join(""):`<div class="student-muted">시상 결과를 집계 중입니다.</div>`;
+    return `${pomHtml}<div class="student-awards-title">HONORS CEREMONY <span>오늘의 빛나는 활약</span></div><div class="student-awards">${awardHtml}</div>`;
   }
   const GROWTH_EFFECTS={
     speed:"주력 · 가속 · 침투 · 수비 복귀 · 루즈볼 경합",
@@ -3201,7 +3474,7 @@
     }
     if(phase==="LINEUP"){
       const status=data.lineupStatus||"UNSET",starter=status==="STARTER",lineups=room.lineups||{};
-      const pitch=(team)=>{const ln=lineups[team],formation=ln?.formation||"-",slots=ln?.slots||[];const shape=FORMATIONS[formation]||[];return `<div class="student-mini-team"><h4 style="color:${team==="blue"?"#8bc6ff":"#ff929a"}">${team.toUpperCase()} · ${formation}</h4><div class="student-mini-pitch">${slots.map((x,i)=>{const pos=shape[i]||{x:50,y:34};const left=team==="blue"?Math.min(95,Math.max(5,pos.x)):Math.min(95,Math.max(5,100-pos.x));const top=Math.min(94,Math.max(6,pos.y/68*100));return `<div class="student-mini-node ${x.participantId===onlineRoomState.studentParticipantId?"me":""}" style="left:${left}%;top:${top}%">${escapeLobbyHtml(x.name)}<br>${x.role}</div>`}).join("")}</div></div>`};
+      const pitch=(team)=>{const ln=lineups[team],formation=ln?.formation||"-",slots=ln?.slots||[],ownTeam=data.team===team,formationLabel=({433:"4-3-3",442:"4-4-2",4231:"4-2-3-1",352:"3-5-2"})[formation]||formation;const shape=FORMATIONS[formation]||[];return `<div class="student-mini-team ${team} ${ownTeam?"own":""}"><div class="student-mini-team-head"><h4 style="color:${team==="blue"?"#8bc6ff":"#ff929a"}">${team.toUpperCase()} TEAM · ${formationLabel}</h4>${ownTeam?`<span class="student-own-team-chip">내 팀</span>`:""}</div><div class="student-mini-pitch">${slots.map((x,i)=>{const pos=shape[i]||{x:50,y:34};const left=team==="blue"?Math.min(90,Math.max(10,pos.x)):Math.min(90,Math.max(10,100-pos.x));const top=Math.min(92,Math.max(8,pos.y/68*100));return `<div class="student-mini-node ${x.participantId===onlineRoomState.studentParticipantId?"me":""}" style="left:${left}%;top:${top}%">${escapeLobbyHtml(x.name)}<br>${x.role}</div>`}).join("")}</div></div>`};
       studentWaitingText.textContent="선발 명단과 양 팀 포메이션이 확정되었습니다.";
       studentStageArea.innerHTML=`<div class="student-lineup-result"><div class="student-stage-title">MATCH READY</div><div class="big">${starter?"⚽ 선발 출전":"🪑 BENCH"}</div><div class="role">${starter?`${data.assignedRole||"-"} · #${data.shirtNumber||"-"} · ${detailedRoleLabel(data.assignedTacticalRole||data.preferredRole)}`:`${detailedRoleLabel(data.preferredRole)} · 교체 출전 준비`}</div>${studentStatsHtml(null,data)}</div><div class="student-formation-grid">${pitch("blue")}${pitch("red")}</div>`;return;
     }
@@ -3216,19 +3489,18 @@
       studentStageArea.innerHTML=`<div class="student-lineup-result"><div class="student-stage-title">TEAM MANAGEMENT</div><div class="big">${data.lineupStatus==="SUBBED_OUT"?"교체 아웃":data.lineupStatus==="SUB"?"교체 투입":"교체 대기"}</div><div class="role">${data.assignedRole||""}${data.assignedTacticalRole?` · ${detailedRoleLabel(data.assignedTacticalRole)}`:""}</div>${studentStatsHtml(null,data)}${applied?`<div class="student-tactic-banner">다음 전술 · <b>${TACTIC_VOTE_LABELS[applied]?.[0]||applied}</b><br>${TACTIC_VOTE_LABELS[applied]?.[1]||""}</div>`:""}</div>`;return;
     }
     if(phase==="RESULT"){
-      const m=room.match||{},snap=room.playerSnapshots?.[onlineRoomState.studentParticipantId]||{},res=room.result||{},ms=snap.matchStats||{};
+      const m=room.match||{},snap=room.playerSnapshots?.[onlineRoomState.studentParticipantId]||{},res=room.result||{};
       onlineRoomState.studentSessionEnded=true;
       studentWaitingText.textContent="경기가 종료되었습니다. 내 최종 기록과 시상식을 확인하세요.";
       if(returnBtn){returnBtn.textContent="← 처음으로 돌아가기";returnBtn.classList.add("visible");}
-      studentStageArea.innerHTML=`<div class="student-stage-head"><div><div class="student-stage-title">FULL TIME</div><strong>${res.winner?res.winner.toUpperCase()+" WIN":"MATCH RESULT"}</strong></div><span class="student-stage-chip">${snap.status||data.lineupStatus||"BENCH"}</span></div><div class="student-match-score"><div class="side" style="color:#88c5ff">BLUE</div><div class="score">${m.blueScore??0} - ${m.redScore??0}</div><div class="side" style="color:#ff969e">RED</div></div>${res.shootout?`<div class="student-tactic-banner">승부차기 · BLUE ${res.shootout.blue}-${res.shootout.red} RED</div>`:""}${studentStatsHtml(snap,data)}<div class="student-personal-stats">최종 평점 <b>${snap.rating!=null?Number(snap.rating).toFixed(1):"-"}</b> · 체력 <b>${snap.stamina!=null?Math.round(snap.stamina):"-"}</b><br>골 <b>${ms.goals||0}</b> · 도움 <b>${ms.assists||0}</b> · 패스 <b>${ms.passesCompleted||0}/${ms.passesAttempted||0}</b><br>키패스 <b>${ms.keyPasses||0}</b> · 슈팅 <b>${ms.shots||0}</b> · 태클 <b>${ms.tacklesWon||0}</b> · 인터셉트 <b>${ms.interceptions||0}</b></div><div class="student-stage-title" style="margin-top:13px">AWARDS CEREMONY</div><div class="student-awards">${(res.awards||[]).map(a=>`<div class="student-award"><b>${a.icon||"🏅"} ${escapeLobbyHtml(a.title||"")}</b><span>${escapeLobbyHtml(a.team||"")} · ${escapeLobbyHtml(a.name||"")}</span><span>${escapeLobbyHtml(a.desc||"")}</span></div>`).join("")||`<div class="student-muted">시상 결과를 집계 중입니다.</div>`}</div></div>`;return;
+      studentStageArea.innerHTML=`<div class="student-stage-head"><div><div class="student-stage-title">FULL TIME</div><strong>${res.winner?res.winner.toUpperCase()+" WIN":"MATCH RESULT"}</strong></div><span class="student-stage-chip">${snap.status||data.lineupStatus||"BENCH"}</span></div><div class="student-match-score"><div class="side" style="color:#88c5ff">BLUE</div><div class="score">${m.blueScore??0} - ${m.redScore??0}</div><div class="side" style="color:#ff969e">RED</div></div>${res.shootout?`<div class="student-tactic-banner">승부차기 · BLUE ${res.shootout.blue}-${res.shootout.red} RED</div>`:""}${studentMatchRecordHtml(snap,data,true)}<details class="student-ability-details"><summary>내 선수 능력치 보기</summary>${studentStatsHtml(snap,data)}</details>${studentHonorsHtml(res,data)}`;return;
     }
     if(["Q1","Q2","Q3","Q4","SHOOTOUT"].includes(phase)){
       const m=room.match||{},snap=room.playerSnapshots?.[onlineRoomState.studentParticipantId]||{};
       if(studentNumberBadge)studentNumberBadge.textContent=snap.number||data.shirtNumber||"?";
       studentWaitingText.textContent=phase==="RESULT"?"경기가 종료되었습니다.":snap.status==="BENCH"?"벤치에서 팀을 응원하며 다음 퀴즈를 준비하세요.":"경기 진행 중 · 내 선수 상태를 실시간으로 확인할 수 있습니다.";
-      const ms=snap.matchStats||{};
       const teamPreset=m.teamTactics?.[data.team||"blue"]||"BALANCED";
-      studentStageArea.innerHTML=`<div class="student-stage-head"><div><div class="student-stage-title">LIVE MATCH</div><strong>${m.clock||`${Math.floor(Number(m.minute)||0)}'`}</strong></div><span class="student-stage-chip">${snap.status||data.lineupStatus||"BENCH"} ${snap.role?`· ${snap.role}`:""}${snap.tacticalRole?` · ${detailedRoleLabel(snap.tacticalRole)}`:""}</span></div><div class="student-match-score"><div class="side" style="color:#88c5ff">BLUE</div><div class="score">${m.blueScore??0} - ${m.redScore??0}</div><div class="side" style="color:#ff969e">RED</div></div><div class="student-tactic-banner">우리 팀 전술 · <b>${TACTIC_VOTE_LABELS[teamPreset]?.[0]||teamPreset}</b></div>${studentStatsHtml(snap,data)}<div class="student-personal-stats">체력 <b>${snap.stamina!=null?Math.round(snap.stamina):"-"}</b> · 평점 <b>${snap.rating!=null?Number(snap.rating).toFixed(1):"-"}</b><br>골 <b>${ms.goals||0}</b> · 도움 <b>${ms.assists||0}</b> · 패스 <b>${ms.passesCompleted||0}/${ms.passesAttempted||0}</b><br>키패스 <b>${ms.keyPasses||0}</b> · 슈팅 <b>${ms.shots||0}</b> · 태클 <b>${ms.tacklesWon||0}</b> · 인터셉트 <b>${ms.interceptions||0}</b></div>`;return;
+      studentStageArea.innerHTML=`<div class="student-stage-head"><div><div class="student-stage-title">LIVE MATCH</div><strong>${m.clock||`${Math.floor(Number(m.minute)||0)}'`}</strong></div><span class="student-stage-chip">${snap.status||data.lineupStatus||"BENCH"} ${snap.role?`· ${snap.role}`:""}${snap.tacticalRole?` · ${detailedRoleLabel(snap.tacticalRole)}`:""}</span></div><div class="student-match-score"><div class="side" style="color:#88c5ff">BLUE</div><div class="score">${m.blueScore??0} - ${m.redScore??0}</div><div class="side" style="color:#ff969e">RED</div></div><div class="student-tactic-banner">우리 팀 전술 · <b>${TACTIC_VOTE_LABELS[teamPreset]?.[0]||teamPreset}</b></div>${studentMatchRecordHtml(snap,data,false)}<details class="student-ability-details"><summary>내 선수 능력치 보기</summary>${studentStatsHtml(snap,data)}</details>`;return;
     }
     studentWaitingText.innerHTML=`호스트가 다음 단계를 진행하고 있습니다.<br><b>${escapeLobbyHtml(phase)}</b>`;studentStageArea.innerHTML="";
   }
@@ -4311,19 +4583,30 @@
 
 
   function studentSnapshotForRoom(st){
-    const active=allPlayers().find(p=>p.studentId===st.id&&!p.sentOff),archived=substitutedPlayers.slice().reverse().find(p=>p.studentId===st.id);
-    const p=active||archived||null;
-    const status=active?(st.lineupStatus==="SUB"?"PLAYING · SUB":"PLAYING"):(st.lineupStatus||"BENCH");
+    const active=allPlayers().find(p=>p.studentId===st.id),dismissed=dismissedPlayers.slice().reverse().find(p=>p.studentId===st.id),archived=substitutedPlayers.slice().reverse().find(p=>p.studentId===st.id);
+    const p=active||dismissed||archived||null;
+    const status=active?(st.lineupStatus==="SUB"?"PLAYING · SUB":"PLAYING"):dismissed?"SENT OFF":(st.lineupStatus||"BENCH");
     return {name:st.name,team:st.team,status,role:p?.role||st.assignedRole||null,tacticalRole:p?.tacticalRole||st.assignedTacticalRole||st.preferredRole||null,number:p?.number||st.shirtNumber||null,
       stats:p?{speed:p.speed,technique:p.technique,kick:p.kick,physical:p.physical,intelligence:p.intelligence}:null,
       stamina:p?.stamina??null,rating:p?Number(playerRating(p).toFixed(2)):null,
-      matchStats:p?{goals:p.matchStats?.goals||0,assists:p.matchStats?.assists||0,passesCompleted:p.matchStats?.passesCompleted||0,passesAttempted:p.matchStats?.passesAttempted||0,keyPasses:p.matchStats?.keyPasses||0,shots:p.matchStats?.shots||0,tacklesWon:p.matchStats?.tacklesWon||0,interceptions:p.matchStats?.interceptions||0}:{}
+      matchStats:p?{
+        goals:p.matchStats?.goals||0,assists:p.matchStats?.assists||0,
+        passesCompleted:p.matchStats?.passesCompleted||0,passesAttempted:p.matchStats?.passesAttempted||0,
+        keyPasses:p.matchStats?.keyPasses||0,shots:p.matchStats?.shots||0,shotsOnTarget:p.matchStats?.shotsOnTarget||0,
+        dribblesAttempted:p.matchStats?.dribblesAttempted||0,dribblesWon:p.matchStats?.dribblesWon||0,
+        tacklesWon:p.matchStats?.tacklesWon||0,interceptions:p.matchStats?.interceptions||0,
+        saves:p.matchStats?.saves||0,blocks:p.matchStats?.blocks||0,recoveries:p.matchStats?.recoveries||0
+      }:{}
     };
+  }
+  function publicParticipantIdForPlayer(player){
+    if(!player?.studentId)return null;
+    return participationStudents().find(st=>st.id===player.studentId)?.remoteId||null;
   }
   function publicResultForRoom(){
     const so=match.shootout;const winner=so?.winner||((match.blueScore>match.redScore)?"blue":(match.redScore>match.blueScore)?"red":null);
-    const awards=matchAwards().map(a=>({icon:a.icon,title:a.title,name:playerName(a.p),team:a.p.team.toUpperCase(),desc:a.desc||""}));const pom=currentPOM();
-    return {winner,shootout:so?.winner?{blue:so.blue,red:so.red,winner:so.winner}:null,pom:pom?{name:playerName(pom),team:pom.team,rating:Number(playerRating(pom).toFixed(1))}:null,awards};
+    const awards=matchAwards().map(a=>({icon:a.icon,title:a.title,theme:a.theme||"hero",name:playerName(a.p),team:a.p.team.toUpperCase(),participantId:publicParticipantIdForPlayer(a.p),desc:a.desc||""}));const pom=currentPOM();
+    return {winner,shootout:so?.winner?{blue:so.blue,red:so.red,winner:so.winner}:null,pom:pom?{name:playerName(pom),team:pom.team,rating:Number(playerRating(pom).toFixed(1)),participantId:publicParticipantIdForPlayer(pom),theme:"pom"}:null,awards};
   }
   async function syncOnlineMatchSnapshot(force=false){
     if(!remoteParticipationActive()||!gameFlow.active)return;
@@ -4858,6 +5141,16 @@
     commentaryCountEl.textContent=`${commentaryLog.length} EVENTS`;
   }
 
+  function cueCrowdFromCommentary(text,type){
+    if(type==="var")return playCrowdReaction("MURMUR");
+    if(type==="hype")return playCrowdReaction("HYPE");
+    if(type==="danger")return playCrowdReaction("CHANCE");
+    if(type==="major"&&/결정적|태클|인터셉트|끊어냅니다|몸을 던져/.test(text)){
+      return playCrowdReaction("TACKLE");
+    }
+    return false;
+  }
+
   function showEvent(text,type="auto",meta={}){
     const resolved=type==="auto"?classifyCommentary(text):type;
     const broadcast=contextualCommentary(text,resolved);
@@ -4866,6 +5159,9 @@
     eventLife=2.3;
     addCommentary(broadcast,resolved,meta);
     renderTicker(broadcast,resolved);
+    // Goals and saves already trigger their own stronger cue. The cooldown in
+    // playCrowdReaction prevents this contextual layer from doubling it.
+    if(resolved!=="goal")cueCrowdFromCommentary(text,resolved);
   }
 
 
@@ -5924,11 +6220,10 @@
       p=>p.role==="GK"
     );
 
-    const xman=awardCandidate(
-      p=>playerRating(p),
-      p=>true,
-      false
-    );
+    const unsung=awardCandidate(p=>{
+      const s=p.matchStats;
+      return s.recoveries*1.5+s.tacklesWon*1.2+s.interceptions*1.3+s.passesCompleted*.025+s.touches*.012;
+    },p=>!pom||p.id!==pom.id);
 
     const clutch=awardCandidate(p=>{
       const moments=(p.storyMoments||[]).filter(m=>m.minute>=75);
@@ -5937,39 +6232,38 @@
 
     return [
       pom&&{
-        icon:"🏆",title:"PLAYER OF THE MATCH",p:pom,
+        icon:"🏆",title:"PLAYER OF THE MATCH",theme:"pom",p:pom,
         desc:`평점 ${playerRating(pom).toFixed(1)} · 오늘 경기의 주인공`
       },
       passer&&{
-        icon:"🎯",title:"MASTER PASSER",p:passer,
+        icon:"🎯",title:"MASTER PASSER",theme:"passer",p:passer,
         desc:`키패스 ${passer.matchStats.keyPasses} · 전진패스 ${passer.matchStats.progressivePasses}`
       },
       wall&&{
-        icon:"🧱",title:"THE WALL",p:wall,
+        icon:"🧱",title:"THE WALL",theme:"wall",p:wall,
         desc:`태클·인터셉트·블록 ${wall.matchStats.tacklesWon+wall.matchStats.interceptions+wall.matchStats.blocks}`
       },
       marathon&&{
-        icon:"🏃",title:"MARATHON ENGINE",p:marathon,
+        icon:"🏃",title:"MARATHON ENGINE",theme:"engine",p:marathon,
         desc:`이동거리 ${(marathon.distanceRun/1000).toFixed(1)}km`
       },
       magician&&{
-        icon:"🪄",title:"MAGICIAN",p:magician,
+        icon:"🪄",title:"MAGICIAN",theme:"magic",p:magician,
         desc:`드리블 ${magician.matchStats.dribblesWon} · 키패스 ${magician.matchStats.keyPasses}`
       },
       keeper&&{
-        icon:"🧤",title:"SUPER KEEPER",p:keeper,
+        icon:"🧤",title:"SUPER KEEPER",theme:"keeper",p:keeper,
         desc:`선방 ${keeper.matchStats.saves} · 평점 ${playerRating(keeper).toFixed(1)}`
       },
       clutch&&{
-        icon:"⏱️",title:"CLUTCH PLAYER",p:clutch,
+        icon:"⏱️",title:"CLUTCH PLAYER",theme:"clutch",p:clutch,
         desc:(clutch.storyMoments||[]).filter(m=>m.minute>=75).sort((a,b)=>b.amount-a.amount)[0]
           ? `${(clutch.storyMoments||[]).filter(m=>m.minute>=75).sort((a,b)=>b.amount-a.amount)[0].minute}' · ${(clutch.storyMoments||[]).filter(m=>m.minute>=75).sort((a,b)=>b.amount-a.amount)[0].label}`
           : "막판 결정적 기여"
       },
-      xman&&{
-        icon:"🫠",title:"X-MAN · 오늘 가장 고전",p:xman,
-        xman:true,
-        desc:`평점 ${playerRating(xman).toFixed(1)} · 오늘은 조금 꼬인 날`
+      unsung&&{
+        icon:"💎",title:"UNSUNG HERO",theme:"hero",p:unsung,
+        desc:`볼 회수 ${unsung.matchStats.recoveries} · 보이지 않는 곳까지 채운 팀 기여`
       }
     ].filter(Boolean);
   }
@@ -6057,7 +6351,7 @@
 
     const pom=currentPOM();
     resultPom.innerHTML=pom
-      ? `<span class="pom-chip">PLAYER OF THE MATCH · ${playerName(pom)} · ${playerRating(pom).toFixed(1)}</span>`
+      ? `<section class="result-pom-hero"><div class="pom-crown">👑</div><div class="pom-copy"><div class="pom-label">PLAYER OF THE MATCH</div><div class="pom-name">${escapeLobbyHtml(playerName(pom))}</div><div class="pom-team">${pom.team.toUpperCase()} TEAM · 오늘 경기 최고의 선수</div></div><div class="pom-rating"><span>MATCH RATING</span><b>${playerRating(pom).toFixed(1)}</b></div></section>`
       : "";
 
     resultTeamStats.innerHTML=teamStatRows().map(([label,b,r])=>`
@@ -6078,11 +6372,11 @@
     resultBluePlayers.innerHTML=topPlayers("blue",5).map(playerResultRow).join("");
     resultRedPlayers.innerHTML=topPlayers("red",5).map(playerResultRow).join("");
 
-    resultAwards.innerHTML=matchAwards().map(a=>`
-      <div class="award-card ${a.xman?"xman":""}">
-        <div class="award-title">${a.icon} ${a.title}</div>
+    resultAwards.innerHTML=matchAwards().filter(a=>a.theme!=="pom").map(a=>`
+      <div class="award-card ${awardThemeClass(a)}">
+        <div class="award-title"><span class="award-icon">${a.icon}</span>${a.title}</div>
         <div class="award-player">
-          ${a.p.team.toUpperCase()} · ${playerName(a.p)}
+          ${a.p.team.toUpperCase()} · ${escapeLobbyHtml(playerName(a.p))}
         </div>
         <div class="award-desc">${a.desc}</div>
       </div>
@@ -8661,6 +8955,12 @@
 
   function resetMatch(autoStart=true){
     selectedPlayerId=null;
+    audioFxState.lastKickAt=-Infinity;
+    audioFxState.lastCrowdAt=-Infinity;
+    audioFxState.lastCrowdPriority=0;
+    audioFxState.kickCount=0;
+    audioFxState.crowdCount=0;
+    audioFxState.lastCue="NONE";
     match.blueScore=0;
     match.redScore=0;
     match.goalPause=0;
@@ -12261,7 +12561,7 @@
     }
 
     const scale=lerp(1.15,.68,intelligence);
-    return rand(min,max)*scale/tempoFactor(player.team);
+    return rand(min,max)*scale/(tempoFactor(player.team)*AI_DECISION_TEMPO_MULTIPLIER);
   }
 
   function pointToSegmentDistance(px,py,x1,y1,x2,y2){
@@ -12519,7 +12819,7 @@
       [p.physical,.17],
       [p.kick,.09]
     ),1.27);
-    // Small v2.5.7 security lift: midfielders keep the first touch under normal
+    // Small v2.5.9 security lift: midfielders keep the first touch under normal
     // pressure a little better without becoming immune to a true double-team.
     const bonus=["DM","LDM","RDM"].includes(p.role)?2.6:2.0;
     return clamp(raw+bonus,1,99);
@@ -14940,6 +15240,7 @@
 
     const error=
       baseError*
+      PASS_EXECUTION_ERROR_FACTOR*
       pressureMultiplier*
       matchFlowPassErrorFactor(owner.team)*
       openExecutionBonus;
@@ -16447,7 +16748,8 @@
     const touch=firstTouchSkill(receiver);
 
     const score=
-      touch -
+      touch +
+      PASS_RECEIVE_SCORE_BONUS -
       pressure*2.35 +
       passDifficulty +
       rand(-6.4,6.4)*lerp(.96,.24,decisionIntelligence(receiver));
@@ -19039,19 +19341,20 @@
     renderPlayerStatPanel();
   });
 
-  document.addEventListener("pointerdown",()=>{
-    ensureAudio();
-  },{once:true});
+  function unlockHostAudio(){
+    if(ensureAudio())document.removeEventListener("pointerdown",unlockHostAudio);
+  }
+  document.addEventListener("pointerdown",unlockHostAudio,{passive:true});
 
   soundToggleBtn.addEventListener("click",()=>{
     soundEnabled=!soundEnabled;
     soundToggleBtn.classList.toggle("active",soundEnabled);
-    soundToggleBtn.textContent=soundEnabled?"🔊 효과음 ON":"🔇 효과음 OFF";
+    soundToggleBtn.textContent=soundEnabled?"🔊 경기장 사운드 ON":"🔇 경기장 사운드 OFF";
     if(soundEnabled){
       ensureAudio();
       playTone(220,.05,.012,"sine");
       playTone(294,.06,.010,"sine",.05);
-    }
+    }else setAudioMasterLevel(false);
   });
 
   document.getElementById("toggleRun").addEventListener("click",e=>{
@@ -19305,6 +19608,20 @@
   stat50Btn.addEventListener("click",()=>setStatMode("BALANCED"));
   statRandomBtn.addEventListener("click",()=>setStatMode("RANDOM"));
 
+  function setMatchSpeed(multiplier=1){
+    matchSpeedMultiplier=Number(multiplier)===2?2:1;
+    for(const [button,value] of [[matchSpeed1Btn,1],[matchSpeed2Btn,2]]){
+      if(!button)continue;
+      const selected=matchSpeedMultiplier===value;
+      button.classList.toggle("active",selected);
+      button.setAttribute("aria-pressed",String(selected));
+    }
+    return matchSpeedMultiplier;
+  }
+
+  matchSpeed1Btn?.addEventListener("click",()=>setMatchSpeed(1));
+  matchSpeed2Btn?.addEventListener("click",()=>setMatchSpeed(2));
+
   document.getElementById("autoDemoBtn").addEventListener("click",e=>{
     autoPlay=!autoPlay;
     e.currentTarget.classList.toggle("active",autoPlay);
@@ -19379,8 +19696,9 @@
       else render();
     }else{
       if(running&&!match.ended){
-        physicsAccumulator+=elapsed;
-        aiAccumulator+=elapsed;
+        const simulationElapsed=elapsed*matchSpeedMultiplier;
+        physicsAccumulator+=simulationElapsed;
+        aiAccumulator+=simulationElapsed;
 
         while(aiAccumulator>=AI_DT){
           updateAI();
@@ -19420,7 +19738,7 @@
             : match.ended
               ? "FULL TIME"
             : running
-              ? `ENGINE RUNNING · ${fpsCounter} FPS`
+              ? `ENGINE RUNNING · ${matchSpeedMultiplier}× · ${fpsCounter} FPS`
               : "ENGINE PAUSED";
       fpsCounter=0;
       fpsTimer=0;
@@ -19432,6 +19750,18 @@
 
   // Lightweight internal telemetry for regression testing.
   window.__matchDebug = {
+    audioSystem(){return {enabled:soundEnabled,hostAllowed:hostAudioAllowed(),contextState:audioCtx?.state||"uninitialized",masterReady:!!audioMaster,fullyEmbedded:true,kickCount:audioFxState.kickCount,crowdCount:audioFxState.crowdCount,lastCue:audioFxState.lastCue};},
+    previewAudioCue(kind="GOAL"){
+      audioFxState.lastKickAt=-Infinity;audioFxState.lastCrowdAt=-Infinity;audioFxState.lastCrowdPriority=0;
+      const cue=String(kind||"GOAL").toUpperCase();
+      if(["PASS","KILL","SHOT","POWER"].includes(cue))playKickSound(cue,cue==="PASS"?18:30);
+      else if(["GOAL","SAVE","TACKLE","CARD"].includes(cue))playEventSound(cue);
+      else playCrowdReaction(cue);
+      return this.audioSystem();
+    },
+    publicResult(){return publicResultForRoom();},
+    matchSpeed(multiplier=null){if(multiplier!==null)setMatchSpeed(multiplier);return {multiplier:matchSpeedMultiplier,onePressed:matchSpeed1Btn?.getAttribute("aria-pressed"),twoPressed:matchSpeed2Btn?.getAttribute("aria-pressed")};},
+    matchTuning(){return {passExecutionErrorFactor:PASS_EXECUTION_ERROR_FACTOR,passReceiveScoreBonus:PASS_RECEIVE_SCORE_BONUS,decisionTempoMultiplier:AI_DECISION_TEMPO_MULTIPLIER};},
     quizBankSummary(){const all=Object.values(quizSystem.phaseQuestions).flat();return {count:quizSystem.bank.length,errors:[...quizSystem.lastParseErrors],phaseCounts:Object.fromEntries(Object.entries(quizSystem.phaseQuestions).map(([k,v])=>[k,v.length])),selectedTotal:all.length,uniquePrompts:new Set(all.map(q=>q.prompt)).size};},
     parseQuizText(raw){const r=parseQuizBankText(raw);return {count:r.items.length,errors:r.errors,first:r.items[0]||null};},
     fastCompleteCurrentQuiz(){autoCompleteLiveQuiz();return quizSystem.current?{key:quizSystem.current.key,stage:quizSystem.current.stage}:null;},
@@ -19446,7 +19776,7 @@
         })),
         clock:match.elapsedSeconds/60,
         secondHalfStarted:match.secondHalfStarted,
-        running
+        running,matchSpeedMultiplier
       };
     },
     setupParticipationStudents(count=8){
@@ -19802,6 +20132,7 @@
           redScore:match.redScore,
           lastShotVariant:match.lastShotVariant,
           elapsedSeconds:match.elapsedSeconds,
+          speedMultiplier:matchSpeedMultiplier,
           ended:match.ended,
           replayActive:replay.active,
           presentationStage:presentation.stage,
@@ -21709,7 +22040,33 @@
       onlineRoomState.studentRoomData={status:"WAITING",sessionId:"result-session",phase:"LOBBY",syncSerial:9,roster:[]};renderStudentStage();
       const button=document.getElementById("studentLeaveBtn");return {ended:onlineRoomState.studentSessionEnded,returnVisible:button?.classList.contains("visible")||false,phase:effectiveStudentRoomState().phase};
     },
-    previewStudentPhase(phase="BUILD"){onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentData={name:"민수",preferredPosition:"CM",team:"blue",status:"joined",preQuizCorrect:16,preQuizPoints:8,startAllocation:{speed:2,technique:2,kick:1,physical:1,intelligence:1},statsBonus:{speed:2,technique:2,kick:1,physical:1,intelligence:1},buildReady:false,breakPoints:{BREAK25:2},breakAllocations:{BREAK25:blankGrowth()},breakReady:{}};onlineRoomState.studentRoomData={status:"LIVE",phase,breakKey:"BREAK25",quiz:phase==="PRE_QUIZ"?{key:"PRE_QUIZ",index:0,total:20,stage:"RUNNING",prompt:"beautiful의 뜻은?",options:["아름다운","어려운","가능한","중요한"],endsAtMs:Date.now()+100000}:null,match:{clock:"63:20",blueScore:1,redScore:1},playerSnapshots:{demo1:{status:"PLAYING",role:"CM",number:8,stats:{speed:64,technique:70,kick:65,physical:60,intelligence:72},stamina:78,rating:7.4,matchStats:{passesCompleted:25,passesAttempted:28,keyPasses:2,shots:1,tacklesWon:2,interceptions:1,goals:0,assists:1}}}};renderStudentWaiting(onlineRoomState.studentData);return phase;}
+    previewStudentHonors(){
+      onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentSessionId="honors-session";onlineRoomState.studentSessionEnded=false;
+      onlineRoomState.studentData={name:"민수",preferredPosition:"CM",preferredRole:"PLAYMAKER",team:"blue",status:"joined",statsBonus:blankGrowth(),lineupStatus:"STARTER",assignedRole:"CM",assignedTacticalRole:"PLAYMAKER",shirtNumber:8};
+      const awards=[
+        {icon:"🏆",title:"PLAYER OF THE MATCH",theme:"pom",name:"민수",team:"BLUE",participantId:"demo1",desc:"평점 9.1 · 오늘 경기의 주인공"},
+        {icon:"🎯",title:"MASTER PASSER",theme:"passer",name:"민수",team:"BLUE",participantId:"demo1",desc:"키패스 4 · 전진패스 12"},
+        {icon:"🧱",title:"THE WALL",theme:"wall",name:"지훈",team:"RED",participantId:"demo2",desc:"수비 기여 9"},
+        {icon:"🏃",title:"MARATHON ENGINE",theme:"engine",name:"서연",team:"BLUE",participantId:"demo3",desc:"이동거리 11.2km"},
+        {icon:"🪄",title:"MAGICIAN",theme:"magic",name:"유나",team:"RED",participantId:"demo4",desc:"드리블 7 · 키패스 2"},
+        {icon:"🧤",title:"SUPER KEEPER",theme:"keeper",name:"도윤",team:"RED",participantId:"demo5",desc:"선방 6 · 평점 8.4"},
+        {icon:"⏱️",title:"CLUTCH PLAYER",theme:"clutch",name:"하준",team:"BLUE",participantId:"demo6",desc:"88' · 결승골"},
+        {icon:"💎",title:"UNSUNG HERO",theme:"hero",name:"소율",team:"BLUE",participantId:"demo7",desc:"볼 회수 11 · 팀 기여"}
+      ];
+      onlineRoomState.studentRoomData={status:"LIVE",sessionId:"honors-session",phase:"RESULT",syncSerial:12,match:{blueScore:3,redScore:2},playerSnapshots:{demo1:{status:"PLAYING",role:"CM",tacticalRole:"PLAYMAKER",number:8,stats:{speed:67,technique:74,kick:69,physical:63,intelligence:76},stamina:61,rating:9.1,matchStats:{goals:1,assists:2,passesCompleted:37,passesAttempted:41,keyPasses:4,shots:3,shotsOnTarget:2,dribblesAttempted:6,dribblesWon:5,tacklesWon:3,interceptions:2,saves:0,blocks:1,recoveries:9}}},result:{winner:"blue",pom:{name:"민수",team:"blue",rating:9.1,participantId:"demo1",theme:"pom"},awards}};
+      renderStudentWaiting(onlineRoomState.studentData);
+      return {pom:studentStageArea?.querySelectorAll(".student-pom-hero").length||0,awards:studentStageArea?.querySelectorAll(".student-award").length||0,mine:studentStageArea?.querySelectorAll(".student-award.mine").length||0,recordStats:studentStageArea?.querySelectorAll(".student-record-stat").length||0};
+    },
+    previewStudentPhase(phase="BUILD"){onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentData={name:"민수",preferredPosition:"CM",team:"blue",status:"joined",preQuizCorrect:16,preQuizPoints:8,startAllocation:{speed:2,technique:2,kick:1,physical:1,intelligence:1},statsBonus:{speed:2,technique:2,kick:1,physical:1,intelligence:1},buildReady:false,breakPoints:{BREAK25:2},breakAllocations:{BREAK25:blankGrowth()},breakReady:{}};onlineRoomState.studentRoomData={status:"LIVE",phase,breakKey:"BREAK25",quiz:phase==="PRE_QUIZ"?{key:"PRE_QUIZ",index:0,total:20,stage:"RUNNING",prompt:"beautiful의 뜻은?",options:["아름다운","어려운","가능한","중요한"],endsAtMs:Date.now()+100000}:null,match:{clock:"63:20",blueScore:1,redScore:1},playerSnapshots:{demo1:{status:"PLAYING",role:"CM",number:8,stats:{speed:64,technique:70,kick:65,physical:60,intelligence:72},stamina:78,rating:7.4,matchStats:{passesCompleted:25,passesAttempted:28,keyPasses:2,shots:2,shotsOnTarget:1,dribblesAttempted:4,dribblesWon:3,tacklesWon:2,interceptions:1,recoveries:7,goals:0,assists:1}}}};renderStudentWaiting(onlineRoomState.studentData);return phase;},
+    previewStudentLineup(team="blue"){
+      const names={blue:["알리송","테오","반다이크","김민재","하키미","로드리","민수","더브라위너","비니시우스","홀란드","살라"],red:["쿠르투아","데이비스","뤼디거","아라우호","워커","라이스","벨링엄","외데고르","음바페","케인","사카"]};
+      const makeLineup=(side,formation)=>({formation,slots:FORMATIONS[formation].map((pos,i)=>({participantId:side===team&&i===6?"demo1":`${side}-${i}`,name:side===team&&i===6?"민수":names[side][i],role:pos.role}))});
+      onlineRoomState.studentParticipantId="demo1";
+      onlineRoomState.studentData={name:"민수",preferredPosition:"CM",preferredRole:"PLAYMAKER",team,status:"joined",lineupStatus:"STARTER",assignedRole:"LCM",assignedTacticalRole:"PLAYMAKER",shirtNumber:8,statsBonus:{speed:2,technique:2,kick:1,physical:1,intelligence:1}};
+      onlineRoomState.studentRoomData={status:"LIVE",phase:"LINEUP",lineups:{blue:makeLineup("blue","433"),red:makeLineup("red","4231")}};
+      renderStudentWaiting(onlineRoomState.studentData);
+      return {team,cards:studentStageArea?.querySelectorAll(".student-mini-team").length||0,ownCards:studentStageArea?.querySelectorAll(".student-mini-team.own").length||0};
+    }
   };
 
   syncTacticUI("blue");
@@ -21718,7 +22075,7 @@
   if(landingPositionSelect)landingPositionSelect.innerHTML=positionPrefOptions("FLEX");
   const initialStudentRoom=parseStudentRoute();
   if(initialStudentRoom)showStudentRoute(initialStudentRoom);else{document.body.classList.add("lobby-open");setHostRoomUI(false);}
-  resizeCanvas();resetMatch(false);renderLobby();initFirebaseOnline();requestAnimationFrame(frame);
+  setMatchSpeed(1);resizeCanvas();resetMatch(false);renderLobby();initFirebaseOnline();requestAnimationFrame(frame);
 })();
 </script>
 </body>
