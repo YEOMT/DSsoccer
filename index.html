@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.10 Positional Tuning &amp; Ceremony</title>
+  <title>Class Football Simulator - v2.5.11 Instant Quiz &amp; Match Narrative</title>
   <style>
     :root{
       --bg:#10141b;
@@ -716,7 +716,9 @@
     .student-stage-title{font-size:11px;color:#ffd76a;font-weight:950;letter-spacing:.08em;margin-bottom:7px}
     .student-stage-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}.student-stage-head strong{font-size:17px}.student-stage-chip{padding:5px 8px;border:1px solid #40516a;border-radius:999px;background:#131e2c;color:#9fb0c5;font-size:9px;font-weight:900;white-space:nowrap}
     .student-question{border:1px solid #33445c;background:#0b141f;border-radius:13px;padding:13px;font-size:16px;font-weight:900;line-height:1.45;margin-bottom:9px}
-    .student-quiz-options{display:grid;grid-template-columns:1fr 1fr;gap:7px}.student-quiz-option{display:flex;gap:8px;align-items:flex-start;text-align:left;padding:11px;border:1px solid #354760;background:#152131;border-radius:11px;color:#eaf1fa;font-size:12px;line-height:1.4}.student-quiz-option b{display:flex;align-items:center;justify-content:center;width:23px;height:23px;border-radius:7px;background:#253650;color:#8fc8ff;flex:0 0 auto}.student-quiz-option.selected{border-color:#e8c75b;background:rgba(232,199,91,.10);box-shadow:0 0 0 1px rgba(232,199,91,.12)}.student-quiz-option:disabled{opacity:.65}
+    .student-quiz-options{display:grid;grid-template-columns:1fr 1fr;gap:7px}.student-quiz-option{display:flex;gap:8px;align-items:flex-start;text-align:left;padding:11px;border:1px solid #354760;background:#152131;border-radius:11px;color:#eaf1fa;font-size:12px;line-height:1.4;transition:border-color .18s,background .18s,transform .18s,box-shadow .18s}.student-quiz-option b{display:flex;align-items:center;justify-content:center;width:23px;height:23px;border-radius:7px;background:#253650;color:#8fc8ff;flex:0 0 auto}.student-quiz-option.selected{border-color:#e8c75b;background:rgba(232,199,91,.10);box-shadow:0 0 0 1px rgba(232,199,91,.12)}.student-quiz-option:disabled{cursor:default;opacity:.58}.student-quiz-option.correct{border-color:#4ee08b;background:rgba(44,190,106,.18);box-shadow:0 0 0 2px rgba(78,224,139,.13),0 0 22px rgba(78,224,139,.13);opacity:1;animation:quizCorrectPulse .52s ease}.student-quiz-option.correct b{background:#2dbd6c;color:#fff}.student-quiz-option.wrong{border-color:#ff717b;background:rgba(224,68,78,.16);box-shadow:0 0 0 2px rgba(255,113,123,.10);opacity:1;animation:quizWrongShake .38s ease}.student-quiz-option.wrong b{background:#d94c58;color:#fff}.student-quiz-option.answer-dim{opacity:.38}
+    .student-quiz-feedback{display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;align-items:center;margin-top:10px;padding:11px 12px;border-radius:12px;font-weight:900;animation:quizFeedbackIn .24s ease}.student-quiz-feedback .mark{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;font-size:23px}.student-quiz-feedback strong{display:block;font-size:14px}.student-quiz-feedback span{display:block;margin-top:3px;font-size:10px;line-height:1.4}.student-quiz-feedback.correct{border:1px solid #3caf70;background:rgba(38,163,91,.14);color:#b7f8cf}.student-quiz-feedback.correct .mark{background:#2dbd6c;color:#fff;box-shadow:0 0 20px rgba(45,189,108,.25)}.student-quiz-feedback.wrong{border:1px solid #a74b55;background:rgba(192,55,66,.13);color:#ffc0c4}.student-quiz-feedback.wrong .mark{background:#cf4551;color:#fff}.student-quiz-feedback small{display:block;margin-top:4px;color:#8fa2b7;font-size:8px}.student-quiz-auto-note{margin-top:9px;text-align:center;color:#8295ab;font-size:9px;font-weight:850}.student-quiz-complete .complete-mark{display:flex;align-items:center;justify-content:center;width:58px;height:58px;margin:4px auto 8px;border-radius:50%;background:rgba(54,195,116,.15);border:1px solid #49c987;color:#9df2bd;font-size:28px;box-shadow:0 0 24px rgba(54,195,116,.12)}
+    @keyframes quizCorrectPulse{0%{transform:scale(.97)}55%{transform:scale(1.025)}100%{transform:scale(1)}}@keyframes quizWrongShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}55%{transform:translateX(4px)}75%{transform:translateX(-2px)}}@keyframes quizFeedbackIn{from{opacity:0;transform:translateY(5px) scale(.98)}to{opacity:1;transform:none}}
     .student-timer{font-variant-numeric:tabular-nums;font-size:20px;font-weight:1000;color:#fff}.student-timer.urgent{color:#ff8a91}
     .student-result-box{border:1px solid #36506d;background:#101c2a;border-radius:13px;padding:14px;text-align:center}.student-result-score{font-size:28px;font-weight:1000}.student-result-point{font-size:13px;color:#9dffc2;font-weight:900;margin-top:4px}
     .student-build-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:9px}.student-build-btn{border:1px solid #354760;background:#172334;border-radius:9px;padding:9px 2px;color:#c7d3e2;font-size:8px;font-weight:900}.student-build-btn b{display:block;color:#fff;font-size:15px;margin-top:2px}.student-build-btn:disabled{opacity:.45}.student-build-meta{display:flex;justify-content:space-between;gap:8px;margin-top:9px;font-size:10px;color:#91a2b7}.student-ready{width:100%;margin-top:10px;padding:12px;font-weight:950}.student-ready.done{border-color:#317252;background:rgba(69,193,121,.13);color:#a4f4c4}
@@ -859,8 +861,6 @@
     .student-connection{color:#75d79d;font-weight:850;min-height:14px}
     .student-quiz-progress{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0;font-size:10px;color:#91a3b8}
     .student-quiz-progress b{color:#fff}
-    .student-quiz-nav{display:grid;grid-template-columns:1fr auto 1fr;gap:7px;align-items:center;margin-top:9px}
-    .student-quiz-nav button{padding:8px;font-size:10px;font-weight:900}.student-quiz-nav span{text-align:center;font-size:9px;color:#8fa0b5}
     .student-build-cards{display:grid;grid-template-columns:1fr;gap:7px;margin-top:10px}
     .student-build-card{display:grid;grid-template-columns:78px 1fr auto;gap:10px;align-items:center;width:100%;padding:10px 11px;text-align:left;border:1px solid #354760;background:#142131;border-radius:11px}
     .student-build-card .stat-key{font-size:11px;font-weight:1000;color:#eaf1fa}.student-build-card .stat-effect{font-size:8px;line-height:1.45;color:#8fa1b7}.student-build-card .stat-plus{font-size:20px;font-weight:1000;color:#9dffc2;min-width:38px;text-align:right}
@@ -960,7 +960,7 @@
     @media(max-width:760px){.result-pom-hero{grid-template-columns:54px minmax(0,1fr)}.result-pom-hero .pom-side{grid-column:1/-1}.result-pom-hero .pom-stat-strip{min-width:0;flex:1}}
     @media(max-width:520px){.result-pom-hero{grid-template-columns:50px minmax(0,1fr);padding:14px}.result-pom-hero .pom-side{display:grid;grid-template-columns:72px minmax(0,1fr)}.result-pom-hero .pom-rating{display:flex;align-items:center;justify-content:center;gap:8px}.result-pom-hero .pom-rating b{margin:0}.pom-name{font-size:22px}.pom-stat-strip{grid-template-columns:repeat(4,minmax(42px,1fr))}}
     @media(max-width:380px){.student-record-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.student-awards{grid-template-columns:1fr}.student-record-hero{grid-template-columns:72px minmax(0,1fr)}}
-    @media(prefers-reduced-motion:reduce){.result-pom-hero:after,.student-pom-hero:after{animation:none}}
+    @media(prefers-reduced-motion:reduce){.result-pom-hero:after,.student-pom-hero:after,.student-quiz-option.correct,.student-quiz-option.wrong,.student-quiz-feedback{animation:none}}
 </style>
 </head>
 <body class="lobby-open">
@@ -968,7 +968,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.10</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.11</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1133,7 +1133,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.10 · Positional Tuning &amp; Ceremony</p>
+      <p>v2.5.11 · Instant Quiz &amp; Match Narrative</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -2770,7 +2770,7 @@
   // Host runs the authoritative match engine; students only join the room.
   // ============================================================
   const DSSOCCER_DEPLOY_URL="https://yeomt.github.io/DSsoccer/";
-  const DSSOCCER_BUILD="2.5.10";
+  const DSSOCCER_BUILD="2.5.11";
   const FIREBASE_CONFIG={
     apiKey:"AIzaSyBtK7NAfw4wDsS4LRacWF78PHT3zls50IQ",
     authDomain:"dsgames-fecef.firebaseapp.com",
@@ -2787,7 +2787,7 @@
     ready:false,error:null,db:null,auth:null,user:null,mode:"host",
     hostRoomCode:null,roomUnsub:null,participantsUnsub:null,pendingQuickJoin:null,
     studentRoomCode:null,studentParticipantId:null,studentDocUnsub:null,studentRoomUnsub:null,
-    studentData:null,studentRoomData:null,studentTimerHandle:null,studentQuizCursor:{},
+    studentData:null,studentRoomData:null,studentTimerHandle:null,studentQuizAdvanceHandle:null,studentQuizCursor:{},studentQuizFeedback:{},
     sessionId:null,sessionStartedAtMs:0,studentSessionId:null,studentSessionStartedAtMs:0,studentSessionEnded:false,recoveryNotice:"",capacitySyncBusy:false,
     suppressRemoteRender:false,lastMatchSyncAt:0,matchSyncBusy:false,hostRenderQueued:false,roomWriteChain:Promise.resolve(),lineupSyncPromise:Promise.resolve(true),roomWriteSerial:0,studentLastSyncSerial:0,lastRoomSyncError:null,clientBroadcastState:{sessionId:null,sessionStartedAtMs:0,phase:"LOBBY",syncSerial:0,quiz:null,breakKey:null,lineups:null,tacticResults:{},match:null,result:null},lastParticipantLiveMirrorAt:0,debugMock:false,mockRoom:{},mockParticipantPatches:{}
   };
@@ -2828,7 +2828,9 @@
     onlineRoomState.studentSessionId=next;
     onlineRoomState.studentSessionStartedAtMs=nextStarted;
     onlineRoomState.studentLastSyncSerial=0;
+    stopStudentQuizAdvance();
     onlineRoomState.studentQuizCursor={};
+    onlineRoomState.studentQuizFeedback={};
     onlineRoomState.studentSessionEnded=false;
     return true;
   }
@@ -3291,7 +3293,9 @@
     return p.get("join")==="1"&&room.length===4?room:null;
   }
   function showStudentRoute(code){
+    stopStudentQuizAdvance();
     onlineRoomState.mode="student";onlineRoomState.studentRoomCode=code;onlineRoomState.studentLastSyncSerial=0;onlineRoomState.studentSessionId=null;onlineRoomState.studentSessionStartedAtMs=0;onlineRoomState.studentSessionEnded=false;onlineRoomState.studentRoomData=null;
+    onlineRoomState.studentQuizCursor={};onlineRoomState.studentQuizFeedback={};
     document.body.classList.remove("lobby-open","participation-open");document.body.classList.add("student-open");
     studentScreen?.classList.remove("session-active");studentJoinForm?.classList.remove("hidden");studentWaiting?.classList.remove("active");
     if(studentRoomCodeEl)studentRoomCodeEl.textContent=code;
@@ -3323,6 +3327,7 @@
     renderStudentStage();
   }
   function stopStudentStageTimer(){if(onlineRoomState.studentTimerHandle){clearInterval(onlineRoomState.studentTimerHandle);onlineRoomState.studentTimerHandle=null;}}
+  function stopStudentQuizAdvance(){if(onlineRoomState.studentQuizAdvanceHandle){clearTimeout(onlineRoomState.studentQuizAdvanceHandle);onlineRoomState.studentQuizAdvanceHandle=null;}}
   function startStudentStageTimer(endsAtMs){
     stopStudentStageTimer();
     const tick=()=>{
@@ -3334,6 +3339,25 @@
   function studentQuizAnswerValue(data,key,index){
     const src=data?.quizAnswers?.[key];if(!src)return null;
     const v=Array.isArray(src)?src[index]:src[String(index)];const n=Number(v);return Number.isInteger(n)?n:null;
+  }
+  function studentQuizFirstUnanswered(data,key,total,start=0){
+    for(let step=0;step<total;step++){
+      const index=(start+step)%total;
+      if(!Number.isInteger(studentQuizAnswerValue(data,key,index)))return index;
+    }
+    return -1;
+  }
+  function studentQuizCorrectCount(data,key,questions){
+    return questions.reduce((count,q,index)=>
+      count+(studentQuizAnswerValue(data,key,index)===Number(q?.correctIndex)?1:0),0
+    );
+  }
+  function studentQuizFeedbackHtml(question,selected,letters){
+    const correctIndex=Number(question?.correctIndex);
+    if(!Number.isInteger(selected)||!Number.isInteger(correctIndex))return "";
+    const correct=selected===correctIndex;
+    const answerText=question?.options?.[correctIndex]||"";
+    return `<div class="student-quiz-feedback ${correct?"correct":"wrong"}" role="status" aria-live="assertive"><div class="mark">${correct?"✓":"✕"}</div><div><strong>${correct?"정답입니다!":"아쉽습니다. 오답입니다."}</strong><span>${correct?"좋은 선택이에요.":`정답은 ${letters[correctIndex]||""}. ${escapeLobbyHtml(answerText)}입니다.`}</span><small>잠시 후 다음 문제로 자동 이동합니다.</small></div></div>`;
   }
   function studentStatsHtml(snapshot,data){
     const vals=snapshot?.stats||null;
@@ -3474,14 +3498,39 @@
       studentWaitingText.textContent=phase==="PRE_QUIZ"?"시작 전 퀴즈에 참여하세요.":"경기가 잠시 멈췄습니다. 중간 퀴즈에 참여하세요.";
       if(quiz.stage==="RUNNING"){
         const questions=Array.isArray(quiz.questions)&&quiz.questions.length?quiz.questions:[{prompt:quiz.prompt||"",options:quiz.options||[]}];
-        const total=Number(quiz.total)||questions.length,answers=data?.quizAnswers?.[quiz.key]||{},letters=["A","B","C","D"];
+        const total=Number(quiz.total)||questions.length,letters=["A","B","C","D"];
         const cursorKey=`${quiz.session||0}:${quiz.key}`;let cursor=Number(onlineRoomState.studentQuizCursor?.[cursorKey]);
-        if(!Number.isInteger(cursor)||cursor<0||cursor>=questions.length){cursor=questions.findIndex((_,i)=>!Number.isInteger(Number(Array.isArray(answers)?answers[i]:answers[String(i)])));if(cursor<0)cursor=0;}
-        onlineRoomState.studentQuizCursor[cursorKey]=cursor;
-        const q=questions[cursor]||questions[0],selected=studentQuizAnswerValue(data,quiz.key,cursor);
         const answeredCount=questions.reduce((n,_,i)=>n+(Number.isInteger(studentQuizAnswerValue(data,quiz.key,i))?1:0),0);
+        if(!Number.isInteger(cursor)||cursor<0||cursor>=questions.length)cursor=studentQuizFirstUnanswered(data,quiz.key,questions.length,0);
+        if(cursor<0)cursor=0;
+        let feedback=onlineRoomState.studentQuizFeedback?.[cursorKey]||null;
+        let feedbackActive=feedback?.index===cursor;
+        if(!feedbackActive&&answeredCount<questions.length&&Number.isInteger(studentQuizAnswerValue(data,quiz.key,cursor))){
+          cursor=studentQuizFirstUnanswered(data,quiz.key,questions.length,cursor+1);
+          if(cursor<0)cursor=0;
+          feedback=null;feedbackActive=false;
+        }
+        onlineRoomState.studentQuizCursor[cursorKey]=cursor;
+        const q=questions[cursor]||questions[0],storedSelected=studentQuizAnswerValue(data,quiz.key,cursor);
+        const selected=Number.isInteger(storedSelected)?storedSelected:(feedbackActive&&Number.isInteger(Number(feedback?.selected))?Number(feedback.selected):null);
         const expired=Date.now()>Number(quiz.endsAtMs||0)+250;
-        studentStageArea.innerHTML=`<div class="student-stage-head"><div><div class="student-stage-title">${quiz.key==="PRE_QUIZ"?"START QUIZ":"BREAK QUIZ"}</div><strong>QUESTION ${cursor+1} / ${total}</strong></div><div><span id="studentQuizTimer" class="student-timer">0</span><div class="student-muted" style="margin-top:0">TOTAL SEC</div></div></div><div class="student-quiz-progress"><span>내 진행률 <b>${answeredCount}/${total}</b></span><span>${answeredCount===total?"✓ 전부 답함":"100초 안에 자유롭게 풀기"}</span></div><div class="student-question">${escapeLobbyHtml(q?.prompt||"")}</div><div class="student-quiz-options">${(q?.options||[]).map((opt,i)=>`<button class="student-quiz-option ${selected===i?"selected":""}" data-student-quiz-answer="${i}" data-quiz-question-index="${cursor}" ${expired?"disabled":""}><b>${letters[i]}</b><span>${escapeLobbyHtml(opt)}</span></button>`).join("")}</div><div class="student-quiz-nav"><button data-student-quiz-nav="-1" ${cursor<=0?"disabled":""}>← 이전</button><span>${answeredCount===total?"답안 수정 가능":"답을 누르면 다음 문제로 이동"}</span><button data-student-quiz-nav="1" ${cursor>=questions.length-1?"disabled":""}>다음 →</button></div>`;
+        const head=`<div class="student-stage-head"><div><div class="student-stage-title">${quiz.key==="PRE_QUIZ"?"START QUIZ":"BREAK QUIZ"}</div><strong>${answeredCount>=questions.length&&!feedbackActive?"QUIZ COMPLETE":`QUESTION ${cursor+1} / ${total}`}</strong></div><div><span id="studentQuizTimer" class="student-timer">0</span><div class="student-muted" style="margin-top:0">TOTAL SEC</div></div></div><div class="student-quiz-progress"><span>내 진행률 <b>${answeredCount}/${total}</b></span><span>${answeredCount>=questions.length?"✓ 전부 답함":"선택 즉시 자동 채점"}</span></div>`;
+        if(answeredCount>=questions.length&&!feedbackActive){
+          const correctCount=studentQuizCorrectCount(data,quiz.key,questions);
+          studentStageArea.innerHTML=`${head}<div class="student-result-box student-quiz-complete"><div class="complete-mark">✓</div><div class="student-stage-title">ALL ANSWERS SENT</div><div class="student-result-score">${correctCount} / ${total}</div><div class="student-muted">모든 문제를 풀었습니다. 호스트가 퀴즈를 마칠 때까지 기다려주세요.</div></div>`;
+          startStudentStageTimer(quiz.endsAtMs);return;
+        }
+        const correctIndex=Number(q?.correctIndex),locked=expired||Number.isInteger(selected);
+        const optionHtml=(q?.options||[]).map((opt,i)=>{
+          let state="";
+          if(Number.isInteger(selected)){
+            if(Number.isInteger(correctIndex)&&i===correctIndex)state="correct";
+            else if(i===selected)state="wrong";
+            else state="answer-dim";
+          }
+          return `<button class="student-quiz-option ${state}" data-student-quiz-answer="${i}" data-quiz-question-index="${cursor}" ${locked?"disabled":""}><b>${letters[i]}</b><span>${escapeLobbyHtml(opt)}</span></button>`;
+        }).join("");
+        studentStageArea.innerHTML=`${head}<div class="student-question">${escapeLobbyHtml(q?.prompt||"")}</div><div class="student-quiz-options">${optionHtml}</div>${feedbackActive?studentQuizFeedbackHtml(q,selected,letters):""}<div class="student-quiz-auto-note">답을 선택하면 정답을 확인한 뒤 자동으로 다음 문제로 넘어갑니다.</div>`;
         startStudentStageTimer(quiz.endsAtMs);return;
       }
       if(quiz.stage==="RESULT"){
@@ -3540,9 +3589,28 @@
     const room=effectiveStudentRoomState(),quiz=room.quiz||{},code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId;
     if(!code||!id||quiz.stage!=="RUNNING"||Date.now()>Number(quiz.endsAtMs||0)+250)return;
     const key=quiz.key,cursorKey=`${quiz.session||0}:${key}`,index=Number.isInteger(Number(questionIndex))?Number(questionIndex):Number(onlineRoomState.studentQuizCursor?.[cursorKey]||0);if(!key||!Number.isInteger(index))return;
+    const questions=Array.isArray(quiz.questions)?quiz.questions:[],question=questions[index];
+    const selected=Number(optionIndex),correctIndex=Number(question?.correctIndex);
+    if(!question||!Number.isInteger(selected)||selected<0||selected>=question.options.length)return;
     const data=onlineRoomState.studentData||(onlineRoomState.studentData={});
-    if(!data.quizAnswers)data.quizAnswers={};if(!data.quizAnswers[key])data.quizAnswers[key]={};data.quizAnswers[key][String(index)]=Number(optionIndex);
-    const total=Number(quiz.total)||quiz.questions?.length||0;let next=index;for(let step=1;step<=total;step++){const j=(index+step)%total;if(!Number.isInteger(studentQuizAnswerValue(data,key,j))){next=j;break;}}onlineRoomState.studentQuizCursor[cursorKey]=next;renderStudentStage();
+    if(Number.isInteger(studentQuizAnswerValue(data,key,index)))return;
+    if(!data.quizAnswers)data.quizAnswers={};if(!data.quizAnswers[key])data.quizAnswers[key]={};data.quizAnswers[key][String(index)]=selected;
+    const feedbackToken=`${quiz.session||0}:${key}:${index}:${Date.now()}`;
+    onlineRoomState.studentQuizFeedback[cursorKey]={index,selected,correctIndex,token:feedbackToken};
+    onlineRoomState.studentQuizCursor[cursorKey]=index;
+    stopStudentQuizAdvance();renderStudentStage();
+    const delay=Number.isInteger(correctIndex)&&selected===correctIndex?850:1450;
+    onlineRoomState.studentQuizAdvanceHandle=window.setTimeout(()=>{
+      onlineRoomState.studentQuizAdvanceHandle=null;
+      const currentRoom=effectiveStudentRoomState(),currentQuiz=currentRoom.quiz||{};
+      const liveFeedback=onlineRoomState.studentQuizFeedback?.[cursorKey];
+      if(currentQuiz.stage!=="RUNNING"||currentQuiz.key!==key||liveFeedback?.token!==feedbackToken)return;
+      delete onlineRoomState.studentQuizFeedback[cursorKey];
+      const currentData=onlineRoomState.studentData||data;
+      const next=studentQuizFirstUnanswered(currentData,key,questions.length,index+1);
+      onlineRoomState.studentQuizCursor[cursorKey]=next>=0?next:index;
+      renderStudentStage();
+    },delay);
     try{await firebaseParticipants(code).doc(id).set({quizAnswers:data.quizAnswers,lastQuizAnswer:`${key}:${index}`,updatedAt:firebaseTimestamp()},{merge:true});}
     catch(e){setStudentMessage(`답안 전송 실패: ${e.message}`);}
   }
@@ -3566,7 +3634,7 @@
     try{await firebaseParticipants(code).doc(id).update({[`tacticVotes.${key}`]:preset,updatedAt:firebaseTimestamp()});}catch(e){setStudentMessage(`전술 투표 전송 실패: ${e.message}`);}
   }
   function unsubscribeStudentRoom(){
-    stopStudentStageTimer();onlineRoomState.studentDocUnsub?.();onlineRoomState.studentDocUnsub=null;
+    stopStudentStageTimer();stopStudentQuizAdvance();onlineRoomState.studentDocUnsub?.();onlineRoomState.studentDocUnsub=null;
     onlineRoomState.studentRoomUnsub?.();onlineRoomState.studentRoomUnsub=null;
   }
   function subscribeStudentState(code,id){
@@ -4077,7 +4145,7 @@
     }
     const q=qz.questions[qz.index]||qz.questions[0],letters=["A","B","C","D"];
     participationContent.innerHTML=`<div class="live-quiz-wrap"><div class="live-quiz-top"><div class="live-question"><div class="live-question-no">OFFLINE QUIZ PREVIEW · ${qz.index+1}/${total}</div><div class="live-question-text">${escapeLobbyHtml(q?.prompt||"")}</div></div><div class="live-timer"><b id="liveQuizTimer">${Math.ceil(Math.max(0,qz.remaining))}</b><span>TOTAL SEC</span></div></div><div class="quiz-option-grid">${(q?.options||[]).map((opt,i)=>`<div class="quiz-option"><b>${letters[i]}</b><span>${escapeLobbyHtml(opt)}</span></div>`).join("")}</div></div>`;
-    participationPrimaryBtn.textContent=qz.index>=total-1?"퀴즈 종료 · 자동채점":"다음 문제 →";
+    participationPrimaryBtn.textContent=qz.index>=total-1?"퀴즈 종료 · 자동채점":"미리보기 계속 →";
   }
   function updateLiveQuizTimerDom(){
     const qz=quizSystem.current;if(!qz||qz.stage!=="RUNNING")return;
@@ -4088,7 +4156,9 @@
   }
   function stopLiveQuizTimer(){if(quizSystem.timerHandle){clearInterval(quizSystem.timerHandle);quizSystem.timerHandle=null;}}
   function publicQuizState(qz,stage="RUNNING"){
-    if(!qz)return null;const questions=stage==="RUNNING"?qz.questions.map(q=>({prompt:q.prompt,options:q.options})):[];
+    // v2.5.11 sends the shuffled answer index so each student device can show
+    // immediate feedback. The host still remains authoritative for final scoring.
+    if(!qz)return null;const questions=stage==="RUNNING"?qz.questions.map(q=>({prompt:q.prompt,options:q.options,correctIndex:q.correctIndex})):[];
     return {key:qz.key,index:0,total:qz.questions.length,stage,questions,prompt:"",options:[],endsAtMs:stage==="RUNNING"?(Number(qz.wallEndsAt)||Date.now()+(QUIZ_TOTAL_SECONDS[qz.key]||60)*1000):0,session:gameFlow.sessionSerial};
   }
   function armLiveQuizQuestion(){
@@ -4164,7 +4234,7 @@
     showParticipationOverlay();
     participationKicker.textContent="LIVE QUIZ · 20 QUESTIONS · 100 SEC";
     participationTitle.textContent="START QUIZ";
-    participationDesc.textContent="학생은 자기 기기에서 20문항을 자유롭게 이동하며 100초 안에 풉니다. 호스트는 전체 진행률만 확인합니다.";
+    participationDesc.textContent="학생은 자기 기기에서 20문항을 순서대로 풀고, 선택 즉시 정답 여부를 확인합니다. 호스트는 전체 진행률만 확인합니다.";
     participationPhaseChip.textContent="PRE-MATCH QUIZ";
     participationRoadmap.innerHTML=phaseRoadmapHtml("Q1");
     participationBackBtn.style.display=remoteParticipationActive()?"none":"";
@@ -4370,7 +4440,7 @@
     showParticipationOverlay();
     participationKicker.textContent=`LIVE QUIZ · 10 QUESTIONS · 60 SEC`;
     participationTitle.textContent=breakTitle(key);
-    participationDesc.textContent="학생은 자기 기기에서 10문항을 60초 안에 자유롭게 풉니다. 자동채점 후 3문제당 성장 +1, 최대 +3을 즉시 적용합니다.";
+    participationDesc.textContent="학생은 자기 기기에서 10문항을 순서대로 풀고, 선택 즉시 정답 여부를 확인합니다. 최종 채점 후 3문제당 성장 +1, 최대 +3을 적용합니다.";
     participationPhaseChip.textContent=key==="HALF"?`HALF TIME · ${match.blueScore}-${match.redScore}`:`${Math.floor(match.elapsedSeconds/60)}' · ${match.blueScore}-${match.redScore}`;
     participationRoadmap.innerHTML=phaseRoadmapHtml(key);
     participationBackBtn.style.display="none";
@@ -4847,21 +4917,24 @@
         return pickOne([
           " 시간이 많지 않습니다. 이 기회를 살려야 합니다!",
           " 추격하는 쪽에는 이제 한 장면 한 장면이 정말 중요합니다!",
-          " 남은 시간은 짧습니다. 공격의 완성도가 필요합니다!"
+          " 남은 시간은 짧습니다. 공격의 완성도가 필요합니다!",
+          " 이제는 좋은 과정만으로 부족합니다. 결과가 필요합니다!"
         ]);
       }
       if(diff>0 && type==="major"){
         return pickOne([
           " 이런 수비 한 번이 리드를 지켜냅니다.",
           " 앞선 팀에는 아주 값진 수비 장면입니다.",
-          " 막판에는 이런 한 번의 차단이 정말 큽니다."
+          " 막판에는 이런 한 번의 차단이 정말 큽니다.",
+          " 시간을 보내는 것보다 확실한 수비가 먼저입니다."
         ]);
       }
       if(diff===0 && type==="danger"){
         return pickOne([
           " 이 한 번이 균형을 깨뜨릴 수도 있습니다!",
           " 이제는 작은 틈 하나가 승부를 바꿀 수 있습니다!",
-          " 동점 상황, 이런 기회는 놓치면 아쉽습니다!"
+          " 동점 상황, 이런 기회는 놓치면 아쉽습니다!",
+          " 승점의 방향이 이 장면에서 갈릴 수 있습니다!"
         ]);
       }
     }else if(minute>=45){
@@ -4898,7 +4971,7 @@
     if(/몸을 던져|블록|정확한 태클|결정적 태클|인터셉트|패스 길을 미리 읽고 끊어|완전히 탈취|즉시 걷어/.test(t))return "defence";
     if(/루즈볼|세컨볼|흐른 패스/.test(t))return "loose";
     if(/킬패스|스루패스|사이드 전환|롱패스|패스|연결|전개/.test(t))return "pass";
-    if(/얼리 크로스|롱 크로스|크로스|컷백|헤더|발리|감아차기|슛|리바운드/.test(t))return "attack";
+    if(/얼리 크로스|롱 크로스|크로스|컷백|헤더|발리|감아차기|슛|슈팅|리바운드/.test(t))return "attack";
     if(/퍼스트 터치|받아냅니다|공을 지키|템포를 조율/.test(t))return "control";
     if(/코너킥|프리킥|스로인|골킥|재개/.test(t))return "restart";
     return "general";
@@ -4916,7 +4989,9 @@
           `${text}`,
           `침착합니다! ${text}`,
           `골키퍼가 손쓸 수 없습니다! ${text}`,
-          `부담을 이겨내고 성공시킵니다! ${text}`
+          `부담을 이겨내고 성공시킵니다! ${text}`,
+          `키커가 골키퍼와의 심리전에서 이깁니다! ${text}`,
+          `끝까지 공을 보고 정확하게 마무리합니다! ${text}`
         ];
       }else{
         const own=teamName?match[teamName+"Score"]:0;
@@ -4926,11 +5001,26 @@
           `GOAL!!! ${text.replace(/^GOAL!?\s*/,"")}`,
           `${minute>=75?"막판에 골이 터집니다!":"골입니다!"} ${text}`,
           `${diff===0?"다시 균형을 맞춥니다!":diff===1?"앞서 나갑니다!":"격차를 더 벌립니다!"} ${text}`,
-          `결국 마무리까지 해냅니다! ${text}`
+          `결국 마무리까지 해냅니다! ${text}`,
+          `골망을 흔듭니다! 공격 작업에 완벽한 마침표를 찍습니다. ${text}`,
+          `찾아온 기회를 놓치지 않고 득점으로 바꿉니다! ${text}`,
+          `슈팅 순간에는 망설임이 없었습니다! ${text}`
         ];
       }
-    }else if(type==="var"||type==="card"){
-      variants=[text];
+    }else if(type==="var"){
+      variants=[
+        `${text}`,
+        `주심이 이어폰에 손을 댑니다. ${text}`,
+        `경기는 잠시 멈췄고, 판독실의 결정을 기다립니다. ${text}`,
+        `여러 각도의 화면을 다시 확인합니다. ${text}`
+      ];
+    }else if(type==="card"){
+      variants=[
+        `${text}`,
+        `주심이 곧바로 주머니에 손을 넣습니다. ${text}`,
+        `이 도전은 타이밍이 늦었습니다. ${text}`,
+        `주심이 가까이서 정확히 보고 있었습니다. ${text}`
+      ];
     }else if(type==="hype"){
       const byTheme={
         penalty:/막아냅니다/.test(text) ? [
@@ -4954,38 +5044,55 @@
           `이건 위협적입니다! ${text}`,
           `한 번에 수비를 흔듭니다! ${text}`,
           `관중석이 바로 반응합니다! ${text}`,
-          `${minute>=80?"이 중요한 시간에! ":""}${text}`
+          `${minute>=80?"이 중요한 시간에! ":""}${text}`,
+          `박스 안에서 슈팅 각도를 만들어냅니다! ${text}`,
+          `수비가 뒷걸음질 칩니다. 마무리까지 봐야 합니다! ${text}`,
+          `공격 숫자를 제대로 확보했습니다! ${text}`
         ],
         pass:[
           `${text}`,
           `수비 사이를 정확히 봤습니다! ${text}`,
           `보입니다, 그리고 찔러 넣습니다! ${text}`,
-          `한 번의 패스로 공격이 열립니다! ${text}`
+          `한 번의 패스로 공격이 열립니다! ${text}`,
+          `라인 사이로 정확히 넣어줍니다! ${text}`,
+          `패스 하나로 수비 두 줄을 무너뜨립니다! ${text}`,
+          `받는 선수의 다음 동작까지 계산한 패스입니다! ${text}`
         ],
         defence:[
           `${text}`,
           `몸을 던집니다! ${text}`,
           `엄청난 수비 집중력입니다! ${text}`,
-          `위험한 순간을 직접 지워냅니다! ${text}`
+          `위험한 순간을 직접 지워냅니다! ${text}`,
+          `한 발 먼저 들어가 공격의 맥을 끊습니다! ${text}`,
+          `페널티박스 안에서 수비가 끝까지 집중합니다! ${text}`,
+          `결정적인 길목을 정확히 지켰습니다! ${text}`
         ],
         keeper:[
           `${text}`,
           `골키퍼가 해냅니다! ${text}`,
           `이걸 막아냅니다! ${text}`,
-          `골문 앞에서 결정적인 반응입니다! ${text}`
+          `골문 앞에서 결정적인 반응입니다! ${text}`,
+          `각을 좁히고 몸을 크게 만들었습니다! ${text}`,
+          `반사 신경으로 팀을 구해냅니다! ${text}`,
+          `첫 번째 동작에 이어 두 번째 처리까지 좋습니다! ${text}`
         ],
         carry:[
           `${text}`,
           `직접 깨고 들어갑니다! ${text}`,
           `한 명을 제치면서 공간이 열립니다! ${text}`,
-          `개인 능력으로 흐름을 바꿉니다! ${text}`
+          `개인 능력으로 흐름을 바꿉니다! ${text}`,
+          `수비의 무게중심을 완전히 무너뜨립니다! ${text}`,
+          `속도를 붙이며 박스 쪽으로 파고듭니다! ${text}`,
+          `볼을 발에 붙이고 압박을 벗어납니다! ${text}`
         ]
       };
       variants=byTheme[theme]||[
         `${text}`,
         `좋은 장면입니다! ${text}`,
         `관중석이 들썩입니다! ${text}`,
-        `${minute>=80?"이 중요한 시간에! ":""}${text}`
+        `${minute>=80?"이 중요한 시간에! ":""}${text}`,
+        `경기의 온도가 한 번에 올라갑니다! ${text}`,
+        `양 팀 벤치가 모두 일어섭니다! ${text}`
       ];
     }else if(type==="danger"){
       const byTheme={
@@ -4993,24 +5100,32 @@
           `${text}`,
           `좋은 위치입니다! ${text}`,
           `수비가 순간적으로 흔들립니다. ${text}`,
-          `마무리까지 이어질 수 있습니다! ${text}`
+          `마무리까지 이어질 수 있습니다! ${text}`,
+          `박스 근처에서 선택지가 열립니다. ${text}`,
+          `수비 뒷공간을 정확히 공략합니다. ${text}`
         ],
         pass:[
           `${text}`,
           `수비 사이가 열립니다! ${text}`,
           `좋은 패스 길을 봤습니다. ${text}`,
-          `한 번에 전진합니다! ${text}`
+          `한 번에 전진합니다! ${text}`,
+          `하프스페이스로 공을 넣어줍니다. ${text}`,
+          `공격 템포를 단숨에 끌어올립니다. ${text}`
         ],
         keeper:[
           `${text}`,
           `골키퍼가 집중해야 합니다. ${text}`,
-          `위험한 볼이 골문 쪽으로 향합니다. ${text}`
+          `위험한 볼이 골문 쪽으로 향합니다. ${text}`,
+          `골키퍼가 빠르게 각을 줄여야 합니다. ${text}`,
+          `처리하기 까다로운 궤적입니다. ${text}`
         ]
       };
       variants=byTheme[theme]||[
         `${text}`,
         `위험한 장면입니다. ${text}`,
-        `공격의 속도가 붙습니다. ${text}`
+        `공격의 속도가 붙습니다. ${text}`,
+        `수비가 빠르게 자리를 잡아야 합니다. ${text}`,
+        `마지막 선택에 시선이 모입니다. ${text}`
       ];
     }else if(type==="major"){
       const byTheme={
@@ -5018,35 +5133,47 @@
           `${text}`,
           `읽었습니다! ${text}`,
           `타이밍이 좋았습니다. ${text}`,
-          `위험을 미리 끊어냅니다. ${text}`
+          `위험을 미리 끊어냅니다. ${text}`,
+          `공격수가 돌아서기 전에 먼저 처리합니다. ${text}`,
+          `수비 간격을 유지하며 길목을 닫습니다. ${text}`
         ],
         keeper:[
           `${text}`,
           `골키퍼가 빠르게 반응합니다. ${text}`,
           `안정적으로 처리합니다. ${text}`,
-          `골문 앞에서 침착합니다. ${text}`
+          `골문 앞에서 침착합니다. ${text}`,
+          `위험 지역에서 확실하게 소유합니다. ${text}`,
+          `판단을 미루지 않고 먼저 나옵니다. ${text}`
         ],
         loose:[
           `${text}`,
           `세컨볼 싸움입니다! ${text}`,
-          `반응 속도가 중요합니다. ${text}`
+          `반응 속도가 중요합니다. ${text}`,
+          `중원 숫자 싸움이 여기서 드러납니다. ${text}`,
+          `공의 낙하지점을 먼저 읽는 쪽이 유리합니다. ${text}`
         ],
         restart:[
           `${text}`,
           `다시 플레이가 이어집니다. ${text}`,
-          `세트피스에서 어떤 선택을 할지 봐야 합니다. ${text}`
+          `세트피스에서 어떤 선택을 할지 봐야 합니다. ${text}`,
+          `수비가 대형을 갖추기 전에 재개합니다. ${text}`,
+          `약속된 움직임이 나오는지 지켜봐야 합니다. ${text}`
         ],
         carry:[
           `${text}`,
           `잘 버텨냅니다! ${text}`,
           `압박을 한 번 벗겨냅니다. ${text}`,
-          `몸을 써서 공을 살려냅니다. ${text}`
+          `몸을 써서 공을 살려냅니다. ${text}`,
+          `상대의 압박 방향을 역으로 이용합니다. ${text}`,
+          `볼을 지켜내며 동료가 올라올 시간을 벌어줍니다. ${text}`
         ]
       };
       variants=byTheme[theme]||[
         `${text}`,
         `좋은 판단입니다. ${text}`,
-        `이 장면을 깔끔하게 처리합니다. ${text}`
+        `이 장면을 깔끔하게 처리합니다. ${text}`,
+        `기본에 충실한 플레이입니다. ${text}`,
+        `상황을 정확하게 읽고 움직였습니다. ${text}`
       ];
     }else if(type==="normal"){
       const byTheme={
@@ -5055,40 +5182,56 @@
           `간결하게 이어갑니다. ${text}`,
           `주변을 확인하고 연결합니다. ${text}`,
           `패스 리듬을 끊지 않습니다. ${text}`,
-          `무리하지 않고 다음 패스를 선택합니다. ${text}`
+          `무리하지 않고 다음 패스를 선택합니다. ${text}`,
+          `원터치로 방향을 바꿉니다. ${text}`,
+          `볼의 속도를 살려 전개합니다. ${text}`,
+          `좌우로 흔들며 빈틈을 찾습니다. ${text}`
         ],
         control:[
           `${text}`,
           `첫 동작이 좋습니다. ${text}`,
           `압박을 등지고 여유 있게 받아냅니다. ${text}`,
-          `공을 자기 것으로 만든 뒤 주변을 봅니다. ${text}`
+          `공을 자기 것으로 만든 뒤 주변을 봅니다. ${text}`,
+          `받기 전에 이미 다음 선택을 준비했습니다. ${text}`,
+          `몸 방향을 열어놓고 전방을 바라봅니다. ${text}`
         ],
         carry:[
           `${text}`,
           `직접 운반합니다. ${text}`,
           `공간이 보이자 앞으로 가져갑니다. ${text}`,
-          `서두르지 않고 볼을 끌고 올라갑니다. ${text}`
+          `서두르지 않고 볼을 끌고 올라갑니다. ${text}`,
+          `동료의 움직임을 기다리며 전진합니다. ${text}`,
+          `압박이 오기 전까지 거리를 확보합니다. ${text}`
         ],
         loose:[
           `${text}`,
           `공이 흐릅니다! ${text}`,
-          `세컨볼에 누가 먼저 반응할까요. ${text}`
+          `세컨볼에 누가 먼저 반응할까요. ${text}`,
+          `양 팀의 중원이 동시에 달려듭니다. ${text}`,
+          `소유권이 아직 어느 쪽에도 없습니다. ${text}`
         ],
         keeper:[
           `${text}`,
           `골키퍼가 침착하게 처리합니다. ${text}`,
-          `후방에서 다시 공격을 준비합니다. ${text}`
+          `후방에서 다시 공격을 준비합니다. ${text}`,
+          `급하게 차내지 않고 동료 위치를 확인합니다. ${text}`,
+          `수비진을 정돈한 뒤 빌드업을 시작합니다. ${text}`
         ],
         restart:[
           `${text}`,
           `빠르게 재개합니다. ${text}`,
-          `다시 공이 움직입니다. ${text}`
+          `다시 공이 움직입니다. ${text}`,
+          `양 팀이 대형을 다시 맞춥니다. ${text}`,
+          `키커가 박스 안 움직임을 확인합니다. ${text}`
         ],
         mistake:[
           `${text}`,
           `아, 연결이 끊깁니다. ${text}`,
           `조금 길었습니다. ${text}`,
-          `의도한 대로 이어지지 않습니다. ${text}`
+          `의도한 대로 이어지지 않습니다. ${text}`,
+          `첫 번째 선택이 조금 아쉬웠습니다. ${text}`,
+          `압박을 의식하며 정확도가 떨어졌습니다. ${text}`,
+          `동료와 타이밍이 맞지 않았습니다. ${text}`
         ]
       };
       variants=byTheme[theme]||[text];
@@ -6092,12 +6235,14 @@
           ? [
               "골문 앞에 자물쇠를 채웠다. 상대 슈팅이 문 앞에서 자꾸 길을 잃었다.",
               "오늘 골문은 그의 개인 금고였다. 쉽게 열어줄 생각이 없었다.",
-              "장갑에 자석이라도 붙인 듯 결정적인 순간마다 공을 끌어당겼다."
+              "장갑에 자석이라도 붙인 듯 결정적인 순간마다 공을 끌어당겼다.",
+              "상대가 골을 확신한 순간마다 마지막 장면을 자신의 선방으로 바꿨다."
             ]
           : [
               "후방의 마지막 문지기로 묵묵히 경기를 읽었다.",
               "큰 소리 없이 골문을 정리하며 수비진의 뒤를 받쳤다.",
-              "골문 뒤에서 경기의 온도를 조절하는 안전장치 역할을 했다."
+              "골문 뒤에서 경기의 온도를 조절하는 안전장치 역할을 했다.",
+              "필요한 순간 앞으로 나와 위험을 먼저 정리하며 수비진을 안정시켰다."
             ],
         p
       );
@@ -6108,12 +6253,14 @@
           ? [
               "박스 앞에 콘크리트 벽을 세웠다. 상대 공격수들이 자꾸 같은 벽에 부딪혔다.",
               "수비라인의 소방수였다. 불이 붙을 때마다 가장 먼저 나타났다.",
-              "오늘만큼은 페널티박스의 문지기였다. 위험한 길목을 몸으로 잠갔다."
+              "오늘만큼은 페널티박스의 문지기였다. 위험한 길목을 몸으로 잠갔다.",
+              "상대의 마지막 패스가 향할 곳을 먼저 읽고 박스 안의 소음을 잠재웠다."
             ]
           : [
               "화려하진 않아도 수비라인의 기둥처럼 자리를 지켰다.",
               "공보다 한발 먼저 자리를 잡으며 뒤에서 경기를 정리했다.",
-              "수비진의 안전벨트처럼 큰 사고를 막는 데 집중했다."
+              "수비진의 안전벨트처럼 큰 사고를 막는 데 집중했다.",
+              "라인 간격을 꾸준히 맞추며 동료들이 흔들리지 않게 중심을 잡았다."
             ],
         p
       );
@@ -6123,7 +6270,8 @@
         [
           "터치라인을 자기 전용 고속도로처럼 오르내렸다.",
           "위아래를 쉼 없이 왕복하며 측면에 엔진 하나를 더 달았다.",
-          "수비수와 윙어 사이를 오가며 경기장 한쪽 면을 통째로 사용했다."
+          "수비수와 윙어 사이를 오가며 경기장 한쪽 면을 통째로 사용했다.",
+          "오버래핑과 수비 복귀를 반복하며 측면의 폭과 균형을 함께 책임졌다."
         ],p
       );
       line2=`${km.toFixed(1)}km를 뛰며 전진패스 ${s.progressivePasses}회와 수비 기여 ${defensive}회를 함께 남겼다.`;
@@ -6132,7 +6280,8 @@
         [
           "수비와 공격 사이의 교통정리 경찰이었다. 위험한 길은 막고 좋은 길은 열었다.",
           "중원 바닥에 빗자루를 들고 나온 듯 세컨볼과 패스길을 쓸어 담았다.",
-          "팀의 무게추처럼 중앙을 잡아주며 앞선 선수들이 마음 놓고 올라가게 했다."
+          "팀의 무게추처럼 중앙을 잡아주며 앞선 선수들이 마음 놓고 올라가게 했다.",
+          "상대 역습의 첫 길목을 지키면서 공격의 첫 패스까지 책임졌다."
         ],p
       );
       line2=`수비 기여 ${defensive}회와 패스 성공률 ${passPct}%로 보이지 않는 궂은일을 맡았다.`;
@@ -6142,12 +6291,14 @@
           ? [
               "중원에 메트로놈을 놓았다. 경기의 빠르기와 방향을 발끝으로 조절했다.",
               "공이 그의 발을 거치면 공격에 문장이 생겼다. 중원의 편집장 같은 경기였다.",
-              "패스길 위에 지도를 펼쳐놓은 듯 팀의 다음 목적지를 계속 알려줬다."
+              "패스길 위에 지도를 펼쳐놓은 듯 팀의 다음 목적지를 계속 알려줬다.",
+              "라인 사이에서 고개를 들 때마다 팀 공격에 새로운 길이 하나씩 생겼다."
             ]
           : [
               "중원의 왕복열차였다. 수비에서 공격까지 빈칸을 계속 메웠다.",
               "공이 있는 곳마다 얼굴을 내밀며 경기의 연결고리가 됐다.",
-              "중앙에서 부지런히 실을 꿰어 공격과 수비를 한 덩어리로 묶었다."
+              "중앙에서 부지런히 실을 꿰어 공격과 수비를 한 덩어리로 묶었다.",
+              "공격수가 고립되지 않도록 한 줄씩 전진하며 두 번째 공격선을 만들었다."
             ],
         p
       );
@@ -6157,7 +6308,8 @@
         [
           "공격수 뒤의 작은 틈을 찾아다니는 도둑고양이처럼 영리하게 움직였다.",
           "박스 앞에서 한 번씩 번뜩이며 수비진의 시선을 흔들었다.",
-          "공격진 사이에서 연결 플러그 역할을 하며 마지막 한 칸을 노렸다."
+          "공격진 사이에서 연결 플러그 역할을 하며 마지막 한 칸을 노렸다.",
+          "수비와 미드필드 사이에 머물며 돌아서는 순간마다 골문을 바라봤다."
         ],p
       );
       line2=`${s.goals}골 ${s.assists}도움, 키패스 ${s.keyPasses}회로 위험지역에서 자신의 존재를 남겼다.`;
@@ -6166,7 +6318,8 @@
         [
           "사이드라인에 불을 붙였다. 공을 잡을 때마다 수비가 한쪽으로 기울었다.",
           "측면에서 계속 문을 두드리며 상대 풀백을 쉬지 못하게 했다.",
-          "터치라인을 무대로 삼아 속도와 기술로 관중의 시선을 끌었다."
+          "터치라인을 무대로 삼아 속도와 기술로 관중의 시선을 끌었다.",
+          "폭을 넓게 유지하다가 순간적으로 안쪽을 파고들며 수비의 기준점을 흔들었다."
         ],p
       );
       line2=`드리블 ${s.dribblesWon}회와 키패스 ${s.keyPasses}회${s.assists?`, 도움 ${s.assists}회`:""}로 측면의 위협을 만들었다.`;
@@ -6176,12 +6329,14 @@
           ? [
               "박스 안에서는 피 냄새를 맡은 상어 같았다. 기회가 오자 바로 물었다.",
               "골문 앞에서 가장 필요한 순간에 등장하는 해결사였다.",
-              "많은 말을 하지 않았다. 골망을 흔드는 것으로 자신의 문장을 끝냈다."
+              "많은 말을 하지 않았다. 골망을 흔드는 것으로 자신의 문장을 끝냈다.",
+              "수비수의 시야에서 잠시 사라진 뒤 가장 위험한 위치에서 다시 나타났다."
             ]
           : [
               "수비 뒷공간의 냄새를 계속 맡았지만 마지막 한입이 조금 아쉬웠다.",
               "센터백 어깨 너머를 끊임없이 노리며 다음 찬스를 기다렸다.",
-              "골은 없었어도 수비라인을 뒤로 밀어내며 공간을 만드는 역할을 했다."
+              "골은 없었어도 수비라인을 뒤로 밀어내며 공간을 만드는 역할을 했다.",
+              "득점으로 연결되진 않았지만 채널을 반복해서 달리며 수비진을 묶어뒀다."
             ],
         p
       );
@@ -6196,20 +6351,51 @@
       line2+=` ${signature.minute}'${timing}의 ‘${signature.label}’ 장면은 이 선수의 경기에서 가장 선명한 순간이었다.`;
     }
 
-    if(rating<5.8){
+    if(rating<5.5){
+      line1=storyPick(
+        [
+          "경기 흐름에 제대로 올라타지 못했다. 공을 잡을 때도, 공이 없을 때도 반응이 한발 늦었다.",
+          "자신의 역할을 충분히 보여주지 못한 채 경기 내내 어려움을 겪었다.",
+          "오늘은 장점보다 아쉬운 선택이 더 선명하게 남은 경기였다.",
+          "팀이 필요로 한 안정감을 주지 못했고, 플레이의 리듬도 끝내 찾지 못했다.",
+          "공격과 수비 어느 쪽에서도 확실한 영향력을 남기지 못한 힘든 하루였다."
+        ],p,29
+      );
       line2+=storyPick(
         [
-          " 오늘은 축구공과 타이밍이 서로 약속 시간을 조금 다르게 잡은 날이었다.",
-          " 뜻대로 풀리진 않았지만 이런 날도 시즌의 한 페이지다.",
-          " 발끝이 살짝 꼬인 날이었지만 다음 경기에 갚아줄 장면은 남아 있다."
+          " 하지만 오늘은 공을 잡은 뒤의 판단이 자주 늦었다. 더 단순하고 정확한 플레이가 필요했다.",
+          " 중요한 순간마다 한 박자씩 늦었고, 몇 차례 실수가 팀의 흐름까지 끊었다. 냉정한 복기가 필요한 경기였다.",
+          " 경기 안으로 좀처럼 들어오지 못했다. 공 없는 움직임과 집중력을 분명히 끌어올려야 한다.",
+          " 시도는 있었지만 선택과 실행 모두 아쉬움이 컸다. 다음 경기에서는 기본적인 연결부터 되찾아야 한다.",
+          " 상대 압박에 고전하며 장점을 거의 보여주지 못했다. 오늘만큼은 더 적극적인 반응이 필요했다."
         ],p,41
+      );
+    }else if(rating<6.3){
+      line1=storyPick(
+        [
+          "맡은 자리는 지켰지만 존재감을 남기기에는 다소 조용한 경기였다.",
+          "좋은 의도는 있었지만 실행의 날카로움이 끝까지 따라오지 않았다.",
+          "무난하게 경기를 따라갔으나 흐름을 바꿀 만한 장면은 부족했다.",
+          "몇 차례 기회를 잡았지만 자신의 강점을 확실하게 보여주지는 못했다."
+        ],p,47
+      );
+      line2+=storyPick(
+        [
+          " 활동량은 있었지만 경기 결과에 영향을 주는 장면은 부족했다.",
+          " 몇 차례 좋은 위치를 잡았지만 마지막 선택의 정확도가 아쉬웠다.",
+          " 무난하게 경기를 따라갔지만, 팀이 필요로 한 한 번의 적극적인 플레이는 나오지 않았다.",
+          " 실수를 줄이는 데는 성공했지만 자신의 강점을 보여주기에는 다소 조용한 경기였다.",
+          " 더 빠른 판단과 과감한 전진이 있었다면 평가를 바꿀 수 있는 경기였다."
+        ],p,57
       );
     }else if(rating>=8){
       line2+=storyPick(
         [
           " 오늘 경기의 형광펜은 자연스럽게 이 선수 위에 그어졌다.",
           " 경기장을 떠날 때 박수를 받을 만한 90분이었다.",
-          " 공이 올 때마다 무언가 일어날 것 같은 분위기를 만들었다."
+          " 공이 올 때마다 무언가 일어날 것 같은 분위기를 만들었다.",
+          " 중요한 장면마다 정확한 선택을 내리며 경기의 기준을 한 단계 높였다.",
+          " 숫자로 보이는 기록과 보이지 않는 영향력 모두 선명했던 경기였다."
         ],p,71
       );
     }
@@ -6357,20 +6543,51 @@
   function matchVerdictText(){
     const pos=possessionPercent();
     const shotDiff=stats.blue.shots-stats.red.shots;
+    const onTargetDiff=stats.blue.shotsOnTarget-stats.red.shotsOnTarget;
     const scoreDiff=match.blueScore-match.redScore;
+    const bluePass=teamPassPct("blue"),redPass=teamPassPct("red");
+    const shootout=match.shootout;
 
-    let first=
-      scoreDiff===0
-        ? `결국 ${match.blueScore}-${match.redScore}. 어느 쪽도 마지막 문을 완전히 열지는 못했다.`
-        : `${scoreDiff>0?"BLUE":"RED"}가 ${Math.abs(scoreDiff)}골 차로 웃었다.`;
+    let first;
+    if(shootout?.winner){
+      first=`정규시간은 ${match.blueScore}-${match.redScore}로 팽팽했다. 승부차기에서 ${shootout.winner.toUpperCase()}가 ${shootout.blue}-${shootout.red}으로 마지막 승부를 가져갔다.`;
+    }else if(scoreDiff===0){
+      first=`최종 스코어 ${match.blueScore}-${match.redScore}. 양 팀이 끝까지 균형을 깨지 못했지만 서로 다른 방식으로 승리를 노린 경기였다.`;
+    }else{
+      const winner=scoreDiff>0?"BLUE":"RED";
+      first=`최종 스코어 ${match.blueScore}-${match.redScore}. ${winner}가 결정적인 장면에서 한 발 앞서며 ${Math.abs(scoreDiff)}골 차 승리를 챙겼다.`;
+    }
 
     let second;
-    if(Math.abs(shotDiff)>=5){
-      second=`슈팅은 ${shotDiff>0?"BLUE":"RED"}가 ${Math.abs(shotDiff)}개 더 많았고, 경기의 위험지역도 그쪽으로 더 자주 기울었다.`;
-    }else if(Math.abs(pos.blue-pos.red)>=10){
-      second=`점유율 ${pos.blue}-${pos.red}. 공을 오래 가진 팀과 결정적인 순간을 만든 팀의 싸움이었다.`;
+    const possessionDiff=pos.blue-pos.red;
+    if(Math.abs(possessionDiff)>=10){
+      const controller=possessionDiff>0?"BLUE":"RED";
+      const rate=possessionDiff>0?bluePass:redPass;
+      second=`점유율은 BLUE ${pos.blue}% · RED ${pos.red}%였다. ${controller}가 공을 더 오래 소유했고 패스 성공률 ${rate}%를 바탕으로 경기의 기본 리듬을 주도했다.`;
     }else{
-      second="점유와 슈팅이 팽팽하게 오간, 한두 장면이 결과를 갈라놓은 경기였다.";
+      second=`점유율은 BLUE ${pos.blue}% · RED ${pos.red}%, 패스 성공률은 ${bluePass}% · ${redPass}%였다. 한 팀이 일방적으로 공을 독점하기보다 중원에서 주도권이 여러 차례 오갔다.`;
+    }
+
+    let third=`공격 지표는 슈팅 BLUE ${stats.blue.shots}(${stats.blue.shotsOnTarget} 유효) · RED ${stats.red.shots}(${stats.red.shotsOnTarget} 유효), 코너킥 ${stats.blue.corners}-${stats.red.corners}였다. `;
+    if(Math.abs(onTargetDiff)>=3){
+      const sharper=onTargetDiff>0?"BLUE":"RED";
+      third+=`${sharper}가 골문 안으로 향하는 슈팅을 더 많이 만들며 상대 골키퍼에게 꾸준히 부담을 줬다.`;
+    }else if(Math.abs(shotDiff)>=5){
+      const busier=shotDiff>0?"BLUE":"RED";
+      third+=`${busier}가 더 자주 슈팅까지 연결했지만, 모든 시도가 확실한 득점 기회로 이어진 것은 아니었다.`;
+    }else{
+      third+="기회의 양은 비슷했고, 박스 근처에서 나온 마지막 패스와 슈팅의 질이 결과를 갈랐다.";
+    }
+
+    let fourth;
+    const turnoverDiff=stats.blue.turnovers-stats.red.turnovers;
+    const blueResistance=stats.blue.tackleWon+stats.blue.blocks+stats.blue.saves;
+    const redResistance=stats.red.tackleWon+stats.red.blocks+stats.red.saves;
+    if(Math.abs(turnoverDiff)>=4){
+      const safer=turnoverDiff<0?"BLUE":"RED";
+      fourth=`볼 소유를 잃은 횟수는 BLUE ${stats.blue.turnovers} · RED ${stats.red.turnovers}. ${safer}가 압박 속에서도 실수를 더 잘 관리했고, 그 차이가 공격을 이어가는 힘이 됐다.`;
+    }else{
+      fourth=`볼 소유 상실은 BLUE ${stats.blue.turnovers} · RED ${stats.red.turnovers}로 큰 차이가 없었다. 태클·블록·선방을 합친 수비 저항은 ${blueResistance}-${redResistance}로, 양 팀 모두 공을 잃은 뒤 빠르게 맞서는 흐름을 보였다.`;
     }
 
     let blue=0,red=0;
@@ -6383,24 +6600,26 @@
       if(g.minute>=80)lateGoal=g;
     }
 
-    const winner=scoreDiff>0?"blue":scoreDiff<0?"red":null;
-    let third="";
-    if(winner&&((winner==="blue"&&blueTrailed)||(winner==="red"&&redTrailed))){
-      third=`${winner.toUpperCase()}는 한때 뒤졌지만 경기 흐름을 뒤집어낸 역전승을 완성했다.`;
+    const winner=shootout?.winner||(scoreDiff>0?"blue":scoreDiff<0?"red":null);
+    let fifth="";
+    if(scoreDiff!==0&&winner&&((winner==="blue"&&blueTrailed)||(winner==="red"&&redTrailed))){
+      fifth=`경기의 서사는 역전에서 완성됐다. ${winner.toUpperCase()}는 한때 뒤졌지만 흐름을 되찾고 끝내 스코어까지 뒤집었다.`;
     }else if(lateGoal){
-      third=`${lateGoal.minute}'에 나온 ${lateGoal.team.toUpperCase()}의 골이 막판 경기 이야기를 크게 바꿨다.`;
+      fifth=`${lateGoal.minute}'에 나온 ${lateGoal.team.toUpperCase()}의 득점이 막판 전술과 경기의 긴장도를 크게 바꿨다.`;
     }else{
       const bMode=teamState.blue.contextMode,rMode=teamState.red.contextMode;
       if([bMode,rMode].includes("PROTECT")){
         const protecting=bMode==="PROTECT"?"BLUE":"RED";
-        third=`막판에는 ${protecting}가 라인을 낮추고 공간을 닫으며 결과를 지키는 운영까지 보여줬다.`;
+        fifth=`막판에는 ${protecting}가 라인을 낮추고 중앙 공간을 닫으며 결과를 지키는 운영까지 보여줬다.`;
       }else if([bMode,rMode].includes("DESPERATE")){
         const desperate=bMode==="DESPERATE"?"BLUE":"RED";
-        third=`종료 직전 ${desperate}가 라인을 끌어올린 총공세가 경기의 긴장감을 끝까지 유지했다.`;
+        fifth=`종료 직전 ${desperate}가 라인을 끌어올리고 공격 숫자를 늘린 총공세가 경기의 긴장감을 끝까지 유지했다.`;
+      }else{
+        fifth="마지막까지 양 팀의 간격이 크게 벌어지지 않았고, 한 번의 전환과 세컨볼이 곧바로 다음 기회로 이어졌다.";
       }
     }
 
-    return `${first}<br><br>${second}${third?`<br><br>${third}`:""}`;
+    return [first,second,third,fourth,fifth].filter(Boolean).join("<br><br>");
   }
 
   function playerResultRow(p){
@@ -12275,6 +12494,18 @@
     return lerp(1.05,.72,intel);
   }
 
+  function midfieldPossessionRolePush(p,progress){
+    if(!p||p.category!=="MID")return 0;
+    const rolePush=
+      p.tacticalRole==="ATTACKING_MIDFIELDER"?3.8:
+      p.tacticalRole==="BOX_TO_BOX"?3.25:
+      p.tacticalRole==="WIDE_MIDFIELDER"?2.85:
+      p.tacticalRole==="PLAYMAKER"?2.35:
+      p.tacticalRole==="BALL_WINNER"?1.75:
+      p.tacticalRole==="ANCHOR"?1.0:2.5;
+    return rolePush*(progress<.48?.65:1);
+  }
+
   function intelligentReceivingTarget(p,target){
     if(ball.ownerTeam!==p.team || p.role==="GK" || ball.ownerId===p.id){
       return target;
@@ -12297,8 +12528,9 @@
       forwardPush=progress<.70?3.0:2.0;
       lateralPush=side*1.3;
     }else if(p.category==="MID"){
-      const buildupScale=progress<.48?.65:1;
-      forwardPush=(p.tacticalRole==="ANCHOR"?.9:p.tacticalRole==="PLAYMAKER"?2.0:p.tacticalRole==="ATTACKING_MIDFIELDER"?3.4:2.6)*buildupScale;
+      // v2.5.11: the midfield line travels with possession a little more.
+      // Attack-minded roles join the forwards; holding roles still protect balance.
+      forwardPush=midfieldPossessionRolePush(p,progress);
       lateralPush=side*(progress<.48?.45:.7);
     }else if(isFullback(p)){
       const buildupScale=progress<.48?.78:1;
@@ -19574,7 +19806,6 @@
   studentNameInput?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();joinStudentRoom();}});
   studentStageArea?.addEventListener("click",e=>{
     const quizBtn=e.target.closest("[data-student-quiz-answer]");if(quizBtn){submitStudentQuizAnswer(Number(quizBtn.dataset.studentQuizAnswer),Number(quizBtn.dataset.quizQuestionIndex));return;}
-    const quizNav=e.target.closest("[data-student-quiz-nav]");if(quizNav){const room=effectiveStudentRoomState(),quiz=room.quiz||{},total=Number(quiz.total)||quiz.questions?.length||0,key=quiz.key,cursorKey=`${quiz.session||0}:${key}`;if(key&&total){const cur=Number(onlineRoomState.studentQuizCursor?.[cursorKey]||0);onlineRoomState.studentQuizCursor[cursorKey]=clamp(cur+Number(quizNav.dataset.studentQuizNav||0),0,total-1);renderStudentStage();}return;}
     const roleBtn=e.target.closest("[data-student-role]");if(roleBtn){saveStudentRole(roleBtn.dataset.studentRole,false);return;}
     const roleReady=e.target.closest("[data-student-role-ready]");if(roleReady){const data=onlineRoomState.studentData||{};saveStudentRole(data.preferredRole||defaultDetailedRoleForPref(data.preferredPosition),true);return;}
     const voteBtn=e.target.closest("[data-student-tactic-vote]");if(voteBtn){saveStudentTacticVote(voteBtn.dataset.studentTacticVote);return;}
@@ -19861,6 +20092,15 @@
     publicResult(){return publicResultForRoom();},
     matchSpeed(multiplier=null){if(multiplier!==null)setMatchSpeed(multiplier);return {multiplier:matchSpeedMultiplier,onePressed:matchSpeed1Btn?.getAttribute("aria-pressed"),twoPressed:matchSpeed2Btn?.getAttribute("aria-pressed")};},
     matchTuning(){return {passExecutionErrorFactor:PASS_EXECUTION_ERROR_FACTOR,passReceiveScoreBonus:PASS_RECEIVE_SCORE_BONUS,decisionTempoMultiplier:AI_DECISION_TEMPO_MULTIPLIER,freeKickDirectChance:.63,forwardTackleFactor:.73,cornerCbTargetBonus:23};},
+    commentarySamples(text="BLUE · 공격수가 슈팅합니다!",type="hype",count=24){return [...new Set(Array.from({length:count},()=>contextualCommentary(text,type)))];},
+    storyFor(playerId){const p=getPlayer(playerId);return p?{rating:playerRating(p),lines:playerStory(p)}:null;},
+    criticalStoryPreview(){
+      resetMatch();const p=teams.blue.players.find(q=>q.role==="GK");
+      p.matchStats.passesAttempted=14;p.matchStats.passesCompleted=3;p.matchStats.redCards=1;match.redScore=5;
+      const result={rating:playerRating(p),lines:playerStory(p)};resetMatch();return result;
+    },
+    matchVerdict(){return matchVerdictText();},
+    midfieldPossessionPush(progress=.65){return Object.fromEntries(["ANCHOR","BALL_WINNER","PLAYMAKER","WIDE_MIDFIELDER","BOX_TO_BOX","ATTACKING_MIDFIELDER"].map(role=>[role,midfieldPossessionRolePush({category:"MID",tacticalRole:role},progress)]));},
     quizBankSummary(){const all=Object.values(quizSystem.phaseQuestions).flat();return {count:quizSystem.bank.length,errors:[...quizSystem.lastParseErrors],phaseCounts:Object.fromEntries(Object.entries(quizSystem.phaseQuestions).map(([k,v])=>[k,v.length])),selectedTotal:all.length,uniquePrompts:new Set(all.map(q=>q.prompt)).size};},
     parseQuizText(raw){const r=parseQuizBankText(raw);return {count:r.items.length,errors:r.errors,first:r.items[0]||null};},
     fastCompleteCurrentQuiz(){autoCompleteLiveQuiz();return quizSystem.current?{key:quizSystem.current.key,stage:quizSystem.current.stage}:null;},
@@ -22148,8 +22388,18 @@
       showStudentRoute(String(code));setStudentMessage("이름과 희망 포지션을 입력해주세요.",false);return this.state();
     },
     previewStudentWaiting(){onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentRoomData={status:"WAITING",phase:"LOBBY"};renderStudentWaiting({name:"민수",preferredPosition:"CM",team:"blue",status:"joined",preQuizPoints:8,startAllocation:blankGrowth(),statsBonus:blankGrowth()});},
-    previewStudentFallback(){onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentRoomData={status:"WAITING",phase:"LOBBY",syncSerial:2,roster:[]};onlineRoomState.studentData={name:"민수",preferredPosition:"CM",team:"blue",status:"joined",quizAnswers:{PRE_QUIZ:{}},clientView:{phase:"PRE_QUIZ",syncSerial:7,quiz:{key:"PRE_QUIZ",index:0,total:20,stage:"RUNNING",questions:[{prompt:"beautiful의 뜻은?",options:["아름다운","어려운","가능한","중요한"]}],prompt:"",options:[],endsAtMs:Date.now()+100000,session:1}}};renderStudentWaiting(onlineRoomState.studentData);return {text:studentStageArea?.innerText||"",phase:effectiveStudentRoomState().phase,serial:effectiveStudentRoomState().syncSerial};},
+    previewStudentFallback(){onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentRoomData={status:"WAITING",phase:"LOBBY",syncSerial:2,roster:[]};onlineRoomState.studentData={name:"민수",preferredPosition:"CM",team:"blue",status:"joined",quizAnswers:{PRE_QUIZ:{}},clientView:{phase:"PRE_QUIZ",syncSerial:7,quiz:{key:"PRE_QUIZ",index:0,total:20,stage:"RUNNING",questions:[{prompt:"beautiful의 뜻은?",options:["아름다운","어려운","가능한","중요한"],correctIndex:0}],prompt:"",options:[],endsAtMs:Date.now()+100000,session:1}}};renderStudentWaiting(onlineRoomState.studentData);return {text:studentStageArea?.innerText||"",phase:effectiveStudentRoomState().phase,serial:effectiveStudentRoomState().syncSerial};},
+    async previewStudentQuizFeedback(correct=true){
+      stopStudentQuizAdvance();onlineRoomState.studentQuizCursor={};onlineRoomState.studentQuizFeedback={};
+      onlineRoomState.studentRoomCode="9999";onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentSessionId="quiz-preview";onlineRoomState.studentSessionEnded=false;
+      onlineRoomState.studentData={name:"민수",preferredPosition:"CM",team:"blue",status:"joined",quizAnswers:{PRE_QUIZ:{}}};
+      onlineRoomState.studentRoomData={status:"LIVE",sessionId:"quiz-preview",phase:"PRE_QUIZ",syncSerial:3,quiz:{key:"PRE_QUIZ",index:0,total:2,stage:"RUNNING",questions:[{prompt:"beautiful의 뜻은?",options:["어려운","아름다운","가능한","중요한"],correctIndex:1},{prompt:"reuse의 뜻은?",options:["버리다","줄이다","재사용하다","생산하다"],correctIndex:2}],endsAtMs:Date.now()+100000,session:3}};
+      renderStudentWaiting(onlineRoomState.studentData);
+      await submitStudentQuizAnswer(correct?1:0,0);
+      return {correct:studentStageArea?.querySelectorAll(".student-quiz-feedback.correct").length||0,wrong:studentStageArea?.querySelectorAll(".student-quiz-feedback.wrong").length||0,correctOption:studentStageArea?.querySelectorAll(".student-quiz-option.correct").length||0,wrongOption:studentStageArea?.querySelectorAll(".student-quiz-option.wrong").length||0,nav:studentStageArea?.querySelectorAll(".student-quiz-nav").length||0,html:studentStageArea?.innerHTML||""};
+    },
     clientMirrorState(){return {room:onlineRoomState.mockRoom,patches:onlineRoomState.mockParticipantPatches,broadcast:onlineRoomState.clientBroadcastState};},
+    currentPublicQuiz(){return publicQuizState(quizSystem.current,quizSystem.current?.stage||"RUNNING");},
     previewStudentEpochRecovery(){
       onlineRoomState.studentParticipantId="demo1";onlineRoomState.studentSessionId="old-session";onlineRoomState.studentSessionStartedAtMs=100;onlineRoomState.studentSessionEnded=false;
       onlineRoomState.studentRoomData={status:"WAITING",sessionId:"old-session",sessionStartedAtMs:100,phase:"Q3",syncSerial:99};
