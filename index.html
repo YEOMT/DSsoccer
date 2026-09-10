@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.9 Stadium Audio &amp; Honors</title>
+  <title>Class Football Simulator - v2.5.10 Positional Tuning &amp; Ceremony</title>
   <style>
     :root{
       --bg:#10141b;
@@ -946,17 +946,19 @@
     .result-pom-hero{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:14px;align-items:center;padding:17px 20px}
     .student-pom-hero{margin-top:11px;padding:15px;text-align:center}.student-pom-hero>*{position:relative;z-index:1}
     .result-pom-hero:after,.student-pom-hero:after{content:"";position:absolute;inset:-80% -35%;background:linear-gradient(110deg,transparent 42%,rgba(255,255,255,.15) 50%,transparent 58%);animation:pomHonorShine 5.4s ease-in-out infinite;pointer-events:none}
-    .pom-crown{position:relative;z-index:1;font-size:43px;text-align:center;filter:drop-shadow(0 3px 8px rgba(255,205,56,.32))}.pom-copy{position:relative;z-index:1;min-width:0}.pom-label{font-size:9px;font-weight:1000;letter-spacing:.16em;color:#ffd96a}.pom-name{margin-top:3px;font-size:27px;line-height:1.05;font-weight:1000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pom-team{margin-top:5px;color:#d8c98f;font-size:10px;font-weight:900}.pom-rating{position:relative;z-index:1;min-width:72px;padding:9px 11px;border:1px solid rgba(255,230,133,.38);border-radius:12px;background:rgba(5,10,16,.36);text-align:center}.pom-rating span{display:block;font-size:8px;color:#d4c58d;font-weight:900}.pom-rating b{display:block;margin-top:2px;font-size:27px;color:#fff}.student-pom-hero .pom-crown{font-size:38px}.student-pom-hero .pom-name{font-size:25px}.student-pom-hero .pom-rating{display:inline-block;margin-top:9px}.pom-mine-badge{display:inline-block;margin-top:7px;padding:4px 8px;border-radius:999px;background:#ffe27a;color:#3a2d08;font-size:8px;font-weight:1000}
+    .pom-crown{position:relative;z-index:1;font-size:43px;text-align:center;filter:drop-shadow(0 3px 8px rgba(255,205,56,.32))}.pom-copy{position:relative;z-index:1;min-width:0}.pom-label{font-size:9px;font-weight:1000;letter-spacing:.16em;color:#ffd96a}.pom-name{margin-top:3px;font-size:27px;line-height:1.05;font-weight:1000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pom-team{margin-top:5px;color:#d8c98f;font-size:10px;font-weight:900}.pom-side{position:relative;z-index:1}.result-pom-hero .pom-side{display:flex;align-items:stretch;gap:7px}.pom-rating{position:relative;z-index:1;min-width:72px;padding:9px 11px;border:1px solid rgba(255,230,133,.38);border-radius:12px;background:rgba(5,10,16,.36);text-align:center}.pom-rating span{display:block;font-size:8px;color:#d4c58d;font-weight:900}.pom-rating b{display:block;margin-top:2px;font-size:27px;color:#fff}.pom-stat-strip{display:grid;grid-template-columns:repeat(4,minmax(48px,1fr));gap:5px}.result-pom-hero .pom-stat-strip{min-width:235px}.pom-mini-stat{display:flex;min-width:0;flex-direction:column;justify-content:center;padding:7px 5px;border:1px solid rgba(255,230,133,.20);border-radius:10px;background:rgba(5,10,16,.25);text-align:center}.pom-mini-stat b{font-size:14px;color:#fff;white-space:nowrap}.pom-mini-stat span{margin-top:3px;font-size:7px;color:#d4c58d;font-weight:900;white-space:nowrap}.student-pom-hero .pom-crown{font-size:38px}.student-pom-hero .pom-name{font-size:25px}.student-pom-hero .pom-side{margin-top:9px}.student-pom-hero .pom-rating{display:inline-block;margin:0 0 7px}.student-pom-hero .pom-stat-strip{max-width:360px;margin:0 auto}.pom-mine-badge{display:inline-block;margin-top:7px;padding:4px 8px;border-radius:999px;background:#ffe27a;color:#3a2d08;font-size:8px;font-weight:1000}
     @keyframes pomHonorShine{0%,62%{transform:translateX(-45%);opacity:0}72%{opacity:1}88%,100%{transform:translateX(45%);opacity:0}}
 
-    .award-passer{--award-accent:#69bcff;--award-bg:#102b43}.award-wall{--award-accent:#7ee3a7;--award-bg:#123125}.award-engine{--award-accent:#ffbd69;--award-bg:#3a2411}.award-magic{--award-accent:#cf9cff;--award-bg:#2b183c}.award-keeper{--award-accent:#68e3dc;--award-bg:#103337}.award-clutch{--award-accent:#ff8fa2;--award-bg:#3c1721}.award-hero{--award-accent:#8eafff;--award-bg:#172648}
+    .award-passer{--award-accent:#69bcff;--award-bg:#102b43}.award-wall{--award-accent:#7ee3a7;--award-bg:#123125}.award-engine{--award-accent:#ffbd69;--award-bg:#3a2411}.award-magic{--award-accent:#cf9cff;--award-bg:#2b183c}.award-keeper{--award-accent:#68e3dc;--award-bg:#103337}.award-clutch{--award-accent:#ff8fa2;--award-bg:#3c1721}.award-hero{--award-accent:#8eafff;--award-bg:#172648}.award-comic{--award-accent:#969ba3;--award-bg:#202226}
     .award-card{position:relative;overflow:hidden;min-height:94px;padding:12px;border-color:var(--award-accent,#53647a);background:linear-gradient(145deg,var(--award-bg,#111b28),#0a121b 72%)}
     .award-card:after,.student-award:after{content:"";position:absolute;right:-24px;top:-28px;width:72px;height:72px;border-radius:50%;background:var(--award-accent,#64768c);opacity:.09;pointer-events:none}
     .award-card .award-title{display:flex;align-items:center;gap:6px;color:var(--award-accent,#aebccc);font-size:10px;font-weight:1000}.award-card .award-icon{font-size:21px;line-height:1}.award-card .award-player{margin-top:7px;font-size:14px;font-weight:1000}.award-card .award-desc{margin-top:5px;color:#c0ccda;font-size:9px;font-weight:800}
+    .award-card.award-comic,.student-award.award-comic{border-color:#666b73;background:linear-gradient(145deg,#24262a,#15171a 76%);filter:saturate(.34)}
     .student-awards{grid-template-columns:1fr 1fr;gap:8px}.student-awards-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:14px;color:#ffd76a;font-size:10px;font-weight:1000;letter-spacing:.08em}.student-awards-title span{color:#8ea0b6;font-size:8px;letter-spacing:0}
     .student-award{position:relative;overflow:hidden;min-height:108px;padding:10px;border-color:var(--award-accent,#52657c);background:linear-gradient(145deg,var(--award-bg,#111c29),#0b141e 78%)}
     .student-award.mine{box-shadow:0 0 0 2px #ffe27a,0 0 18px rgba(255,210,71,.18)}.student-award-title{display:flex;align-items:flex-start;gap:5px;color:var(--award-accent,#ffd76a)}.student-award-title i{font-style:normal;font-size:19px;line-height:1}.student-award-title b{color:inherit;font-size:9px;font-weight:1000;line-height:1.25}.student-award strong{position:relative;z-index:1;display:block;margin-top:8px;color:#fff;font-size:12px;font-weight:1000}.student-award span{position:relative;z-index:1;margin-top:5px;color:#b8c5d5;font-size:8px;font-weight:800;line-height:1.35}.student-award-mine{display:inline-block!important;width:max-content;margin-top:6px!important;padding:3px 6px;border-radius:999px;background:#ffe27a;color:#3b2e08!important;font-size:7px!important;font-weight:1000!important}
-    @media(max-width:520px){.result-pom-hero{grid-template-columns:50px minmax(0,1fr);padding:14px}.result-pom-hero .pom-rating{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:8px}.result-pom-hero .pom-rating b{margin:0}.pom-name{font-size:22px}}
+    @media(max-width:760px){.result-pom-hero{grid-template-columns:54px minmax(0,1fr)}.result-pom-hero .pom-side{grid-column:1/-1}.result-pom-hero .pom-stat-strip{min-width:0;flex:1}}
+    @media(max-width:520px){.result-pom-hero{grid-template-columns:50px minmax(0,1fr);padding:14px}.result-pom-hero .pom-side{display:grid;grid-template-columns:72px minmax(0,1fr)}.result-pom-hero .pom-rating{display:flex;align-items:center;justify-content:center;gap:8px}.result-pom-hero .pom-rating b{margin:0}.pom-name{font-size:22px}.pom-stat-strip{grid-template-columns:repeat(4,minmax(42px,1fr))}}
     @media(max-width:380px){.student-record-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.student-awards{grid-template-columns:1fr}.student-record-hero{grid-template-columns:72px minmax(0,1fr)}}
     @media(prefers-reduced-motion:reduce){.result-pom-hero:after,.student-pom-hero:after{animation:none}}
 </style>
@@ -966,7 +968,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.9</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.10</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1131,7 +1133,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.9 · Stadium Audio &amp; Honors</p>
+      <p>v2.5.10 · Positional Tuning &amp; Ceremony</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -2768,7 +2770,7 @@
   // Host runs the authoritative match engine; students only join the room.
   // ============================================================
   const DSSOCCER_DEPLOY_URL="https://yeomt.github.io/DSsoccer/";
-  const DSSOCCER_BUILD="2.5.9";
+  const DSSOCCER_BUILD="2.5.10";
   const FIREBASE_CONFIG={
     apiKey:"AIzaSyBtK7NAfw4wDsS4LRacWF78PHT3zls50IQ",
     authDomain:"dsgames-fecef.firebaseapp.com",
@@ -3340,7 +3342,7 @@
   }
   function awardThemeClass(award){
     const explicit=String(award?.theme||"").toLowerCase();
-    if(["passer","wall","engine","magic","keeper","clutch","hero"].includes(explicit))return `award-${explicit}`;
+    if(["passer","wall","engine","magic","keeper","clutch","hero","comic"].includes(explicit))return `award-${explicit}`;
     const title=String(award?.title||"").toUpperCase();
     if(title.includes("PASSER"))return "award-passer";
     if(title.includes("WALL"))return "award-wall";
@@ -3348,7 +3350,37 @@
     if(title.includes("MAGICIAN"))return "award-magic";
     if(title.includes("KEEPER"))return "award-keeper";
     if(title.includes("CLUTCH"))return "award-clutch";
+    if(title.includes("X-MAN")||title.includes("X맨")||title.includes("실종자")||title.includes("MISSING"))return "award-comic";
     return "award-hero";
+  }
+  function pomPerformanceSnapshot(player){
+    const s=player?.matchStats||{};
+    return {
+      role:player?.role||"",category:player?.category||"",
+      goals:Number(s.goals)||0,assists:Number(s.assists)||0,keyPasses:Number(s.keyPasses)||0,
+      shotsOnTarget:Number(s.shotsOnTarget)||0,tacklesWon:Number(s.tacklesWon)||0,
+      interceptions:Number(s.interceptions)||0,blocks:Number(s.blocks)||0,saves:Number(s.saves)||0,
+      passesCompleted:Number(s.passesCompleted)||0,passesAttempted:Number(s.passesAttempted)||0
+    };
+  }
+  function pomStatStripHtml(stats={}){
+    const category=stats.category||roleCategory(stats.role||"");
+    const completed=Number(stats.passesCompleted)||0,attempted=Number(stats.passesAttempted)||0;
+    const defensive=(Number(stats.tacklesWon)||0)+(Number(stats.interceptions)||0)+(Number(stats.blocks)||0);
+    const impact=category==="GK"
+      ? {value:Number(stats.saves)||0,label:"선방"}
+      : category==="DEF"
+        ? {value:defensive,label:"수비 기여"}
+        : category==="ATT"
+          ? {value:Number(stats.shotsOnTarget)||0,label:"유효 슈팅"}
+          : {value:Number(stats.keyPasses)||0,label:"키패스"};
+    const items=[
+      {value:Number(stats.goals)||0,label:"골"},
+      {value:Number(stats.assists)||0,label:"도움"},
+      impact,
+      {value:attempted?`${Math.round(completed/attempted*100)}%`:"-",label:"패스 성공"}
+    ];
+    return `<div class="pom-stat-strip">${items.map(item=>`<div class="pom-mini-stat"><b>${item.value}</b><span>${item.label}</span></div>`).join("")}</div>`;
   }
   function studentMatchRecordHtml(snapshot,data,final=false){
     const snap=snapshot||{},ms=snap.matchStats||{};
@@ -3386,7 +3418,7 @@
     const awards=raw.filter(a=>a!==pom&&a.theme!=="pom"&&!String(a.title||"").toUpperCase().includes("PLAYER OF THE MATCH"));
     const pomMine=pom&&studentAwardMine(pom,data);
     const pomRating=pom?.rating!==null&&pom?.rating!==undefined&&Number.isFinite(Number(pom.rating))?Number(pom.rating).toFixed(1):"-";
-    const pomHtml=pom?`<section class="student-pom-hero"><div class="pom-crown">👑</div><div class="pom-label">PLAYER OF THE MATCH</div><div class="pom-name">${escapeLobbyHtml(pom.name||"")}</div><div class="pom-team">${escapeLobbyHtml(String(pom.team||"").toUpperCase())} TEAM · 오늘 경기 최고의 선수</div><div class="pom-rating"><span>MATCH RATING</span><b>${pomRating}</b></div>${pomMine?`<span class="pom-mine-badge">🏆 내가 오늘의 POM!</span>`:""}</section>`:"";
+    const pomHtml=pom?`<section class="student-pom-hero"><div class="pom-crown">👑</div><div class="pom-label">PLAYER OF THE MATCH</div><div class="pom-name">${escapeLobbyHtml(pom.name||"")}</div><div class="pom-team">${escapeLobbyHtml(String(pom.team||"").toUpperCase())} TEAM · 오늘 경기 최고의 선수</div><div class="pom-side"><div class="pom-rating"><span>MATCH RATING</span><b>${pomRating}</b></div>${pomStatStripHtml(pom.stats||{})}</div>${pomMine?`<span class="pom-mine-badge">🏆 내가 오늘의 POM!</span>`:""}</section>`:"";
     const awardHtml=awards.length?awards.map(a=>{const mine=studentAwardMine(a,data);return `<article class="student-award ${awardThemeClass(a)} ${mine?"mine":""}"><div class="student-award-title"><i>${a.icon||"🏅"}</i><b>${escapeLobbyHtml(a.title||"")}</b></div><strong>${escapeLobbyHtml(String(a.team||"").toUpperCase())} · ${escapeLobbyHtml(a.name||"")}</strong><span>${escapeLobbyHtml(a.desc||"")}</span>${mine?`<span class="student-award-mine">★ 나의 수상</span>`:""}</article>`;}).join(""):`<div class="student-muted">시상 결과를 집계 중입니다.</div>`;
     return `${pomHtml}<div class="student-awards-title">HONORS CEREMONY <span>오늘의 빛나는 활약</span></div><div class="student-awards">${awardHtml}</div>`;
   }
@@ -4606,7 +4638,7 @@
   function publicResultForRoom(){
     const so=match.shootout;const winner=so?.winner||((match.blueScore>match.redScore)?"blue":(match.redScore>match.blueScore)?"red":null);
     const awards=matchAwards().map(a=>({icon:a.icon,title:a.title,theme:a.theme||"hero",name:playerName(a.p),team:a.p.team.toUpperCase(),participantId:publicParticipantIdForPlayer(a.p),desc:a.desc||""}));const pom=currentPOM();
-    return {winner,shootout:so?.winner?{blue:so.blue,red:so.red,winner:so.winner}:null,pom:pom?{name:playerName(pom),team:pom.team,rating:Number(playerRating(pom).toFixed(1)),participantId:publicParticipantIdForPlayer(pom),theme:"pom"}:null,awards};
+    return {winner,shootout:so?.winner?{blue:so.blue,red:so.red,winner:so.winner}:null,pom:pom?{name:playerName(pom),team:pom.team,rating:Number(playerRating(pom).toFixed(1)),participantId:publicParticipantIdForPlayer(pom),theme:"pom",stats:pomPerformanceSnapshot(pom)}:null,awards};
   }
   async function syncOnlineMatchSnapshot(force=false){
     if(!remoteParticipationActive()||!gameFlow.active)return;
@@ -6194,6 +6226,37 @@
     })[0]||null;
   }
 
+  function comicMistakeProfile(p){
+    const s=p?.matchStats||{};
+    const missedPasses=Math.max(0,(s.passesAttempted||0)-(s.passesCompleted||0));
+    const failedDribbles=Math.max(0,(s.dribblesAttempted||0)-(s.dribblesWon||0));
+    const offTarget=Math.max(0,(s.shots||0)-(s.shotsOnTarget||0));
+    const discipline=(s.fouls||0)+(s.yellowCards||0)*1.4+(s.redCards||0)*4.5;
+    const score=
+      missedPasses*.62+
+      failedDribbles*1.55+
+      offTarget*.82+
+      (s.offsides||0)*1.10+
+      discipline+
+      Math.max(0,6.6-playerRating(p))*1.8;
+    return {missedPasses,failedDribbles,offTarget,score};
+  }
+
+  function quietActivityProfile(p){
+    const s=p?.matchStats||{};
+    const highlights=
+      (s.goals||0)+(s.assists||0)+(s.keyPasses||0)+(s.shotsOnTarget||0)+
+      (s.tacklesWon||0)+(s.interceptions||0)+(s.blocks||0)+(s.saves||0);
+    const score=
+      highlights*8+
+      (s.progressivePasses||0)*.55+
+      (s.recoveries||0)*.38+
+      (s.passesCompleted||0)*.045+
+      (s.touches||0)*.028+
+      (p?.distanceRun||0)/6000;
+    return {highlights,score};
+  }
+
   function matchAwards(){
     const pom=currentPOM();
 
@@ -6224,6 +6287,21 @@
       const s=p.matchStats;
       return s.recoveries*1.5+s.tacklesWon*1.2+s.interceptions*1.3+s.passesCompleted*.025+s.touches*.012;
     },p=>!pom||p.id!==pom.id);
+
+    const winner=match.shootout?.winner||(
+      match.blueScore>match.redScore?"blue":
+      match.redScore>match.blueScore?"red":null
+    );
+    const losingTeam=winner?otherTeam(winner):null;
+    const xman=awardCandidate(
+      p=>comicMistakeProfile(p).score,
+      p=>!losingTeam||p.team===losingTeam
+    );
+    const missing=awardCandidate(
+      p=>quietActivityProfile(p).score,
+      p=>p.id!==xman?.id&&p.id!==pom?.id,
+      false
+    );
 
     const clutch=awardCandidate(p=>{
       const moments=(p.storyMoments||[]).filter(m=>m.minute>=75);
@@ -6264,6 +6342,14 @@
       unsung&&{
         icon:"💎",title:"UNSUNG HERO",theme:"hero",p:unsung,
         desc:`볼 회수 ${unsung.matchStats.recoveries} · 보이지 않는 곳까지 채운 팀 기여`
+      },
+      xman&&{
+        icon:"🕳️",title:"X맨 · 패배 지분 1위",theme:"comic",p:xman,
+        desc:`패스 실수 ${comicMistakeProfile(xman).missedPasses} · 드리블 실패 ${comicMistakeProfile(xman).failedDribbles} · 슈팅 빗나감 ${comicMistakeProfile(xman).offTarget}`
+      },
+      missing&&{
+        icon:"🫥",title:"실종자 · 활약 없음",theme:"comic",p:missing,
+        desc:`주요 활약 ${quietActivityProfile(missing).highlights}회 · 중계 카메라가 아직 찾는 중`
       }
     ].filter(Boolean);
   }
@@ -6351,7 +6437,7 @@
 
     const pom=currentPOM();
     resultPom.innerHTML=pom
-      ? `<section class="result-pom-hero"><div class="pom-crown">👑</div><div class="pom-copy"><div class="pom-label">PLAYER OF THE MATCH</div><div class="pom-name">${escapeLobbyHtml(playerName(pom))}</div><div class="pom-team">${pom.team.toUpperCase()} TEAM · 오늘 경기 최고의 선수</div></div><div class="pom-rating"><span>MATCH RATING</span><b>${playerRating(pom).toFixed(1)}</b></div></section>`
+      ? `<section class="result-pom-hero"><div class="pom-crown">👑</div><div class="pom-copy"><div class="pom-label">PLAYER OF THE MATCH</div><div class="pom-name">${escapeLobbyHtml(playerName(pom))}</div><div class="pom-team">${pom.team.toUpperCase()} TEAM · 오늘 경기 최고의 선수</div></div><div class="pom-side"><div class="pom-rating"><span>MATCH RATING</span><b>${playerRating(pom).toFixed(1)}</b></div>${pomStatStripHtml(pomPerformanceSnapshot(pom))}</div></section>`
       : "";
 
     resultTeamStats.innerHTML=teamStatRows().map(([label,b,r])=>`
@@ -7459,13 +7545,13 @@
             headerFinishSkill(a)*.70+
             a.physical*.22+
             a.intelligence*.08+
-            (isCentralDefender(a)?24:0)+
+            (isCentralDefender(a)?27:0)+
             (a.tacticalRole==="TARGET_FORWARD"?15:0);
           const pb=
             headerFinishSkill(b)*.70+
             b.physical*.22+
             b.intelligence*.08+
-            (isCentralDefender(b)?24:0)+
+            (isCentralDefender(b)?27:0)+
             (b.tacticalRole==="TARGET_FORWARD"?15:0);
           return pb-pa;
         });
@@ -7824,7 +7910,7 @@
             headerFinishSkill(p)*.70+
             p.physical*.28+
             p.intelligence*.10+
-            (isCentralDefender(p)?19:0)+
+            (isCentralDefender(p)?23:0)+
             (p.tacticalRole==="TARGET_FORWARD"?15:0)-
             Math.abs(opponentGoalX(teamName)-p.x)*.16;
           return score(b)-score(a);
@@ -7890,7 +7976,8 @@
       Math.abs(sp.y-34)<20 &&
       (taker.kick*.65+taker.technique*.20+taker.intelligence*.15)>56;
 
-    if(directChance&&Math.random()<.58){
+    // v2.5.10: qualified direct free kicks are attempted a touch more often.
+    if(directChance&&Math.random()<.63){
       ball.state="CONTROLLED";
       ball.ownerId=taker.id;ball.ownerTeam=teamName;
       ball.x=taker.x;ball.y=taker.y;
@@ -8505,9 +8592,12 @@
 
   function positionalDecisionBonus(p){
     if(!p)return 0;
-    if(["DM","LDM","RDM"].includes(p.role)||p.tacticalRole==="ANCHOR")return 2.8;
-    if(p.category==="DEF")return 2.4;
-    if(p.category==="MID"||p.role==="AM")return 1.8;
+    // v2.5.10: modest positional reading boosts. They improve choices without
+    // replacing the player's own intelligence rating.
+    if(["DM","LDM","RDM"].includes(p.role)||p.tacticalRole==="ANCHOR")return 4.0;
+    if(p.category==="DEF")return 3.6;
+    if(p.category==="MID"||p.role==="AM")return 3.2;
+    if(p.category==="ATT")return 1.6;
     return 0;
   }
 
@@ -8643,9 +8733,13 @@
   }
 
   function firstTouchSkill(p){
-    return amplifyDerived(weightedSkill(
+    const raw=amplifyDerived(weightedSkill(
       [p.technique,.78],[p.intelligence,.17],[p.physical,.05]
     ),1.28);
+    const positionalBonus=
+      p.category==="MID"||p.role==="AM" ? 2.0 :
+      p.category==="DEF" ? 1.6 : 0;
+    return clamp(raw+positionalBonus,1,99);
   }
 
   function offBallRunSkill(p){
@@ -8679,18 +8773,18 @@
       const control=midfieldControlSkill(p)/100;
       const bonus=
         type==="THROUGH"||type==="KILL_PASS"
-          ? lerp(2.4,5.8,vision*.58+control*.42)
-          : lerp(1.6,4.2,vision*.52+control*.48);
+          ? lerp(2.9,6.5,vision*.58+control*.42)
+          : lerp(2.0,4.9,vision*.52+control*.48);
       result=clamp(result+bonus,1,99);
     }else if(p.category==="DEF"){
       const vision=decisionIntelligence(p);
       const security=defensiveBallSecuritySkill(p)/100;
       const bonus=
         type==="SHORT"
-          ? lerp(.9,2.9,vision*.58+security*.42)
+          ? lerp(1.4,3.6,vision*.58+security*.42)
           : ["LONG","SWITCH","LONG_GK"].includes(type)
-            ? lerp(.5,1.8,vision*.62+security*.38)
-            : lerp(.3,1.1,vision);
+            ? lerp(.9,2.4,vision*.62+security*.38)
+            : lerp(.6,1.5,vision);
       result=clamp(result+bonus,1,99);
     }
 
@@ -11421,9 +11515,9 @@
   function shapeLeashFor(p,attacking){
     let x=3.1,y=3.0;
 
-    if(p.category==="MID"){x=9.4;y=8.2;}
+    if(p.category==="MID"){x=10.0;y=8.8;}
     if(["DM","LDM","RDM"].includes(p.role)||p.tacticalRole==="ANCHOR"){x=5.5;y=5.2;}
-    if(p.category==="ATT"){x=7.5;y=6.2;}
+    if(p.category==="ATT"){x=8.2;y=6.8;}
     if(isFullback(p)){x=6.0;y=6.4;}
     if(p.tacticalRole==="WINGBACK"){x=7.5;y=7.2;}
     if(isClassic442WideMid(p)){x=8.5;y=9.5;}
@@ -11653,15 +11747,15 @@
       roamX=p.tacticalRole==="WINGBACK"?8.0:6.4;
       roamY=p.tacticalRole==="WINGBACK"?7.3:6.0;
     }
-    else if(isWinger(p)){roamX=8.2;roamY=7.2;}
+    else if(isWinger(p)){roamX=8.8;roamY=7.7;}
     else if(p.role==="AM"||p.tacticalRole==="ATTACKING_MIDFIELDER"){
-      roamX=9.4;roamY=8.2;
+      roamX=9.9;roamY=8.7;
     }
     else if(isCentralMid(p)){
-      roamX=p.tacticalRole==="PLAYMAKER"?10.1:9.2;
-      roamY=p.tacticalRole==="PLAYMAKER"?9.0:8.4;
+      roamX=p.tacticalRole==="PLAYMAKER"?10.7:9.8;
+      roamY=p.tacticalRole==="PLAYMAKER"?9.5:8.9;
     }
-    else if(isStriker(p)){roamX=9.0;roamY=6.8;}
+    else if(isStriker(p)){roamX=9.8;roamY=7.4;}
     else if(p.category==="DEF"){roamX=3.0;roamY=3.2;}
 
     const roleRoam=clamp(tacticalRoleProfile(p).move.roam,.18,1.35);
@@ -11794,13 +11888,13 @@
       // a little more freedom so the match does not look position-locked.
       const personality=individualMovementAggression(p,true);
       let roleBlend =
-        p.category==="ATT" ? .50 :
+        p.category==="ATT" ? .54 :
         p.category==="MID"
           ? (
-              p.tacticalRole==="PLAYMAKER"?.64:
-              p.tacticalRole==="BOX_TO_BOX"?.72:
-              p.tacticalRole==="ATTACKING_MIDFIELDER"?.74:
-              .54
+              p.tacticalRole==="PLAYMAKER"?.66:
+              p.tacticalRole==="BOX_TO_BOX"?.74:
+              p.tacticalRole==="ATTACKING_MIDFIELDER"?.76:
+              .57
             ) :
         p.tacticalRole==="WINGBACK" ? .54 :
         p.tacticalRole==="FULLBACK" ? .39 : .27;
@@ -12061,6 +12155,10 @@
     const base=lerp(.68,.19,intel*.62+movementIQ*.38);
     const urgency=attacking?teamState[p.team].supportBias:teamState[p.team].dangerLevel*.22;
     p.offBallRefresh=Math.max(.12,base-urgency*.17)+rand(.02,.10);
+    // Midfielders scan and reposition most often; forwards react a little
+    // faster when opening a passing lane or attacking space.
+    if(p.category==="MID")p.offBallRefresh=Math.max(.12,p.offBallRefresh*.93);
+    else if(p.category==="ATT")p.offBallRefresh=Math.max(.12,p.offBallRefresh*.96);
   }
 
   function laneRisk(from,to){
@@ -12819,9 +12917,9 @@
       [p.physical,.17],
       [p.kick,.09]
     ),1.27);
-    // Small v2.5.9 security lift: midfielders keep the first touch under normal
+    // v2.5.10: midfielders keep the first touch under normal
     // pressure a little better without becoming immune to a true double-team.
-    const bonus=["DM","LDM","RDM"].includes(p.role)?2.6:2.0;
+    const bonus=["DM","LDM","RDM"].includes(p.role)?3.5:2.9;
     return clamp(raw+bonus,1,99);
   }
 
@@ -12833,7 +12931,7 @@
       [p.physical,.23],
       [p.kick,.07]
     ),1.18);
-    return clamp(raw+(p.category==="DEF"?3.0:1.8),1,99);
+    return clamp(raw+(p.category==="DEF"?4.2:1.8),1,99);
   }
 
   function isDefensiveBuildUpPlayer(p){
@@ -12992,7 +13090,7 @@
     if(variant==="HEADER")chance-=.035;
     if(variant==="VOLLEY")chance-=.025;
     if(variant==="FIRST_TIME")chance+=.005;
-    if(variant==="FREE_KICK")chance+=.015;
+    if(variant==="FREE_KICK")chance+=.035;
     if(variant==="PENALTY")chance=.78+finishing*.16;
 
     return clamp(
@@ -13022,6 +13120,7 @@
       HEADER:.05,
       VOLLEY:.12,
       FIRST_TIME:.075,
+      FREE_KICK:.035,
       PENALTY:.13,
       NORMAL:0
     }[variant]||0;
@@ -13321,7 +13420,7 @@
     const onTargetChance=clamp(
       shotOnTargetChance(
         receiver,"HEADER",d,angle,pressureLoad,skill
-      )+(setPieceHeader?-.095:0),
+      )+(setPieceHeader?-.045:0),
       .24,.86
     );
 
@@ -13338,7 +13437,7 @@
     const speed=
       17.8+
       headerFinishSkill(receiver)*.058+
-      (setPieceHeader?-.15:0)+
+      (setPieceHeader?.35:0)+
       Math.min(incoming*.16,3.5);
 
     receiver.onBallAction="SHOOT";
@@ -16681,13 +16780,13 @@
 
       const cornerCB=ball.setPieceSource==="CORNER"&&isCentralDefender(receiver);
       const headerChance=clamp(
-        (cornerCB?.46:.31)+headerIQ*(cornerCB?.0043:.0039)+
+        (cornerCB?.48:.31)+headerIQ*(cornerCB?.0043:.0039)+
         (isStriker(receiver)?.065:0)+
         (receiver.tacticalRole==="TARGET_FORWARD"?.09:0)+
         (isCentralDefender(receiver)?.08:0)+
         (ball.setPieceSource==="CORNER"?.06:0),
-        cornerCB?.55:.40,
-        cornerCB?.82:.76
+        cornerCB?.57:.40,
+        cornerCB?.85:.76
       );
       const volleyChance=clamp(
         .27+
@@ -16883,7 +16982,7 @@
     // win clean standing tackles as reliably as defenders / ball-winning mids.
     const forwardTacklePenalty=
       defender.category==="ATT"
-        ? (defender.tacticalRole==="FALSE_NINE"?.065:.092)
+        ? (defender.tacticalRole==="FALSE_NINE"?.075:.102)
         : 0;
 
     return clamp(
@@ -16960,7 +17059,7 @@
       singleDefenderRetention*=lerp(.94,.80,security);
     }
 
-    const roleTackleFactor=defender.category==="ATT"?.76:1;
+    const roleTackleFactor=defender.category==="ATT"?.73:1;
     const success=clamp(
       (tackleProbability(defender,attacker)+.008+approachBonus)*
       singleDefenderRetention*
@@ -18323,7 +18422,7 @@
       ball.ownerTeam===p.team &&
       ball.ownerId!==p.id
     ){
-      focusBoost*=1.075;
+      focusBoost*=1.095;
     }
 
     if(urgentLooseMove){
@@ -19761,7 +19860,7 @@
     },
     publicResult(){return publicResultForRoom();},
     matchSpeed(multiplier=null){if(multiplier!==null)setMatchSpeed(multiplier);return {multiplier:matchSpeedMultiplier,onePressed:matchSpeed1Btn?.getAttribute("aria-pressed"),twoPressed:matchSpeed2Btn?.getAttribute("aria-pressed")};},
-    matchTuning(){return {passExecutionErrorFactor:PASS_EXECUTION_ERROR_FACTOR,passReceiveScoreBonus:PASS_RECEIVE_SCORE_BONUS,decisionTempoMultiplier:AI_DECISION_TEMPO_MULTIPLIER};},
+    matchTuning(){return {passExecutionErrorFactor:PASS_EXECUTION_ERROR_FACTOR,passReceiveScoreBonus:PASS_RECEIVE_SCORE_BONUS,decisionTempoMultiplier:AI_DECISION_TEMPO_MULTIPLIER,freeKickDirectChance:.63,forwardTackleFactor:.73,cornerCbTargetBonus:23};},
     quizBankSummary(){const all=Object.values(quizSystem.phaseQuestions).flat();return {count:quizSystem.bank.length,errors:[...quizSystem.lastParseErrors],phaseCounts:Object.fromEntries(Object.entries(quizSystem.phaseQuestions).map(([k,v])=>[k,v.length])),selectedTotal:all.length,uniquePrompts:new Set(all.map(q=>q.prompt)).size};},
     parseQuizText(raw){const r=parseQuizBankText(raw);return {count:r.items.length,errors:r.errors,first:r.items[0]||null};},
     fastCompleteCurrentQuiz(){autoCompleteLiveQuiz();return quizSystem.current?{key:quizSystem.current.key,stage:quizSystem.current.stage}:null;},
@@ -20943,6 +21042,31 @@
       executeSetPiece();
       return {target:ball.intendedReceiverId,cb:cb.id,passType:ball.passType};
     },
+    debugDirectFreeKickTrials(runs=80){
+      const result={runs,directShots:0,onTargetAims:0,goals:0};
+      for(let n=0;n<runs;n++){
+        resetMatch();
+        const taker=teams.blue.players
+          .filter(p=>p.role!=="GK")
+          .sort((a,b)=>(b.kick+b.technique)-(a.kick+a.technique))[0];
+        taker.kick=88;taker.technique=84;taker.intelligence=82;
+        startSetPiece("FREE_KICK","blue",FIELD_W-24,n%2?30:38,"QA");
+        match.setPiece.timer=0;
+        executeSetPiece();
+        if(ball.shotVariant!=="FREE_KICK")continue;
+        result.directShots++;
+        if(Math.abs((ball.shotTargetY??99)-34)<=3.66)result.onTargetAims++;
+        for(let i=0;i<240&&!match.ended&&match.blueScore===0;i++){
+          if(presentation.active)updateGoalPresentation(PHYSICS_DT);
+          else if(replay.active)updateReplay(PHYSICS_DT);
+          else updatePhysics(PHYSICS_DT);
+          if(ball.state==="CONTROLLED"&&ball.ownerTeam==="red"&&ball.flightTime===0)break;
+        }
+        if(match.blueScore>0)result.goals++;
+      }
+      resetMatch();
+      return result;
+    },
     debugFinishVariety(source="EARLY_CROSS",runs=60){
       const counts={};
       for(let i=0;i<runs;i++){
@@ -21228,8 +21352,12 @@
 
       return {
         tacticalRole:p.tacticalRole,
+        category:p.category,
         maxSpeed:effectiveMaxSpeedNoFatigue(p),
         firstTouch:firstTouchSkill(p),
+        midfieldControl:midfieldControlSkill(p),
+        defensiveSecurity:defensiveBallSecuritySkill(p),
+        tackle:tackleSkill(p),
         offBall:offBallRunSkill(p),
         passShort:passExecutionSkill(p,"SHORT"),
         passThrough:passExecutionSkill(p,"THROUGH"),
@@ -22051,9 +22179,11 @@
         {icon:"🪄",title:"MAGICIAN",theme:"magic",name:"유나",team:"RED",participantId:"demo4",desc:"드리블 7 · 키패스 2"},
         {icon:"🧤",title:"SUPER KEEPER",theme:"keeper",name:"도윤",team:"RED",participantId:"demo5",desc:"선방 6 · 평점 8.4"},
         {icon:"⏱️",title:"CLUTCH PLAYER",theme:"clutch",name:"하준",team:"BLUE",participantId:"demo6",desc:"88' · 결승골"},
-        {icon:"💎",title:"UNSUNG HERO",theme:"hero",name:"소율",team:"BLUE",participantId:"demo7",desc:"볼 회수 11 · 팀 기여"}
+        {icon:"💎",title:"UNSUNG HERO",theme:"hero",name:"소율",team:"BLUE",participantId:"demo7",desc:"볼 회수 11 · 팀 기여"},
+        {icon:"🕳️",title:"X맨 · 패배 지분 1위",theme:"comic",name:"정우",team:"RED",participantId:"demo8",desc:"패스 실수 12 · 드리블 실패 4 · 슈팅 빗나감 3"},
+        {icon:"🫥",title:"실종자 · 활약 없음",theme:"comic",name:"현우",team:"RED",participantId:"demo9",desc:"주요 활약 0회 · 중계 카메라가 아직 찾는 중"}
       ];
-      onlineRoomState.studentRoomData={status:"LIVE",sessionId:"honors-session",phase:"RESULT",syncSerial:12,match:{blueScore:3,redScore:2},playerSnapshots:{demo1:{status:"PLAYING",role:"CM",tacticalRole:"PLAYMAKER",number:8,stats:{speed:67,technique:74,kick:69,physical:63,intelligence:76},stamina:61,rating:9.1,matchStats:{goals:1,assists:2,passesCompleted:37,passesAttempted:41,keyPasses:4,shots:3,shotsOnTarget:2,dribblesAttempted:6,dribblesWon:5,tacklesWon:3,interceptions:2,saves:0,blocks:1,recoveries:9}}},result:{winner:"blue",pom:{name:"민수",team:"blue",rating:9.1,participantId:"demo1",theme:"pom"},awards}};
+      onlineRoomState.studentRoomData={status:"LIVE",sessionId:"honors-session",phase:"RESULT",syncSerial:12,match:{blueScore:3,redScore:2},playerSnapshots:{demo1:{status:"PLAYING",role:"CM",tacticalRole:"PLAYMAKER",number:8,stats:{speed:67,technique:74,kick:69,physical:63,intelligence:76},stamina:61,rating:9.1,matchStats:{goals:1,assists:2,passesCompleted:37,passesAttempted:41,keyPasses:4,shots:3,shotsOnTarget:2,dribblesAttempted:6,dribblesWon:5,tacklesWon:3,interceptions:2,saves:0,blocks:1,recoveries:9}}},result:{winner:"blue",pom:{name:"민수",team:"blue",rating:9.1,participantId:"demo1",theme:"pom",stats:{role:"CM",category:"MID",goals:1,assists:2,keyPasses:4,shotsOnTarget:2,tacklesWon:3,interceptions:2,blocks:1,saves:0,passesCompleted:37,passesAttempted:41}},awards}};
       renderStudentWaiting(onlineRoomState.studentData);
       return {pom:studentStageArea?.querySelectorAll(".student-pom-hero").length||0,awards:studentStageArea?.querySelectorAll(".student-award").length||0,mine:studentStageArea?.querySelectorAll(".student-award.mine").length||0,recordStats:studentStageArea?.querySelectorAll(".student-record-stat").length||0};
     },
