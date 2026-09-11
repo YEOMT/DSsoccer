@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.15 Match Audio &amp; Class BGM</title>
+  <title>Class Football Simulator - v2.5.16 Modern Tactics &amp; Engine Polish</title>
   <style>
     :root{
       --bg:#10141b;
@@ -976,7 +976,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.15</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.16</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1141,7 +1141,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.15 · Match Audio &amp; Class BGM</p>
+      <p>v2.5.16 · Modern Tactics &amp; Match Engine Polish</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -1174,6 +1174,9 @@
               <option value="442">4-4-2</option>
               <option value="4231">4-2-3-1</option>
               <option value="352">3-5-2 · 윙백</option>
+              <option value="3421">3-4-2-1 · 더블 10번</option>
+              <option value="4222">4-2-2-2 · 좁은 2선</option>
+              <option value="4141">4-1-4-1 · 중원 압박</option>
             </select>
           </div>
           <div class="field-row">
@@ -1183,6 +1186,9 @@
               <option value="442">4-4-2</option>
               <option value="4231">4-2-3-1</option>
               <option value="352">3-5-2 · 윙백</option>
+              <option value="3421">3-4-2-1 · 더블 10번</option>
+              <option value="4222">4-2-2-2 · 좁은 2선</option>
+              <option value="4141">4-1-4-1 · 중원 압박</option>
             </select>
           </div>
           <div style="height:4px"></div>
@@ -1208,6 +1214,7 @@
             <option value="BALANCED">균형</option><option value="POSSESSION">점유 · U자 빌드업</option>
             <option value="TIKI_TAKA">티키타카</option><option value="GEGENPRESS">강한 압박</option>
             <option value="COUNTER">빠른 역습</option><option value="DIRECT_WIDE">다이렉트 · 크로스</option>
+            <option value="BUILDUP_32">3-2 빌드업</option><option value="OVERLOAD_SWITCH">한쪽 과부하 → 전환</option>
             <option value="LOW_BLOCK">내려앉기</option><option value="CUSTOM" disabled>사용자 설정</option>
           </select></div>
           <div class="field-row"><label>성향</label><select id="blueMentality">
@@ -1220,7 +1227,7 @@
             <option value="SLOW">느리게</option><option value="BALANCED" selected>균형</option><option value="FAST">빠르게</option>
           </select></div>
           <div class="field-row"><label>패스</label><select id="bluePassing">
-            <option value="SHORT">짧게</option><option value="MIXED" selected>혼합</option><option value="DIRECT">직선적</option>
+            <option value="SHORT">티키타카 · 짧고 빠르게</option><option value="MIXED" selected>혼합</option><option value="DIRECT">직선적</option>
           </select></div>
           <div class="field-row"><label>압박</label><select id="bluePressing">
             <option value="LOW">낮게</option><option value="MID" selected>보통</option><option value="HIGH">강하게</option>
@@ -1239,6 +1246,7 @@
             <option value="BALANCED">균형</option><option value="POSSESSION">점유 · U자 빌드업</option>
             <option value="TIKI_TAKA">티키타카</option><option value="GEGENPRESS">강한 압박</option>
             <option value="COUNTER">빠른 역습</option><option value="DIRECT_WIDE">다이렉트 · 크로스</option>
+            <option value="BUILDUP_32">3-2 빌드업</option><option value="OVERLOAD_SWITCH">한쪽 과부하 → 전환</option>
             <option value="LOW_BLOCK">내려앉기</option><option value="CUSTOM" disabled>사용자 설정</option>
           </select></div>
           <div class="field-row"><label>성향</label><select id="redMentality">
@@ -1251,7 +1259,7 @@
             <option value="SLOW">느리게</option><option value="BALANCED" selected>균형</option><option value="FAST">빠르게</option>
           </select></div>
           <div class="field-row"><label>패스</label><select id="redPassing">
-            <option value="SHORT">짧게</option><option value="MIXED" selected>혼합</option><option value="DIRECT">직선적</option>
+            <option value="SHORT">티키타카 · 짧고 빠르게</option><option value="MIXED" selected>혼합</option><option value="DIRECT">직선적</option>
           </select></div>
           <div class="field-row"><label>압박</label><select id="redPressing">
             <option value="LOW">낮게</option><option value="MID" selected>보통</option><option value="HIGH">강하게</option>
@@ -1485,9 +1493,9 @@
   "use strict";
 
   // ============================================================
-  // MATCH ENGINE v2.5.3
-  // Match clarity + slow replay commentary + spacing polish
-  // richer set-piece / cross / cutback / midfield finishing patterns
+  // MATCH ENGINE v2.5.16
+  // Modern formations/tactics, persistent halftime position changes,
+  // deferred corners, smarter passing and calmer one-on-one finishing.
   // ============================================================
 
   const FIELD_W = 105;
@@ -1502,6 +1510,7 @@
   const PASS_RECEIVE_SCORE_BONUS = 1.2;
   const AI_DECISION_TEMPO_MULTIPLIER = 1.07;
   const DEF_MID_DECISION_TEMPO_BONUS = 1.11;
+  const MIDFIELD_DECISION_TEMPO_BONUS = 1.20;
 
   const canvas = document.getElementById("pitch");
   const ctx = canvas.getContext("2d");
@@ -2271,6 +2280,32 @@
       { role:"DM",x:39,y:34 },
       { role:"LCM",x:48,y:24 }, { role:"RCM",x:48,y:44 },
       { role:"LST",x:68,y:29 }, { role:"RST",x:68,y:39 }
+    ],
+    "3421": [
+      { role:"GK",x:5,y:34 },
+      { role:"LCB",x:20,y:20 }, { role:"MCB",x:18.5,y:34 },
+      { role:"RCB",x:20,y:48 },
+      { role:"LWB",x:37,y:7 }, { role:"LDM",x:40,y:28 },
+      { role:"RDM",x:40,y:40 }, { role:"RWB",x:37,y:61 },
+      { role:"AM",x:58,y:25 }, { role:"AM",x:58,y:43 },
+      { role:"ST",x:72,y:34 }
+    ],
+    "4222": [
+      { role:"GK",x:5,y:34 },
+      { role:"LB",x:23,y:10 }, { role:"LCB",x:21,y:27 },
+      { role:"RCB",x:21,y:41 }, { role:"RB",x:23,y:58 },
+      { role:"LDM",x:39,y:27 }, { role:"RDM",x:39,y:41 },
+      { role:"AM",x:55,y:21 }, { role:"AM",x:55,y:47 },
+      { role:"LST",x:69,y:29 }, { role:"RST",x:69,y:39 }
+    ],
+    "4141": [
+      { role:"GK",x:5,y:34 },
+      { role:"LB",x:23,y:10 }, { role:"LCB",x:21,y:27 },
+      { role:"RCB",x:21,y:41 }, { role:"RB",x:23,y:58 },
+      { role:"DM",x:37,y:34 },
+      { role:"LM",x:49,y:9 }, { role:"LCM",x:48,y:25 },
+      { role:"RCM",x:48,y:43 }, { role:"RM",x:49,y:59 },
+      { role:"ST",x:71,y:34 }
     ]
   };
 
@@ -2307,6 +2342,8 @@
     GEGENPRESS:{mentality:"ATTACKING",width:"BALANCED",tempo:"FAST",passing:"MIXED",pressing:"HIGH",line:"HIGH",transition:"COUNTER"},
     COUNTER:{mentality:"BALANCED",width:"WIDE",tempo:"FAST",passing:"DIRECT",pressing:"MID",line:"LOW",transition:"COUNTER"},
     DIRECT_WIDE:{mentality:"ATTACKING",width:"WIDE",tempo:"FAST",passing:"DIRECT",pressing:"MID",line:"MID",transition:"COUNTER"},
+    BUILDUP_32:{mentality:"BALANCED",width:"BALANCED",tempo:"BALANCED",passing:"SHORT",pressing:"MID",line:"HIGH",transition:"REGROUP"},
+    OVERLOAD_SWITCH:{mentality:"ATTACKING",width:"WIDE",tempo:"FAST",passing:"MIXED",pressing:"MID",line:"MID",transition:"BALANCED"},
     LOW_BLOCK:{mentality:"DEFENSIVE",width:"NARROW",tempo:"SLOW",passing:"DIRECT",pressing:"LOW",line:"LOW",transition:"REGROUP"}
   };
 
@@ -2436,7 +2473,12 @@
       d<4.80 ? .17 : 0;
 
     const crowdLoad=clamp((nearby-1)*.11,0,.28);
-    return clamp(distanceLoad+crowdLoad,0,1.15);
+    let load=clamp(distanceLoad+crowdLoad,0,1.15);
+    if(isMidfieldController(player)){
+      const resistance=clamp(midfieldControlSkill(player)/100,0,1);
+      load*=lerp(.92,.79,resistance);
+    }
+    return load;
   }
 
   function pressureExecutionMultiplier(player,kind="PASS"){
@@ -2547,6 +2589,20 @@
       if(type==="SHORT")bias-=3;
     }
 
+    if(t.preset==="BUILDUP_32"){
+      if(type==="SHORT"||type==="SHORT_GK")bias+=9;
+      if(type==="THROUGH")bias+=4;
+      if(type==="LONG"||type==="LONG_GK")bias-=7;
+      if(type==="EARLY_CROSS"||type==="LONG_CROSS")bias-=3;
+    }
+
+    if(t.preset==="OVERLOAD_SWITCH"){
+      if(type==="SHORT")bias+=4;
+      if(type==="SWITCH")bias+=17;
+      if(type==="LONG")bias+=7;
+      if(type==="THROUGH"||type==="EARLY_CROSS")bias+=5;
+    }
+
     const mentality=mentalityValue(teamName);
     if(mentality>0 && ["THROUGH","KILL_PASS","SWITCH","LONG","EARLY_CROSS","CROSS","LONG_CROSS"].includes(type)) bias+=3;
     if(mentality<0){
@@ -2566,7 +2622,8 @@
     return {
       BALANCED:"균형",POSSESSION:"점유·U자",TIKI_TAKA:"티키타카",
       GEGENPRESS:"강한 압박",COUNTER:"빠른 역습",
-      DIRECT_WIDE:"다이렉트·크로스",LOW_BLOCK:"내려앉기",CUSTOM:"사용자"
+      DIRECT_WIDE:"다이렉트·크로스",BUILDUP_32:"3-2 빌드업",
+      OVERLOAD_SWITCH:"과부하 후 전환",LOW_BLOCK:"내려앉기",CUSTOM:"사용자"
     }[teamTactic(teamName).preset]||"사용자";
   }
 
@@ -2593,6 +2650,7 @@
       gkPossessionMode:false,
       nonProgressivePasses:0,
       defenderRecycleCount:0,
+      recentPassTargets:[],
       contextMode:"NORMAL",
       contextLastAnnounced:"NORMAL"
     },
@@ -2618,6 +2676,7 @@
       gkPossessionMode:false,
       nonProgressivePasses:0,
       defenderRecycleCount:0,
+      recentPassTargets:[],
       contextMode:"NORMAL",
       contextLastAnnounced:"NORMAL"
     }
@@ -2631,6 +2690,7 @@
     lastScorerId:null,
     lastShotVariant:null,
     setPiece:null,
+    pendingSetPiece:null,
 
     // v1.0 match presentation / stats
     elapsedSeconds:0,
@@ -2854,15 +2914,18 @@
     ST:["POACHER","ADVANCED_FORWARD","TARGET_FORWARD","FALSE_NINE"]
   };
   const ROLE_DESCRIPTIONS={AUTO:"포메이션 자리와 팀 구성에 맞춰 자동 선택",KEEPER:"골문을 지키는 안정형 골키퍼",SWEEPER_KEEPER:"박스 밖까지 빠르게 커버하는 골키퍼",CENTRE_BACK:"마킹·클리어링 중심의 정통 센터백",BALL_PLAYING_DEFENDER:"후방 빌드업과 롱패스에 적극적인 센터백",FULLBACK:"수비 균형과 안정적인 측면 지원",WINGBACK:"오버래핑·크로스를 적극적으로 시도",ANCHOR:"수비진 앞을 지키며 패스길을 차단",BALL_WINNER:"강한 압박과 탈취에 집중",PLAYMAKER:"공을 오래 받고 패스 방향을 설계",BOX_TO_BOX:"공수 전 지역을 왕복하며 적극 가담",ATTACKING_MIDFIELDER:"2선 침투·킬패스·슈팅에 적극적",WIDE_FORWARD:"측면에서 안쪽으로 파고드는 공격수",WIDE_MIDFIELDER:"폭을 유지하며 연결과 크로스를 담당",POACHER:"박스 안 득점 위치를 우선 탐색",ADVANCED_FORWARD:"뒷공간 침투와 전진 드리블을 적극 시도",TARGET_FORWARD:"몸싸움으로 공을 지키고 동료에게 연결",FALSE_NINE:"아래로 내려와 연계하며 공간을 만듦"};
-  const FORMATION_VOTE_PRESETS=["433","442","4231","352"];
+  const FORMATION_VOTE_PRESETS=["433","442","4231","352","3421","4222","4141"];
   const FORMATION_VOTE_LABELS={
     433:["4-3-3","폭넓은 3톱과 중원 균형"],
     442:["4-4-2","두 줄 수비와 투톱의 직선적인 공격"],
     4231:["4-2-3-1","더블 볼란치와 공격형 미드필더 활용"],
-    352:["3-5-2","중앙 수적 우위와 윙백의 적극적인 전진"]
+    352:["3-5-2","중앙 수적 우위와 윙백의 적극적인 전진"],
+    3421:["3-4-2-1","두 명의 10번과 윙백으로 하프스페이스 공략"],
+    4222:["4-2-2-2","더블 볼란치와 좁은 2선·투톱 연결"],
+    4141:["4-1-4-1","원 볼란치 뒤 안정과 중원 전방 압박"]
   };
-  const TACTIC_VOTE_PRESETS=["BALANCED","POSSESSION","GEGENPRESS","COUNTER","DIRECT_WIDE","LOW_BLOCK"];
-  const TACTIC_VOTE_LABELS={BALANCED:["균형","공수 밸런스를 유지"],POSSESSION:["점유","짧은 패스로 소유권 유지"],GEGENPRESS:["강한 압박","높은 압박과 빠른 탈환"],COUNTER:["빠른 역습","낮게 버티고 빠르게 전진"],DIRECT_WIDE:["측면 직선 공격","넓게 벌리고 빠른 크로스"],LOW_BLOCK:["수비 블록","라인을 낮추고 공간 차단"]};
+  const TACTIC_VOTE_PRESETS=["BALANCED","POSSESSION","TIKI_TAKA","GEGENPRESS","COUNTER","DIRECT_WIDE","BUILDUP_32","OVERLOAD_SWITCH","LOW_BLOCK"];
+  const TACTIC_VOTE_LABELS={BALANCED:["균형","공수 밸런스를 유지"],POSSESSION:["점유","U자 빌드업으로 소유권 유지"],TIKI_TAKA:["티키타카","짧고 빠른 점유율 패스와 삼각 지원"],GEGENPRESS:["강한 압박","높은 압박과 빠른 탈환"],COUNTER:["빠른 역습","낮게 버티고 빠르게 전진"],DIRECT_WIDE:["측면 직선 공격","넓게 벌리고 빠른 크로스"],BUILDUP_32:["3-2 빌드업","한 풀백은 안으로, 반대 풀백은 후방 3명 구성"],OVERLOAD_SWITCH:["한쪽 과부하 후 전환","볼 쪽에 모은 뒤 반대 측면으로 크게 전환"],LOW_BLOCK:["수비 블록","라인을 낮추고 공간 차단"]};
   function detailedRoleLabel(role){return role==="AUTO"?"자동 역할":(PLAYER_ROLES?.[role]?.label||role||"자동 역할");}
   function detailedRoleChoices(pref="FLEX"){return DETAILED_ROLE_GROUPS[pref]||DETAILED_ROLE_GROUPS.FLEX;}
   function defaultDetailedRoleForPref(pref="FLEX"){return detailedRoleChoices(pref)[0]||"AUTO";}
@@ -2875,7 +2938,8 @@
 
   const lineupState={
     prepared:false,assignments:{blue:Array(11).fill(null),red:Array(11).fill(null)},
-    benches:{blue:[],red:[]},substitutionsUsed:{blue:0,red:0},subLog:{blue:[],red:[]},serial:1
+    benches:{blue:[],red:[]},substitutionsUsed:{blue:0,red:0},subLog:{blue:[],red:[]},
+    positionLog:{blue:[],red:[]},serial:1
   };
   const substitutedPlayers=[];
 
@@ -2917,7 +2981,7 @@
   // Host runs the authoritative match engine; students only join the room.
   // ============================================================
   const DSSOCCER_DEPLOY_URL="https://yeomt.github.io/DSsoccer/";
-  const DSSOCCER_BUILD="2.5.15";
+  const DSSOCCER_BUILD="2.5.16";
   const FIREBASE_CONFIG={
     apiKey:"AIzaSyBtK7NAfw4wDsS4LRacWF78PHT3zls50IQ",
     authDomain:"dsgames-fecef.firebaseapp.com",
@@ -3895,7 +3959,7 @@
     }
     if(phase==="LINEUP"){
       const status=data.lineupStatus||"UNSET",starter=status==="STARTER",lineups=room.lineups||{};
-      const pitch=(team)=>{const ln=lineups[team],formation=ln?.formation||"-",slots=ln?.slots||[],ownTeam=data.team===team,formationLabel=({433:"4-3-3",442:"4-4-2",4231:"4-2-3-1",352:"3-5-2"})[formation]||formation;const shape=FORMATIONS[formation]||[];return `<div class="student-mini-team ${team} ${ownTeam?"own":""}"><div class="student-mini-team-head"><h4 style="color:${team==="blue"?"#8bc6ff":"#ff929a"}">${team.toUpperCase()} TEAM · ${formationLabel}</h4>${ownTeam?`<span class="student-own-team-chip">내 팀</span>`:""}</div><div class="student-mini-pitch">${slots.map((x,i)=>{const pos=shape[i]||{x:50,y:34};const left=team==="blue"?Math.min(90,Math.max(10,pos.x)):Math.min(90,Math.max(10,100-pos.x));const top=Math.min(92,Math.max(8,pos.y/68*100));return `<div class="student-mini-node ${x.participantId===onlineRoomState.studentParticipantId?"me":""}" style="left:${left}%;top:${top}%">${escapeLobbyHtml(x.name)}<br>${x.role}</div>`}).join("")}</div></div>`};
+      const pitch=(team)=>{const ln=lineups[team],formation=ln?.formation||"-",slots=ln?.slots||[],ownTeam=data.team===team,formationLabel=({433:"4-3-3",442:"4-4-2",4231:"4-2-3-1",352:"3-5-2",3421:"3-4-2-1",4222:"4-2-2-2",4141:"4-1-4-1"})[formation]||formation;const shape=FORMATIONS[formation]||[];return `<div class="student-mini-team ${team} ${ownTeam?"own":""}"><div class="student-mini-team-head"><h4 style="color:${team==="blue"?"#8bc6ff":"#ff929a"}">${team.toUpperCase()} TEAM · ${formationLabel}</h4>${ownTeam?`<span class="student-own-team-chip">내 팀</span>`:""}</div><div class="student-mini-pitch">${slots.map((x,i)=>{const pos=shape[i]||{x:50,y:34};const left=team==="blue"?Math.min(90,Math.max(10,pos.x)):Math.min(90,Math.max(10,100-pos.x));const top=Math.min(92,Math.max(8,pos.y/68*100));return `<div class="student-mini-node ${x.participantId===onlineRoomState.studentParticipantId?"me":""}" style="left:${left}%;top:${top}%">${escapeLobbyHtml(x.name)}<br>${x.role}</div>`}).join("")}</div></div>`};
       studentWaitingText.textContent="선발 명단과 양 팀 포메이션이 확정되었습니다.";
       studentStageArea.innerHTML=`<div class="student-lineup-result"><div class="student-stage-title">MATCH READY</div><div class="big">${starter?"⚽ 선발 출전":"🪑 BENCH"}</div><div class="role">${starter?`${data.assignedRole||"-"} · #${data.shirtNumber||"-"} · ${detailedRoleLabel(data.assignedTacticalRole||data.preferredRole)}`:`${detailedRoleLabel(data.preferredRole)} · 교체 출전 준비`}</div>${studentStatsHtml(null,data)}</div><div class="student-formation-grid">${pitch("blue")}${pitch("red")}</div>`;return;
     }
@@ -4408,6 +4472,7 @@
     lineupState.benches={blue:[],red:[]};
     lineupState.substitutionsUsed={blue:0,red:0};
     lineupState.subLog={blue:[],red:[]};
+    lineupState.positionLog={blue:[],red:[]};
     lineupState.serial=1;
     substitutedPlayers.length=0;
     for(const s of lobbyState.students)resetStudentProgress(s);
@@ -4932,14 +4997,32 @@
     if(!first||!second||first.id===second.id)return {ok:false,message:"서로 다른 두 선수를 선택해주세요."};
     const firstBundle=halftimeIdentityBundle(first),secondBundle=halftimeIdentityBundle(second),formationKey=teams[teamName].formation;
     placeHalftimeIdentity(first,secondBundle,formationKey);placeHalftimeIdentity(second,firstBundle,formationKey);
+
+    // The live player objects are slot based (blue-0, blue-1 ...). Keep the
+    // source lineup in the same swapped order as well, so a later sync or
+    // formation rebuild cannot silently put both students back in their old
+    // positions at the start of Q3.
+    const slotIndex=p=>{
+      const fromId=Number((p.id.match(/-(\d+)$/)||[])[1]);
+      return Number.isFinite(fromId)?fromId:teams[teamName].players.indexOf(p);
+    };
+    const firstIndex=slotIndex(first),secondIndex=slotIndex(second);
+    if(!lineupState.assignments[teamName])lineupState.assignments[teamName]=Array(11).fill(null);
+    lineupState.assignments[teamName][firstIndex]=first.studentId||null;
+    lineupState.assignments[teamName][secondIndex]=second.studentId||null;
+
     const message=`${playerName(first)} → ${first.role} · ${playerName(second)} → ${second.role}`;
+    if(!lineupState.positionLog)lineupState.positionLog={blue:[],red:[]};
+    if(!lineupState.positionLog[teamName])lineupState.positionLog[teamName]=[];
+    lineupState.positionLog[teamName].push(message);
     addCommentary(`${teamName.toUpperCase()} 하프타임 포지션 조정 · ${message}`,"major",{participation:true});
     return {ok:true,message};
   }
   function halftimePositionTeamHtml(teamName){
     const active=teams[teamName].players.filter(p=>!p.sentOff);
     const options=(selectedIndex=-1)=>active.map((p,i)=>`<option value="${p.id}" ${i===selectedIndex?"selected":""}>#${p.number} ${escapeLobbyHtml(playerName(p))} · ${p.role}</option>`).join("");
-    return `<div class="halftime-position-card"><h4 style="color:${teamName==="blue"?"#77b8ff":"#ff858d"}">${teamName.toUpperCase()} 포지션 재배치</h4><p>${FORMATION_VOTE_LABELS[teams[teamName].formation]?.[0]||teams[teamName].formation} 안에서 두 선수의 자리를 맞바꿉니다. 경기 기록·카드·체력은 선수에게 그대로 따라갑니다.</p>${active.length>1?`<div class="sub-select-row"><select class="sub-select" data-halftime-from="${teamName}">${options(0)}</select><div class="sub-arrow">↔</div><select class="sub-select" data-halftime-to="${teamName}">${options(1)}</select></div><button class="sub-apply" data-halftime-position-swap="${teamName}">두 선수 포지션 교환</button>`:`<div class="growth-summary">재배치 가능한 선수가 부족합니다.</div>`}</div>`;
+    const log=(lineupState.positionLog?.[teamName]||[]).slice(-3).map(x=>`✓ ${escapeLobbyHtml(x)}`).join("<br>");
+    return `<div class="halftime-position-card"><h4 style="color:${teamName==="blue"?"#77b8ff":"#ff858d"}">${teamName.toUpperCase()} 포지션 재배치</h4><p>${FORMATION_VOTE_LABELS[teams[teamName].formation]?.[0]||teams[teamName].formation} 안에서 두 선수의 자리를 맞바꿉니다. 경기 기록·카드·체력은 선수에게 그대로 따라가며 Q3 라인업에 확정 반영됩니다.</p>${active.length>1?`<div class="sub-select-row"><select class="sub-select" data-halftime-from="${teamName}">${options(0)}</select><div class="sub-arrow">↔</div><select class="sub-select" data-halftime-to="${teamName}">${options(1)}</select></div><button class="sub-apply" data-halftime-position-swap="${teamName}">두 선수 포지션 교환</button>`:`<div class="growth-summary">재배치 가능한 선수가 부족합니다.</div>`}${log?`<div class="sub-log">${log}</div>`:""}</div>`;
   }
   function subTeamHtml(teamName){
     const active=teams[teamName].players.filter(p=>!p.sentOff);
@@ -5098,7 +5181,7 @@
     showSubstitutionScreen(key);
   }
   function prepareParticipationHalfKickoff(){
-    match.setPiece=null;match.goalPause=0;match.restartTeam=null;match.halfTimePause=0;
+    match.setPiece=null;match.pendingSetPiece=null;match.goalPause=0;match.restartTeam=null;match.halfTimePause=0;
     ball.state="DEAD";ball.ownerId=null;ball.ownerTeam=null;ball.vx=ball.vy=0;
     for(const p of allPlayers())resetPlayerForDeadBall(p,"HALF_TIME");
     prepareKickoffShape("red",true);
@@ -5110,7 +5193,8 @@
     if(key==="BREAK25"){
       gameFlow.phase="Q2";
       running=true;
-      renderTicker("Q2 · 성장 적용 완료. 25분부터 전반 종료까지 경기를 재개합니다.","major",{immediate:true});
+      kickoff("red");
+      renderTicker("Q2 KICK OFF · RED가 센터서클에서 25분부터 경기를 시작합니다.","major",{immediate:true});
     }else if(key==="HALF"){
       prepareParticipationHalfKickoff();
       gameFlow.phase="Q3";
@@ -5122,7 +5206,8 @@
     }else{
       gameFlow.phase="Q4";
       running=true;
-      renderTicker("Q4 · 마지막 성장 적용 완료. 90분까지 최종 쿼터를 시작합니다.","major",{immediate:true});
+      kickoff("blue");
+      renderTicker("Q4 KICK OFF · BLUE가 센터서클에서 70분부터 최종 쿼터를 시작합니다.","major",{immediate:true});
     }
     updateGamePhaseBadge();
     if(remoteParticipationActive()){
@@ -5132,7 +5217,7 @@
   }
   function participationPauseSafe(){
     return !presentation.active&&!replay.active&&!match.shootout?.active&&
-      !match.setPiece&&match.goalPause<=0&&ball.state!=="PASSING"&&ball.state!=="SHOOTING";
+      !match.setPiece&&!match.pendingSetPiece&&match.goalPause<=0&&ball.state!=="PASSING"&&ball.state!=="SHOOTING";
   }
   function handleParticipationClock(){
     if(gameFlow.fastSimulating)return false;
@@ -6374,6 +6459,7 @@
         const score=`${match.blueScore}-${match.redScore}`;
 
         match.setPiece=null;
+        match.pendingSetPiece=null;
         match.goalPause=0;
         match.restartTeam=null;
         ball.state="DEAD";
@@ -7651,6 +7737,7 @@
     presentation.stage="NONE";
     matchFx.classList.remove("active");
     match.setPiece=null;
+    match.pendingSetPiece=null;
     match.goalPause=0;
     match.restartTeam=null;
 
@@ -8484,12 +8571,43 @@
     })[0];
   }
 
+  function queueSetPiece(type,teamName,x,y,reason=""){
+    if(type!=="CORNER"){
+      startSetPiece(type,teamName,x,y,reason);
+      return true;
+    }
+
+    // Let the deflection/save/out animation finish before the pitch is reset
+    // into a corner shape. The ball is dead during this short presentation
+    // window, so a second contact cannot schedule another restart.
+    if(match.pendingSetPiece||match.setPiece)return false;
+    match.pendingSetPiece={
+      type,team:teamName,
+      x:clamp(x,1,FIELD_W-1),
+      y:clamp(y,1,FIELD_H-1),
+      reason,
+      timer:.62
+    };
+    match.goalPause=0;
+    match.restartTeam=null;
+    ball.state="DEAD";
+    ball.ownerId=null;ball.ownerTeam=null;
+    ball.passerId=null;ball.intendedReceiverId=null;
+    ball.passTeam=null;ball.passType=null;
+    ball.shooterId=null;ball.shotTeam=null;ball.shotTargetY=null;ball.shotVariant=null;
+    ball.vx=ball.vy=0;
+    ball.flightTime=0;ball.looseAge=0;
+    clearOffsideState();
+    return true;
+  }
+
   function startSetPiece(type,teamName,x,y,reason=""){
     x=clamp(x,1,FIELD_W-1);
     y=clamp(y,1,FIELD_H-1);
 
     const taker=chooseSetPieceTaker(teamName,type,x,y);
 
+    match.pendingSetPiece=null;
     match.goalPause=0;
     match.restartTeam=null;
     match.setPiece={
@@ -8753,7 +8871,7 @@
       if(lastTouch===defendingTeam){
         const attackingTeam=otherTeam(defendingTeam);
         stats[attackingTeam].corners++;
-        startSetPiece(
+        queueSetPiece(
           "CORNER",attackingTeam,
           ball.x<0?1:FIELD_W-1,
           ball.y<34?1:FIELD_H-1
@@ -8963,7 +9081,10 @@
     if(slotRole==="RDM") return "BALL_WINNER";
     if(slotRole==="LCM") return "PLAYMAKER";
     if(slotRole==="RCM") return formationKey==="442" ? "BALL_WINNER" : "BOX_TO_BOX";
-    if(slotRole==="AM") return "ATTACKING_MIDFIELDER";
+    if(slotRole==="AM"){
+      if(["3421","4222"].includes(formationKey))return index%2===0?"PLAYMAKER":"ATTACKING_MIDFIELDER";
+      return "ATTACKING_MIDFIELDER";
+    }
     if(slotRole==="LM" || slotRole==="RM") return "WIDE_MIDFIELDER";
 
     if(slotRole==="LW" || slotRole==="RW") return "WIDE_FORWARD";
@@ -9317,9 +9438,9 @@
     if(!p)return 0;
     // v2.5.10: modest positional reading boosts. They improve choices without
     // replacing the player's own intelligence rating.
-    if(["DM","LDM","RDM"].includes(p.role)||p.tacticalRole==="ANCHOR")return 4.0;
+    if(["DM","LDM","RDM"].includes(p.role)||p.tacticalRole==="ANCHOR")return 5.2;
     if(p.category==="DEF")return 3.6;
-    if(p.category==="MID"||p.role==="AM")return 3.2;
+    if(p.category==="MID"||p.role==="AM")return 4.8;
     if(p.category==="ATT")return 1.6;
     return 0;
   }
@@ -9460,7 +9581,7 @@
       [p.technique,.78],[p.intelligence,.17],[p.physical,.05]
     ),1.28);
     const positionalBonus=
-      p.category==="MID"||p.role==="AM" ? 2.0 :
+      p.category==="MID"||p.role==="AM" ? 4.2 :
       p.category==="DEF" ? 1.6 : 0;
     return clamp(raw+positionalBonus,1,99);
   }
@@ -9473,9 +9594,13 @@
 
   // Decision quality: INT matters heavily. Execution accuracy is separated below.
   function throughPassSkill(p){
-    return amplifyDerived(weightedSkill(
+    let result=amplifyDerived(weightedSkill(
       [p.kick,.40],[p.intelligence,.50],[p.technique,.10]
     ),1.18);
+    if(isMidfieldController(p)){
+      result+=lerp(3.0,6.2,decisionIntelligence(p));
+    }
+    return clamp(result,1,99);
   }
 
   function passExecutionSkill(p,type="SHORT"){
@@ -9496,8 +9621,8 @@
       const control=midfieldControlSkill(p)/100;
       const bonus=
         type==="THROUGH"||type==="KILL_PASS"
-          ? lerp(2.9,6.5,vision*.58+control*.42)
-          : lerp(2.0,4.9,vision*.52+control*.48);
+          ? lerp(4.5,8.5,vision*.58+control*.42)
+          : lerp(3.5,7.0,vision*.52+control*.48);
       result=clamp(result+bonus,1,99);
     }else if(p.category==="DEF"){
       const vision=decisionIntelligence(p);
@@ -9517,21 +9642,31 @@
   function generalPassSkill(p,type="SHORT"){
     if(type==="THROUGH"||type==="KILL_PASS") return throughPassSkill(p);
 
+    let result;
     if(["LONG","LONG_GK","SWITCH","EARLY_CROSS","CROSS","LONG_CROSS"].includes(type)){
-      return amplifyDerived(weightedSkill(
+      result=amplifyDerived(weightedSkill(
         [p.kick,.50],[p.intelligence,.32],[p.technique,.18]
+      ),1.16);
+    }else{
+      result=amplifyDerived(weightedSkill(
+        [p.kick,.30],[p.intelligence,.40],[p.technique,.30]
       ),1.16);
     }
 
-    return amplifyDerived(weightedSkill(
-      [p.kick,.30],[p.intelligence,.40],[p.technique,.30]
-    ),1.16);
+    if(isMidfieldController(p)){
+      const longType=["LONG","SWITCH","EARLY_CROSS","CROSS","LONG_CROSS"].includes(type);
+      result+=longType
+        ? lerp(3.6,5.7,decisionIntelligence(p))
+        : lerp(4.2,6.4,decisionIntelligence(p));
+    }
+    return clamp(result,1,99);
   }
 
   function dribbleSkill(p){
-    return amplifyDerived(weightedSkill(
+    const result=amplifyDerived(weightedSkill(
       [p.technique,.58],[p.speed,.32],[p.intelligence,.10]
     ),1.26);
+    return clamp(result+(isMidfieldController(p)?4.0:0),1,99);
   }
 
   function tackleSkill(p){
@@ -9724,6 +9859,9 @@
     const taker=prepareKickoffShape(teamName,true);
     if(!taker)return;
 
+    match.setPiece=null;
+    match.pendingSetPiece=null;
+
     // A kickoff always belongs to live play: silence the classroom BGM before
     // the referee cue so the whistle and stadium effects are heard clearly.
     classBgmWanted=false;
@@ -9769,6 +9907,8 @@
     teamState.red.nonProgressivePasses=0;
     teamState.blue.defenderRecycleCount=0;
     teamState.red.defenderRecycleCount=0;
+    teamState.blue.recentPassTargets=[];
+    teamState.red.recentPassTargets=[];
 
     showEvent(
       `KICK OFF · ${teamName.toUpperCase()}가 센터서클에서 경기를 다시 시작합니다.`,
@@ -9792,6 +9932,7 @@
     match.lastScorerId=null;
     match.lastShotVariant=null;
     match.setPiece=null;
+    match.pendingSetPiece=null;
     match.elapsedSeconds=0;
     match.ended=false;
     match.lastPasserId=null;
@@ -9824,6 +9965,7 @@
     substitutedPlayers.length=0;
     lineupState.substitutionsUsed={blue:0,red:0};
     lineupState.subLog={blue:[],red:[]};
+    lineupState.positionLog={blue:[],red:[]};
     presentation.active=false;
     presentation.stage="NONE";
     presentation.timer=0;
@@ -9878,6 +10020,7 @@
       teamState[t].gkPossessionMode=false;
       teamState[t].nonProgressivePasses=0;
       teamState[t].defenderRecycleCount=0;
+      teamState[t].recentPassTargets=[];
       teamState[t].contextMode="NORMAL";
       teamState[t].contextLastAnnounced="NORMAL";
     }
@@ -11113,8 +11256,24 @@
 
   function isThreeBackWingback(p){
     return !!p &&
-      teams[p.team]?.formation==="352" &&
+      ["352","3421"].includes(teams[p.team]?.formation) &&
       ["LWB","RWB"].includes(p.role);
+  }
+
+  function isActiveFullbackRun(p){
+    if(!isFullback(p))return false;
+    const intent=String(p.offBallIntent||p.assignment||"");
+    const runIntent=[
+      "OVERLAP","BYLINE","HIGH_WIDE","WIDE_OUTLET",
+      "WIDE_SUPPORT","ESCAPE","SWITCH_OUTLET"
+    ].some(key=>intent.includes(key));
+    const dir=attackDir(p.team);
+    const movingForward=Math.max(
+      (p.tx-p.x)*dir,
+      ((p.offBallX??p.x)-p.x)*dir,
+      p.vx*dir*.45
+    );
+    return runIntent&&movingForward>.65;
   }
 
   function isMidfieldLineBreaker(p){
@@ -12767,7 +12926,10 @@
         patternOwner &&
         patternOwner.team===p.team &&
         patternOwner.id!==p.id &&
-        ["BUILD_UP","PROGRESSION"].includes(phase)
+        (
+          ["BUILD_UP","PROGRESSION"].includes(phase) ||
+          patternPreset==="OVERLOAD_SWITCH"
+        )
       ){
         const dir=attackDir(p.team);
 
@@ -12834,6 +12996,73 @@
               y:lerp(target.y,p.homeY<34?8:60,.56)
             };
             patternIntent="DIRECT_WIDE_SUPPORT";
+          }
+        }
+
+        if(patternPreset==="BUILDUP_32"&&["BUILD_UP","PROGRESSION"].includes(phase)){
+          const ballSide=sideSignFromY(patternOwner.y)||teamState[p.team].ballSide||(patternOwner.number%2===0?1:-1);
+          const playerSide=sideSignFromY(p.homeY);
+          const fourBack=!(["352","3421"].includes(teams[p.team]?.formation));
+
+          if(isFullback(p)){
+            if(playerSide===ballSide){
+              target={
+                x:lerp(target.x,patternOwner.x+dir*5.8,.58),
+                y:lerp(target.y,34+ballSide*5.0,.76)
+              };
+              patternIntent="BUILDUP32_INVERTED_PIVOT";
+            }else{
+              target={
+                x:lerp(target.x,patternOwner.x-dir*(fourBack?6.2:2.8),.54),
+                y:lerp(target.y,fourBack?(p.homeY<34?18:50):(p.homeY<34?8:60),.66)
+              };
+              patternIntent=fourBack?"BUILDUP32_BACK_THREE":"BUILDUP32_WIDE_HOLD";
+            }
+          }else if(isCentralDefender(p)){
+            target={
+              x:lerp(target.x,patternOwner.x-dir*6.0,.42),
+              y:lerp(target.y,p.homeY,.64)
+            };
+            patternIntent="BUILDUP32_BACK_THREE";
+          }else if(["DM","LDM","RDM"].includes(p.role)){
+            target={
+              x:lerp(target.x,patternOwner.x+dir*7.0,.52),
+              y:lerp(target.y,34-ballSide*4.5,.68)
+            };
+            patternIntent="BUILDUP32_DOUBLE_PIVOT";
+          }else if((isCentralMid(p)||p.role==="AM")&&p.category==="MID"){
+            target={
+              x:clamp(target.x+dir*3.8,3,FIELD_W-3),
+              y:lerp(target.y,34+(playerSide||-ballSide)*9.0,.46)
+            };
+            patternIntent="BUILDUP32_HIGH_MIDFIELD";
+          }
+        }
+
+        if(patternPreset==="OVERLOAD_SWITCH"){
+          const overloadSide=sideSignFromY(patternOwner.y)||teamState[p.team].ballSide||(patternOwner.number%2===0?1:-1);
+          const playerSide=sideSignFromY(p.homeY);
+          const sameSide=playerSide!==0&&playerSide===overloadSide;
+          const weakSide=playerSide!==0&&playerSide!==overloadSide;
+
+          if(
+            sameSide &&
+            (isFullback(p)||isWinger(p)||p.category==="MID") &&
+            dist(p.x,p.y,patternOwner.x,patternOwner.y)<34
+          ){
+            const stagger=(p.number%3)-1;
+            target={
+              x:lerp(target.x,patternOwner.x+dir*(p.category==="MID"?3.5:5.2),.46),
+              y:lerp(target.y,patternOwner.y+overloadSide*(4.6+stagger*2.2),.58)
+            };
+            patternIntent="OVERLOAD_NEAR_COMBINATION";
+          }else if(weakSide&&(isWinger(p)||isFullback(p)||["LM","RM"].includes(p.role))){
+            const outletY=playerSide<0?4.8:FIELD_H-4.8;
+            target={
+              x:clamp(lerp(target.x,patternOwner.x+dir*13,.68),3,FIELD_W-3),
+              y:lerp(target.y,outletY,.80)
+            };
+            patternIntent="ISOLATED_SWITCH_OUTLET";
           }
         }
       }
@@ -13413,8 +13642,14 @@
     }
 
     const scale=lerp(1.15,.68,intelligence);
-    const positionalTempo=(player.category==="DEF"||player.category==="MID"||player.role==="AM")?DEF_MID_DECISION_TEMPO_BONUS:1;
-    return rand(min,max)*scale/(tempoFactor(player.team)*AI_DECISION_TEMPO_MULTIPLIER*positionalTempo);
+    const positionalTempo=
+      player.category==="MID"||player.role==="AM"
+        ? MIDFIELD_DECISION_TEMPO_BONUS
+        : player.category==="DEF"
+          ? DEF_MID_DECISION_TEMPO_BONUS
+          : 1;
+    const tikiTempo=teamTactic(player.team).preset==="TIKI_TAKA"?.86:1;
+    return rand(min,max)*scale*tikiTempo/(tempoFactor(player.team)*AI_DECISION_TEMPO_MULTIPLIER*positionalTempo);
   }
 
   function pointToSegmentDistance(px,py,x1,y1,x2,y2){
@@ -13529,6 +13764,15 @@
     const angle=shootingAngleQuality(owner);
     const tech=techniqueImpact(owner);
     const kick=kickImpact(owner);
+    const oneOnOne=oneOnOneProfile(owner);
+
+    if(oneOnOne&&d<12.5&&load<.42){
+      const calmFinish=clamp(
+        .52+decisionIntelligence(owner)*.22+tech*.14,
+        .62,.88
+      );
+      return Math.random()<calmFinish?"PLACED":"LOW_DRIVEN";
+    }
 
     if(longContext||d>=18){
       if(kick>.62 && Math.random()<clamp(.42+(kick-.5)*.55,.42,.75)){
@@ -13603,6 +13847,46 @@
     return clamp(1 - dy/(dx*1.25+8), 0, 1);
   }
 
+  function oneOnOneProfile(owner){
+    if(
+      !owner ||
+      owner.reboundShotWindow>0 ||
+      !(owner.category==="ATT"||owner.role==="AM"||owner.tacticalRole==="WIDE_FORWARD")
+    )return null;
+
+    const d=shootingDistance(owner);
+    const angle=shootingAngleQuality(owner);
+    if(d<6.5||d>25||angle<.27)return null;
+
+    const dir=attackDir(owner.team);
+    const gx=opponentGoalX(owner.team);
+    const outfield=teams[otherTeam(owner.team)].players.filter(p=>p.role!=="GK"&&!p.sentOff);
+    const nearestOutfield=outfield.reduce(
+      (best,p)=>Math.min(best,dist(owner.x,owner.y,p.x,p.y)),
+      999
+    );
+    const corridorBlockers=outfield.filter(p=>{
+      const forward=(p.x-owner.x)*dir;
+      return forward>0&&forward<Math.min(15,d-1.5)&&
+        pointToSegmentDistance(p.x,p.y,owner.x,owner.y,gx,34)<4.0;
+    });
+    if(nearestOutfield<3.7||corridorBlockers.length)return null;
+
+    const gk=teams[otherTeam(owner.team)].players.find(p=>p.role==="GK")||null;
+    return {
+      distance:d,
+      angle,
+      nearestOutfield,
+      gk,
+      composure:clamp(
+        decisionIntelligence(owner)*.48+
+        techniqueImpact(owner)*.32+
+        shootingSkill(owner)/100*.20,
+        0,1
+      )
+    };
+  }
+
 
   function matchFlowBalance(teamName){
     const own=stats[teamName];
@@ -13674,7 +13958,7 @@
     ),1.27);
     // v2.5.10: midfielders keep the first touch under normal
     // pressure a little better without becoming immune to a true double-team.
-    const bonus=["DM","LDM","RDM"].includes(p.role)?3.9:3.5;
+    const bonus=["DM","LDM","RDM"].includes(p.role)?5.8:5.2;
     return clamp(raw+bonus,1,99);
   }
 
@@ -13800,6 +14084,12 @@
       if(["PLAYMAKER","BOX_TO_BOX","ATTACKING_MIDFIELDER"].includes(owner.tacticalRole))utility+=3;
     }
     if(owner.role==="AM") utility+=5;
+
+    const oneOnOne=oneOnOneProfile(owner);
+    if(oneOnOne){
+      if(d>10.5)utility-=14+Math.min(8,(d-10.5)*.75);
+      else utility+=12+oneOnOne.composure*7;
+    }
 
     utility-=matchFlowShotThrottle(owner.team);
     utility += rand(-6,6)*lerp(1,.52,decisionIntelligence(owner));
@@ -14054,6 +14344,7 @@
 
     if(ball.passTeam===attackingTeam&&ball.intendedReceiverId===receiver.id){
       stats[attackingTeam].passCompleted++;
+      recordRecentPassTarget(attackingTeam,receiver.id);
       const passer=getPlayer(ball.passerId);
       if(passer){
         passer.matchStats.passesCompleted++;
@@ -14147,6 +14438,7 @@
 
     if(ball.passTeam===attackingTeam&&ball.intendedReceiverId===receiver.id){
       stats[attackingTeam].passCompleted++;
+      recordRecentPassTarget(attackingTeam,receiver.id);
       const passer=getPlayer(ball.passerId);
       if(passer){
         passer.matchStats.passesCompleted++;
@@ -14559,7 +14851,7 @@
 
     if(Math.random()<cornerChance){
       stats[attackingTeam].corners++;
-      startSetPiece(
+      queueSetPiece(
         "CORNER",
         attackingTeam,
         ownGoalX(defendingTeam),
@@ -14772,7 +15064,7 @@
 
     if(Math.random()<cornerChance){
       stats[attackingTeam].corners++;
-      startSetPiece(
+      queueSetPiece(
         "CORNER",
         attackingTeam,
         ownGoalX(defendingTeam),
@@ -14868,6 +15160,7 @@
     match.goalPause=.75;
     match.restartTeam=concedingTeam;
     match.setPiece=null;
+    match.pendingSetPiece=null;
     clearOffsideState();
 
     ball.state="DEAD";
@@ -14929,7 +15222,7 @@
 
         if(ball.lastTouchTeam===defendingTeam){
           stats[scoringTeam].corners++;
-          startSetPiece(
+          queueSetPiece(
             "CORNER",scoringTeam,targetGoalX,
             lineY<34?1:FIELD_H-1,
             "수비 맞고 나감"
@@ -14959,6 +15252,30 @@
   // ------------------------------------------------------------
   // 패스
   // ------------------------------------------------------------
+  function recordRecentPassTarget(teamName,targetId){
+    if(!teamName||!targetId||!teamState[teamName])return;
+    const history=teamState[teamName].recentPassTargets||(
+      teamState[teamName].recentPassTargets=[]
+    );
+    history.push(targetId);
+    if(history.length>8)history.splice(0,history.length-8);
+  }
+
+  function passTargetVarietyBonus(teamName,targetId,receivingSpace=0){
+    const history=teamState[teamName]?.recentPassTargets||[];
+    let penalty=0;
+    const recent=history.slice(-6);
+    for(let i=0;i<recent.length;i++){
+      if(recent[i]!==targetId)continue;
+      const recency=(i+1)/recent.length;
+      penalty+=2.0+recency*2.4;
+    }
+    if(!recent.includes(targetId)&&receivingSpace>4.2){
+      return 2.5+Math.min(2.5,(receivingSpace-4.2)*.55);
+    }
+    return -Math.min(12,penalty);
+  }
+
   function scorePassTarget(owner,target){
     if(target.id===owner.id)return -999;
     const d=dist(owner.x,owner.y,target.x,target.y);
@@ -14999,6 +15316,11 @@
     }else{
       if(target.category==="ATT"&&forward>2)score+=7.0;
       if(target.role==="AM"||target.tacticalRole==="ATTACKING_MIDFIELDER")score+=4.0;
+      if(forward<-3){
+        const ownerPressure=nearestOpponentDistance(owner);
+        score-=(ownerPressure>2.6?10.5:5.5)+Math.min(11,Math.abs(forward)*.56);
+        if(isFullback(target)&&forward<-7)score-=10.5;
+      }
     }
 
     if(
@@ -15055,7 +15377,7 @@
     if(teamTactic(owner.team).preset==="DIRECT_WIDE"&&targetIsWide&&forward>0)score+=6.5;
 
     if(target.tacticalRole==="TARGET_FORWARD"&&d>14)score+=4.2;
-    if(target.tacticalRole==="PLAYMAKER"&&d<24)score+=10.0;
+    if(target.tacticalRole==="PLAYMAKER"&&d<24)score+=7.0;
     if(target.tacticalRole==="POACHER"&&forward>5)score+=zone==="ATTACK"?7.0:4.0;
     if(target.tacticalRole==="FALSE_NINE"&&d<18)score+=3.2;
     if(isWinger(target))score+=congestion*(zone==="BUILDUP"?.65:1.6);
@@ -15145,6 +15467,44 @@
       distance:d,
       safety
     };
+  }
+
+  function modernTacticPassBonus(owner,target,type,safetyData){
+    const preset=teamTactic(owner.team).preset;
+    const zone=possessionZoneFor(owner.team,owner.x);
+    const targetIntent=String(target.offBallIntent||"");
+    let bonus=0;
+
+    if(preset==="BUILDUP_32"&&zone!=="ATTACK"){
+      if(
+        type==="SHORT" &&
+        (
+          ["DM","LDM","RDM"].includes(target.role) ||
+          targetIntent.includes("BUILDUP32_INVERTED_PIVOT") ||
+          targetIntent.includes("BUILDUP32_DOUBLE_PIVOT")
+        )
+      )bonus+=11;
+      if(type==="SHORT"&&isCentralDefender(target))bonus+=4;
+      if(type==="THROUGH"&&isActiveFullbackRun(target))bonus+=10;
+      if(safetyData.forward<-5)bonus-=6;
+    }
+
+    if(preset==="OVERLOAD_SWITCH"){
+      const ownerSide=sideSignFromY(owner.y)||teamState[owner.team]?.ballSide||1;
+      const targetSide=sideSignFromY(target.y);
+      const sameSide=ownerSide!==0&&targetSide===ownerSide;
+      const oppositeSide=ownerSide!==0&&targetSide!==0&&targetSide!==ownerSide;
+
+      if(type==="SHORT"&&sameSide&&safetyData.distance<19)bonus+=8;
+      if(
+        oppositeSide &&
+        (type==="SWITCH"||type==="LONG") &&
+        (targetIntent.includes("ISOLATED_SWITCH_OUTLET")||safetyData.receivingSpace>4)
+      )bonus+=type==="SWITCH"?22:11;
+      if(type==="THROUGH"&&isActiveFullbackRun(target))bonus+=9;
+    }
+
+    return bonus;
   }
 
   function passOptionIsViable(owner,option){
@@ -15243,8 +15603,8 @@
         (zone==="BUILDUP"?.70:zone==="PROGRESSION"?.55:.34);
 
     const openReceiverBonus=
-      safetyData.receivingSpace>5.5 ? 6.0 :
-      safetyData.receivingSpace>4.2 ? 3.5 : 0;
+      safetyData.receivingSpace>5.5 ? 8.0 :
+      safetyData.receivingSpace>4.2 ? 4.5 : 0;
 
     const creativeBoxBonus=
       type==="CUTBACK" ? 26 :
@@ -15267,6 +15627,13 @@
     if(owner.category==="DEF"&&safetyData.forward>2&&(target.category==="MID"||wideTarget))progressiveDecisionBonus+=5;
     if(["DEF","MID"].includes(owner.category)&&safetyData.forward<-1)progressiveDecisionBonus-=4+Math.min(5,Math.abs(safetyData.forward)*.24);
     if(teamTactic(owner.team).preset==="DIRECT_WIDE"&&wideTarget&&safetyData.forward>0)progressiveDecisionBonus+=5;
+    if(zone==="ATTACK"&&safetyData.forward<-4){
+      progressiveDecisionBonus-=8+Math.min(12,Math.abs(safetyData.forward)*.52);
+      if(isFullback(target)&&safetyData.forward<-7)progressiveDecisionBonus-=9;
+    }
+    if(type==="THROUGH"&&isActiveFullbackRun(target)&&safetyData.forward>3){
+      progressiveDecisionBonus+=15;
+    }
 
     return {
       type,target,aimX,aimY,speed,
@@ -15274,6 +15641,8 @@
       score:
         base+bonus+passerRole+receiverRole+
         tacticPassBias(owner.team,type)+
+        modernTacticPassBonus(owner,target,type,safetyData)+
+        passTargetVarietyBonus(owner.team,target.id,safetyData.receivingSpace)+
         trianglePassBonus(owner,target)+
         uBuildUpBonus(owner,target,type)+
         zonePassTypeBias(owner,type,risk)+
@@ -15327,6 +15696,7 @@
         (
           target.category==="ATT"||
           isWinger(target)||
+          (isFullback(target)&&isActiveFullbackRun(target))||
           target.role==="AM"||
           target.tacticalRole==="ATTACKING_MIDFIELDER"||
           (isMidfieldBoxRunner(target)&&progress>.62)
@@ -15351,6 +15721,7 @@
           clamp(19+d*.28,20,27),
           6.0+progress*6+intel*4+
           (tactical==="COUNTER_ATTACK"?10:0)+
+          (isActiveFullbackRun(target)?14:0)+
           (
             owner.category==="MID"&&target.category==="ATT"
               ? 8+clamp(nearestOpponentDistance(target)-2,0,5)*1.1
@@ -15619,6 +15990,51 @@
     options.splice(0,options.length,...viable);
     options.sort((a,b)=>b.score-a.score);
 
+    // When a fullback is already running beyond the ball, release that space
+    // before considering a long retreating pass to a deep defender.
+    if(zone!=="BUILDUP"){
+      const overlapRelease=options
+        .filter(o=>
+          o.type==="THROUGH"&&
+          isActiveFullbackRun(o.target)&&
+          o.safetyData.forward>3.5&&
+          o.safetyData.receivingSpace>2.4&&
+          o.safetyData.laneRisk<5.4
+        )
+        .sort((a,b)=>b.score-a.score);
+      if(overlapRelease[0]){
+        const releaseChance=clamp(
+          .48+intel*.24+
+          (teamTactic(owner.team).preset==="OVERLOAD_SWITCH"?.12:0)+
+          (teamTactic(owner.team).preset==="DIRECT_WIDE"?.08:0),
+          .58,.88
+        );
+        if(Math.random()<releaseChance)return overlapRelease[0];
+      }
+    }
+
+    const recentTargets=teamState[owner.team].recentPassTargets?.slice(-4)||[];
+    const smartOpenOutlet=options
+      .filter(o=>
+        !recentTargets.includes(o.target.id)&&
+        o.safetyData.receivingSpace>5.2&&
+        o.safetyData.laneRisk<3.35&&
+        o.safetyData.forward>(zone==="ATTACK"?-1.5:-3.5)&&
+        (
+          o.type==="SHORT"||o.type==="THROUGH"||o.type==="KILL_PASS"||
+          (o.type==="SWITCH"&&o.safetyData.receivingSpace>6)
+        )
+      )
+      .sort((a,b)=>
+        (b.safetyData.safety+b.safetyData.receivingSpace*1.55+b.score*.18)-
+        (a.safetyData.safety+a.safetyData.receivingSpace*1.55+a.score*.18)
+      )[0];
+    if(
+      smartOpenOutlet&&
+      smartOpenOutlet.score>=options[0].score-13&&
+      Math.random()<clamp(.46+intel*.30,.56,.80)
+    )return smartOpenOutlet;
+
     // First look forward: a clean short outlet, a line-breaking midfield pass
     // or a release into the flank should beat a harmless recycle for DEF/MID.
     if(["DEF","MID"].includes(owner.category)&&zone!=="ATTACK"){
@@ -15762,6 +16178,7 @@
           (
             isStriker(o.target) ||
             isWinger(o.target) ||
+            isActiveFullbackRun(o.target) ||
             isActiveMidfieldRun(o.target)
           )
         )
@@ -15923,6 +16340,7 @@
       const bestSwitch=switchOptions[0];
       const congestion=countOpponentsNear(owner.x,owner.y,10,owner.team);
       let switchChance=
+        preset==="OVERLOAD_SWITCH" ? .94 :
         preset==="DIRECT_WIDE" ? .90 :
         preset==="POSSESSION" ? .58 :
         preset==="COUNTER" ? .50 :
@@ -15931,7 +16349,7 @@
 
       if(
         bestSwitch.score>18 &&
-        (congestion>=2 || preset==="DIRECT_WIDE" || preset==="POSSESSION") &&
+        (congestion>=2 || preset==="DIRECT_WIDE" || preset==="POSSESSION" || preset==="OVERLOAD_SWITCH") &&
         Math.random()<switchChance
       ){
         return bestSwitch;
@@ -16217,8 +16635,12 @@
     ball.y=owner.y+dy/len*.8;
 
     const kickPace=lerp(.82,1.20,kickImpact(owner));
+    const tacticalPassPace=
+      teamTactic(owner.team).preset==="TIKI_TAKA"&&option.type==="SHORT" ? 1.10 :
+      teamTactic(owner.team).preset==="OVERLOAD_SWITCH"&&option.type==="SWITCH" ? 1.06 :
+      1;
     const actualPassSpeed=
-      option.speed*kickPace*
+      option.speed*kickPace*tacticalPassPace*
       lerp(.96,1.05,(tempoFactor(owner.team)-.84)/.34);
     ball.vx=dx/len*actualPassSpeed;
     ball.vy=dy/len*actualPassSpeed;
@@ -16376,6 +16798,31 @@
     }
     recordCreativePattern(owner.team,"DRIBBLE");
     showEvent(`${owner.team.toUpperCase()} · ${playerName(owner)}, 직접 전진합니다.`);
+  }
+
+  function beginOneOnOneCarry(owner,profile=oneOnOneProfile(owner)){
+    if(!profile){beginDribble(owner);return;}
+    const dir=attackDir(owner.team);
+    const gkY=profile.gk?.y??34;
+    const side=Math.abs(owner.y-gkY)>.8
+      ? Math.sign(owner.y-gkY)
+      : (owner.number%2===0?1:-1);
+    const towardCenter=clamp((34-owner.y)*.035,-.18,.18);
+    const dx=dir;
+    const dy=clamp(towardCenter+side*.16,-.30,.30);
+    const len=Math.hypot(dx,dy)||1;
+
+    owner.onBallAction="DRIBBLE";
+    owner.actionTimer=rand(.38,.62)*lerp(1.04,.76,profile.composure);
+    owner.dribbleX=dx/len;owner.dribbleY=dy/len;
+    owner.dribbleStartX=owner.x;owner.dribbleStartY=owner.y;
+    owner.dribbleMarked=true;
+    owner.controlGrace=Math.max(owner.controlGrace,.10+profile.composure*.06);
+    stats[owner.team].dribbleAttempts++;
+    owner.matchStats.dribblesAttempted++;
+    teamState[owner.team].nonProgressivePasses=0;
+    recordCreativePattern(owner.team,"ONE_ON_ONE_CARRY");
+    showEvent(`${owner.team.toUpperCase()} · ${playerName(owner)}, 골키퍼를 보며 한 번 더 몰고 갑니다!`,"danger");
   }
 
 
@@ -16544,6 +16991,24 @@
           attemptPass(owner,delivery);
           return;
         }
+      }
+    }
+
+    // A clean breakaway should not always end with an early shot. Composed
+    // forwards sometimes take another controlled touch, draw the goalkeeper,
+    // then use the calmer close-range finishing branch on the next decision.
+    const oneOnOne=oneOnOneProfile(owner);
+    if(oneOnOne&&oneOnOne.distance>9.5){
+      const carryChance=clamp(
+        .42+
+        oneOnOne.composure*.30+
+        dribbleSkill(owner)/100*.16+
+        clamp((oneOnOne.distance-11)/15,0,.10),
+        .58,.88
+      );
+      if(Math.random()<carryChance){
+        beginOneOnOneCarry(owner,oneOnOne);
+        return;
       }
     }
 
@@ -17407,6 +17872,7 @@
     }
 
     if(wasPass&&oldPassTeam&&player.team===oldPassTeam){
+      recordRecentPassTarget(player.team,player.id);
       bumpDiagBucket(reactiveDiagnostics.passCompleted,receivedPassType||"UNKNOWN");
     }
 
@@ -19674,7 +20140,14 @@
     for(const p of allPlayers())updatePlayerPhysics(p,dt);
     resolvePlayerDiscSpacing();
 
-    if(match.setPiece){
+    if(match.pendingSetPiece){
+      match.pendingSetPiece.timer=Math.max(0,match.pendingSetPiece.timer-dt);
+      if(match.pendingSetPiece.timer<=0){
+        const pending={...match.pendingSetPiece};
+        match.pendingSetPiece=null;
+        startSetPiece(pending.type,pending.team,pending.x,pending.y,pending.reason);
+      }
+    }else if(match.setPiece){
       match.setPiece.timer=Math.max(0,match.setPiece.timer-dt);
       if(match.setPiece.timer<=0){
         executeSetPiece();
@@ -19693,7 +20166,7 @@
     if(eventLife>0){
       eventLife-=dt;
       if(eventLife<=0&&eventNote){
-        eventNote.textContent="v1.2.2 · COMMENTARY READABILITY / MATCH CONTEXT";
+        eventNote.textContent="v2.5.16 · MODERN TACTICS / MATCH ENGINE POLISH";
       }
     }
   }
@@ -20736,7 +21209,7 @@
     },
     publicResult(){return publicResultForRoom();},
     matchSpeed(multiplier=null){if(multiplier!==null)setMatchSpeed(multiplier);return {multiplier:matchSpeedMultiplier,onePressed:matchSpeed1Btn?.getAttribute("aria-pressed"),twoPressed:matchSpeed2Btn?.getAttribute("aria-pressed")};},
-    matchTuning(){return {passExecutionErrorFactor:PASS_EXECUTION_ERROR_FACTOR,passReceiveScoreBonus:PASS_RECEIVE_SCORE_BONUS,decisionTempoMultiplier:AI_DECISION_TEMPO_MULTIPLIER,defMidDecisionTempoBonus:DEF_MID_DECISION_TEMPO_BONUS,freeKickDirectChance:.63,forwardTackleFactor:.73,cornerCbTargetBonus:23};},
+    matchTuning(){return {passExecutionErrorFactor:PASS_EXECUTION_ERROR_FACTOR,passReceiveScoreBonus:PASS_RECEIVE_SCORE_BONUS,decisionTempoMultiplier:AI_DECISION_TEMPO_MULTIPLIER,defDecisionTempoBonus:DEF_MID_DECISION_TEMPO_BONUS,midfieldDecisionTempoBonus:MIDFIELD_DECISION_TEMPO_BONUS,freeKickDirectChance:.63,forwardTackleFactor:.73,cornerCbTargetBonus:23};},
     commentarySamples(text="BLUE · 공격수가 슈팅합니다!",type="hype",count=24){return [...new Set(Array.from({length:count},()=>contextualCommentary(text,type)))];},
     storyFor(playerId){const p=getPlayer(playerId);return p?{rating:playerRating(p),lines:playerStory(p)}:null;},
     criticalStoryPreview(){
@@ -20782,6 +21255,9 @@
     debugShowFormationVote(key="HALF"){showFormationVote(key);return this.participationSnapshot();},
     async startQ1(){await startQuarterOne();return this.participationSnapshot();},
     currentFormations(){return {blue:teams.blue.formation,red:teams.red.formation,blueSelect:document.getElementById("blueFormation")?.value,redSelect:document.getElementById("redFormation")?.value};},
+    tacticalCatalog(){return {formations:Object.fromEntries(Object.entries(FORMATIONS).map(([k,v])=>[k,v.map(x=>x.role)])),tactics:Object.keys(TEAM_TACTIC_PRESETS),formationVotes:[...FORMATION_VOTE_PRESETS],tacticVotes:[...TACTIC_VOTE_PRESETS]};},
+    restartState(){return {ball:{x:ball.x,y:ball.y,state:ball.state,ownerTeam:ball.ownerTeam},setPiece:match.setPiece?{...match.setPiece}:null,pendingSetPiece:match.pendingSetPiece?{...match.pendingSetPiece}:null,restartSerial:match.restartSerial};},
+    debugQueueCorner(teamName="blue"){match.setPiece=null;match.pendingSetPiece=null;queueSetPiece("CORNER",teamName,teamName==="blue"?FIELD_W-1:1,1,"QA · 장면 마무리 대기");return this.restartState();},
     autoPreQuizAndBuild(score=16){
       for(const s of participationStudents()){s.preQuizCorrect=score;}
       confirmPreQuiz();
