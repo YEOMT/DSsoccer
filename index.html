@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.12 Formation Vote &amp; Wide Play</title>
+  <title>Class Football Simulator - v2.5.15 Match Audio &amp; Class BGM</title>
   <style>
     :root{
       --bg:#10141b;
@@ -976,7 +976,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.12</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.15</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1141,7 +1141,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.12 · Formation Vote &amp; Wide Play</p>
+      <p>v2.5.15 · Match Audio &amp; Class BGM</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -1159,8 +1159,8 @@
           <div style="height:8px"></div>
           <button id="autoDemoBtn" class="active" style="width:100%">자동 플레이 AI ON</button>
           <div style="height:8px"></div>
-          <button id="soundToggleBtn" class="active" style="width:100%">🔊 경기장 사운드 ON</button>
-          <div class="sound-note">호스트가 화면을 한 번 클릭하면 내장 킥 사운드와 관중 반응이 재생됩니다. 학생 기기에서는 소리가 나지 않습니다.</div>
+          <button id="soundToggleBtn" class="active" style="width:100%">🔊 게임 사운드 ON</button>
+          <div class="sound-note">호스트가 화면을 한 번 클릭하면 경기 중 킥·휘슬·관중 효과음이 재생되고, 퀴즈·투표·성장 화면에서는 BGM이 이어집니다. 학생 기기에서는 소리가 나지 않습니다.</div>
           <div style="height:8px"></div>
           <button id="endMatchBtn" class="danger" style="width:100%">경기 종료 · 결과 보기</button>
         </section>
@@ -1647,9 +1647,17 @@
   let audioMaster=null;
   let audioCompressor=null;
   let embeddedNoiseBuffer=null;
+  const CLASS_BGM_URL="https://www.dropbox.com/scl/fi/e1u8pxin1j4b6p7f8ebx6/Class-Soccer-Battle.mp3?rlkey=huw5z814aozwq3pjoi6mxj6n4&raw=1";
+  const MATCH_AUDIO_PHASES=new Set(["Q1","Q2","Q3","Q4","SHOOTOUT"]);
+  const CLASS_BGM_VOLUME=.32;
+  let classBgm=null;
+  let classBgmWanted=false;
+  let classBgmPrimed=false;
+  let classBgmFadeSerial=0;
+  let hostAudioInteracted=false;
   const audioFxState={
     lastKickAt:-Infinity,lastCrowdAt:-Infinity,lastCrowdPriority:0,
-    kickCount:0,crowdCount:0,lastCue:"NONE"
+    kickCount:0,crowdCount:0,whistleCount:0,lastCue:"NONE"
   };
   const kickVisuals=[];
   const momentumHistory=Array(18).fill(0);
@@ -1683,7 +1691,7 @@
     if(!audioCtx||!audioMaster||audioCtx.state==="closed")return;
     const t=audioCtx.currentTime;
     audioMaster.gain.cancelScheduledValues(t);
-    audioMaster.gain.setTargetAtTime(enabled ? .72 : .0001,t,.018);
+    audioMaster.gain.setTargetAtTime(enabled ? .86 : .0001,t,.018);
   }
 
   function ensureAudio(){
@@ -1698,7 +1706,7 @@
     if(!audioMaster){
       audioMaster=audioCtx.createGain();
       audioCompressor=audioCtx.createDynamicsCompressor();
-      audioMaster.gain.value=.72;
+      audioMaster.gain.value=.86;
       audioCompressor.threshold.value=-22;
       audioCompressor.knee.value=16;
       audioCompressor.ratio.value=5;
@@ -1711,6 +1719,99 @@
     if(audioCtx.state==="suspended")audioCtx.resume().catch(()=>{});
     setAudioMasterLevel(true);
     return audioCtx;
+  }
+
+  function ensureClassBgm(){
+    if(classBgm)return classBgm;
+    classBgm=new Audio();
+    classBgm.src=CLASS_BGM_URL;
+    classBgm.loop=true;
+    classBgm.preload="metadata";
+    classBgm.volume=0;
+    classBgm.setAttribute("playsinline","");
+    classBgm.addEventListener("error",()=>{
+      console.warn("Class BGM could not be loaded. Check the shared Dropbox audio link.",classBgm?.error||"");
+    });
+    return classBgm;
+  }
+
+  function classBgmShouldPlay(){
+    return !!(
+      soundEnabled&&hostAudioInteracted&&gameFlow?.active&&!gameFlow.fastSimulating&&
+      !MATCH_AUDIO_PHASES.has(gameFlow.phase)&&
+      !document.body.classList.contains("student-open")&&
+      !document.body.classList.contains("lobby-open")&&
+      document.visibilityState!=="hidden"
+    );
+  }
+
+  function fadeClassBgmTo(target,duration=420,pauseWhenSilent=false){
+    const audio=classBgm;if(!audio)return;
+    const serial=++classBgmFadeSerial;
+    const from=Number(audio.volume)||0,to=clamp(Number(target)||0,0,1);
+    const started=performance.now(),span=Math.max(1,duration);
+    const step=now=>{
+      if(serial!==classBgmFadeSerial)return;
+      const p=clamp((now-started)/span,0,1);
+      audio.volume=clamp(from+(to-from)*(p*p*(3-2*p)),0,1);
+      if(p<1){requestAnimationFrame(step);return;}
+      if(pauseWhenSilent&&to<=.0001){audio.pause();audio.volume=0;}
+    };
+    requestAnimationFrame(step);
+  }
+
+  function startClassBgm(){
+    if(!classBgmShouldPlay())return false;
+    const audio=ensureClassBgm();
+    const afterPlay=()=>{
+      classBgmPrimed=true;
+      if(classBgmShouldPlay())fadeClassBgmTo(CLASS_BGM_VOLUME,audio.volume>.01?260:520,false);
+      else stopClassBgm(true);
+    };
+    if(!audio.paused){afterPlay();return true;}
+    audio.volume=0;
+    const attempt=audio.play();
+    if(attempt&&typeof attempt.then==="function")attempt.then(afterPlay).catch(e=>{
+      console.warn("Class BGM playback is waiting for a host click.",e);
+    });
+    else afterPlay();
+    return true;
+  }
+
+  function stopClassBgm(immediate=false){
+    if(!classBgm)return;
+    if(immediate){
+      classBgmFadeSerial++;
+      classBgm.pause();
+      classBgm.volume=0;
+      return;
+    }
+    if(!classBgm.paused)fadeClassBgmTo(0,280,true);
+  }
+
+  function primeClassBgmFromGesture(){
+    if(classBgmPrimed||document.body.classList.contains("student-open"))return;
+    const audio=ensureClassBgm();
+    audio.volume=0;
+    const attempt=audio.play();
+    if(attempt&&typeof attempt.then==="function")attempt.then(()=>{
+      classBgmPrimed=true;
+      if(classBgmShouldPlay())fadeClassBgmTo(CLASS_BGM_VOLUME,520,false);
+      else{audio.pause();audio.currentTime=0;audio.volume=0;}
+    }).catch(()=>{});
+    else{
+      classBgmPrimed=true;
+      if(classBgmShouldPlay())fadeClassBgmTo(CLASS_BGM_VOLUME,520,false);
+      else{audio.pause();audio.currentTime=0;}
+    }
+  }
+
+  function syncHostAudioScene(force=false,immediateStop=false){
+    const wanted=classBgmShouldPlay();
+    if(!force&&wanted===classBgmWanted)return;
+    classBgmWanted=wanted;
+    if(wanted)startClassBgm();
+    else stopClassBgm(immediateStop);
   }
 
   function embeddedNoise(ac){
@@ -1767,6 +1868,28 @@
     gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),t+.008);
     gain.gain.exponentialRampToValueAtTime(.0001,end);
     osc.connect(gain);connectAudioNode(ac,gain,pan);osc.start(t);osc.stop(end+.02);
+  }
+
+  function playKickoffWhistle(){
+    if(!hostAudioAllowed())return false;
+    const ac=ensureAudio();if(!ac||ac.state==="closed")return false;
+    const start=ac.currentTime+.025,duration=.52,end=start+duration;
+    const whistleGain=ac.createGain(),whistleFilter=ac.createBiquadFilter();
+    const carrier=ac.createOscillator(),harmonic=ac.createOscillator(),vibrato=ac.createOscillator(),vibratoGain=ac.createGain();
+    whistleFilter.type="bandpass";whistleFilter.frequency.value=2450;whistleFilter.Q.value=2.8;
+    carrier.type="sine";carrier.frequency.setValueAtTime(2180,start);carrier.frequency.linearRampToValueAtTime(2380,start+.10);carrier.frequency.linearRampToValueAtTime(2260,end);
+    harmonic.type="triangle";harmonic.frequency.setValueAtTime(4360,start);harmonic.frequency.linearRampToValueAtTime(4520,end);
+    vibrato.type="sine";vibrato.frequency.value=22;vibratoGain.gain.value=38;vibrato.connect(vibratoGain);vibratoGain.connect(carrier.frequency);
+    whistleGain.gain.setValueAtTime(.0001,start);
+    whistleGain.gain.exponentialRampToValueAtTime(.066,start+.035);
+    whistleGain.gain.setValueAtTime(.058,end-.09);
+    whistleGain.gain.exponentialRampToValueAtTime(.0001,end);
+    carrier.connect(whistleFilter);harmonic.connect(whistleFilter);whistleFilter.connect(whistleGain);connectAudioNode(ac,whistleGain,0);
+    carrier.start(start);harmonic.start(start);vibrato.start(start);
+    carrier.stop(end+.02);harmonic.stop(end+.02);vibrato.stop(end+.02);
+    playFilteredNoise(ac,{delay:.02,duration:.42,volume:.018,frequency:2600,q:2.1,attack:.018,playbackRate:1.08});
+    audioFxState.whistleCount++;audioFxState.lastCue="KICKOFF_WHISTLE";
+    return true;
   }
 
   function addCrowdVoiceCluster(ac,t,duration,kind){
@@ -2794,7 +2917,7 @@
   // Host runs the authoritative match engine; students only join the room.
   // ============================================================
   const DSSOCCER_DEPLOY_URL="https://yeomt.github.io/DSsoccer/";
-  const DSSOCCER_BUILD="2.5.14";
+  const DSSOCCER_BUILD="2.5.15";
   const FIREBASE_CONFIG={
     apiKey:"AIzaSyBtK7NAfw4wDsS4LRacWF78PHT3zls50IQ",
     authDomain:"dsgames-fecef.firebaseapp.com",
@@ -5041,12 +5164,13 @@
     }[gameFlow.phase]||gameFlow.phase;
   }
   function updateGamePhaseBadge(){
-    if(!gamePhaseBadge)return;
+    if(!gamePhaseBadge){syncHostAudioScene();return;}
     gamePhaseBadge.textContent=gameFlow.active?gameFlowLabel():"FREE PLAY";
     const cls=gameFlow.phase.toLowerCase().replace(/[^a-z0-9]/g,"");
     gamePhaseBadge.className=`game-phase-badge ${["PRE_QUIZ","ROLE_SELECT","BUILD","LINEUP","BREAK25","HALF","BREAK70","BREAK_BUILD","FORMATION_VOTE","TACTIC_VOTE","SUBSTITUTION"].includes(gameFlow.phase)?"quiz":cls}`;
     const broadcast=gameFlow.active&&["Q1","Q2","Q3","Q4","SHOOTOUT"].includes(gameFlow.phase)&&!document.body.classList.contains("participation-open")&&!document.body.classList.contains("lobby-open");
     document.body.classList.toggle("broadcast-mode",broadcast);
+    syncHostAudioScene();
   }
   function randomizeVisibleQuizScores(){
     autoCompleteLiveQuiz();
@@ -9600,6 +9724,12 @@
     const taker=prepareKickoffShape(teamName,true);
     if(!taker)return;
 
+    // A kickoff always belongs to live play: silence the classroom BGM before
+    // the referee cue so the whistle and stadium effects are heard clearly.
+    classBgmWanted=false;
+    stopClassBgm(true);
+    playKickoffWhistle();
+
     ball.state="CONTROLLED";
     ball.ownerId=taker.id;
     ball.ownerTeam=teamName;
@@ -9653,6 +9783,7 @@
     audioFxState.lastCrowdPriority=0;
     audioFxState.kickCount=0;
     audioFxState.crowdCount=0;
+    audioFxState.whistleCount=0;
     audioFxState.lastCue="NONE";
     match.blueScore=0;
     match.redScore=0;
@@ -20153,11 +20284,18 @@
   });
 
   function unlockHostAudio(){
-    if(ensureAudio())document.removeEventListener("pointerdown",unlockHostAudio);
+    if(document.body.classList.contains("student-open"))return;
+    hostAudioInteracted=true;
+    const ac=ensureAudio();
+    if(classBgmShouldPlay())syncHostAudioScene(true);
+    else primeClassBgmFromGesture();
+    if(ac&&ac.state==="suspended")ac.resume().then(()=>syncHostAudioScene(true)).catch(()=>{});
   }
   document.addEventListener("pointerdown",unlockHostAudio,{passive:true});
+  new MutationObserver(()=>syncHostAudioScene()).observe(document.body,{attributes:true,attributeFilter:["class"]});
   document.addEventListener("visibilitychange",()=>{
     if(document.visibilityState==="hidden"&&onlineStudentSession()&&studentPendingQuizCount())flushStudentQuizAnswers();
+    syncHostAudioScene(true,document.visibilityState==="hidden");
   });
   window.addEventListener("pagehide",()=>{
     if(onlineStudentSession()&&studentPendingQuizCount())flushStudentQuizAnswers();
@@ -20166,12 +20304,21 @@
   soundToggleBtn.addEventListener("click",()=>{
     soundEnabled=!soundEnabled;
     soundToggleBtn.classList.toggle("active",soundEnabled);
-    soundToggleBtn.textContent=soundEnabled?"🔊 경기장 사운드 ON":"🔇 경기장 사운드 OFF";
+    soundToggleBtn.textContent=soundEnabled?"🔊 게임 사운드 ON":"🔇 게임 사운드 OFF";
     if(soundEnabled){
-      ensureAudio();
-      playTone(220,.05,.012,"sine");
-      playTone(294,.06,.010,"sine",.05);
-    }else setAudioMasterLevel(false);
+      unlockHostAudio();
+      const ac=ensureAudio();
+      const confirm=()=>{
+        playTone(220,.05,.015,"sine");
+        playTone(294,.06,.013,"sine",.05);
+      };
+      if(ac&&ac.state==="suspended")ac.resume().then(confirm).catch(()=>{});else confirm();
+      syncHostAudioScene(true);
+    }else{
+      setAudioMasterLevel(false);
+      classBgmWanted=false;
+      stopClassBgm(true);
+    }
   });
 
   document.getElementById("toggleRun").addEventListener("click",e=>{
@@ -20577,12 +20724,13 @@
 
   // Lightweight internal telemetry for regression testing.
   window.__matchDebug = {
-    audioSystem(){return {enabled:soundEnabled,hostAllowed:hostAudioAllowed(),contextState:audioCtx?.state||"uninitialized",masterReady:!!audioMaster,fullyEmbedded:true,kickCount:audioFxState.kickCount,crowdCount:audioFxState.crowdCount,lastCue:audioFxState.lastCue};},
+    audioSystem(){return {enabled:soundEnabled,hostAllowed:hostAudioAllowed(),contextState:audioCtx?.state||"uninitialized",masterReady:!!audioMaster,fullyEmbedded:true,kickCount:audioFxState.kickCount,crowdCount:audioFxState.crowdCount,whistleCount:audioFxState.whistleCount,lastCue:audioFxState.lastCue,bgm:{wanted:classBgmWanted,playing:!!classBgm&&!classBgm.paused,volume:Number(classBgm?.volume||0),primed:classBgmPrimed,source:"DROPBOX"}};},
     previewAudioCue(kind="GOAL"){
       audioFxState.lastKickAt=-Infinity;audioFxState.lastCrowdAt=-Infinity;audioFxState.lastCrowdPriority=0;
       const cue=String(kind||"GOAL").toUpperCase();
       if(["PASS","KILL","SHOT","POWER"].includes(cue))playKickSound(cue,cue==="PASS"?18:30);
       else if(["GOAL","SAVE","TACKLE","CARD"].includes(cue))playEventSound(cue);
+      else if(cue==="WHISTLE"||cue==="KICKOFF_WHISTLE")playKickoffWhistle();
       else playCrowdReaction(cue);
       return this.audioSystem();
     },
