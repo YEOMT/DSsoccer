@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.17 Smart Patterns &amp; Efficiency</title>
+  <title>Class Football Simulator - v2.5.18 Passing Intelligence &amp; Match Report</title>
   <style>
     :root{
       --bg:#10141b;
@@ -212,10 +212,23 @@
       padding:10px 16px;
     }
     .teamlabel{
-      font-weight:800;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-size:13px;
+      font-weight:900;
       letter-spacing:.02em;
     }
-    .teamlabel.red{text-align:right}
+    .scorebar>.teamlabel:first-child{justify-content:flex-end}
+    .teamlabel.red{justify-content:flex-start;text-align:left}
+    .teamlabel span{
+      min-width:38px;
+      font-size:31px;
+      line-height:1;
+      text-align:center;
+      color:#fff;
+      text-shadow:0 0 12px currentColor,0 2px 4px rgba(0,0,0,.7);
+    }
     .center-status{
       color:#cbd5e1;
       font-size:12px;
@@ -261,6 +274,13 @@
       }
       .section{margin:0}
       canvas{min-height:520px}
+    }
+    @media (max-width:620px){
+      .scorebar{padding:8px 9px}
+      .teamlabel{gap:6px;font-size:10px}
+      .teamlabel span{min-width:31px;font-size:25px}
+      .center-status{min-width:145px}
+      .match-clock{min-width:62px;margin:0 5px;font-size:14px}
     }
   
     .match-clock{
@@ -980,7 +1000,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.17</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.18</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1145,7 +1165,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.17 · Smart Patterns &amp; Efficiency</p>
+      <p>v2.5.18 · Passing Intelligence &amp; Match Report</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -1497,9 +1517,9 @@
   "use strict";
 
   // ============================================================
-  // MATCH ENGINE v2.5.17
-  // Carries every v2.5.16 classroom/network/audio/tactical fix forward, then
-  // adds decisive-chance priority, wall passes, aerial relays and lean UI loops.
+  // MATCH ENGINE v2.5.18
+  // Carries every v2.5.17 classroom/network/tactical feature forward, then
+  // improves targeted delivery, shared-ball reactions and match reporting.
   // ============================================================
 
   const FIELD_W = 105;
@@ -1510,8 +1530,19 @@
   const AI_DT = 1 / AI_HZ;
   // v2.5.12 keeps the global tempo stable while defenders and midfielders
   // receive an extra positional speed-up in their on-ball decisions.
-  const PASS_EXECUTION_ERROR_FACTOR = .965;
-  const PASS_RECEIVE_SCORE_BONUS = 1.2;
+  const PASS_EXECUTION_ERROR_FACTOR = .72;
+  const PASS_RECEIVE_SCORE_BONUS = 4.2;
+  const PASS_TYPE_ERROR_FACTORS = Object.freeze({
+    SHORT:.045,
+    CUTBACK:.072,
+    THROUGH:.16,
+    KILL_PASS:.19,
+    SWITCH:.34,
+    LONG:.38,
+    EARLY_CROSS:.26,
+    CROSS:.29,
+    LONG_CROSS:.34
+  });
   const AI_DECISION_TEMPO_MULTIPLIER = 1.07;
   const DEF_MID_DECISION_TEMPO_BONUS = 1.11;
   const MIDFIELD_DECISION_TEMPO_BONUS = 1.20;
@@ -1663,7 +1694,8 @@
   let embeddedNoiseBuffer=null;
   const CLASS_BGM_URL="https://www.dropbox.com/scl/fi/e1u8pxin1j4b6p7f8ebx6/Class-Soccer-Battle.mp3?rlkey=huw5z814aozwq3pjoi6mxj6n4&raw=1";
   const MATCH_AUDIO_PHASES=new Set(["Q1","Q2","Q3","Q4","SHOOTOUT"]);
-  const CLASS_BGM_VOLUME=.32;
+  const MATCH_AUDIO_MASTER_GAIN=.98;
+  const CLASS_BGM_VOLUME=.40;
   let classBgm=null;
   let classBgmWanted=false;
   let classBgmPrimed=false;
@@ -1705,7 +1737,7 @@
     if(!audioCtx||!audioMaster||audioCtx.state==="closed")return;
     const t=audioCtx.currentTime;
     audioMaster.gain.cancelScheduledValues(t);
-    audioMaster.gain.setTargetAtTime(enabled ? .86 : .0001,t,.018);
+    audioMaster.gain.setTargetAtTime(enabled ? MATCH_AUDIO_MASTER_GAIN : .0001,t,.018);
   }
 
   function ensureAudio(){
@@ -1720,7 +1752,7 @@
     if(!audioMaster){
       audioMaster=audioCtx.createGain();
       audioCompressor=audioCtx.createDynamicsCompressor();
-      audioMaster.gain.value=.86;
+      audioMaster.gain.value=MATCH_AUDIO_MASTER_GAIN;
       audioCompressor.threshold.value=-22;
       audioCompressor.knee.value=16;
       audioCompressor.ratio.value=5;
@@ -1895,13 +1927,13 @@
     harmonic.type="triangle";harmonic.frequency.setValueAtTime(4360,start);harmonic.frequency.linearRampToValueAtTime(4520,end);
     vibrato.type="sine";vibrato.frequency.value=22;vibratoGain.gain.value=38;vibrato.connect(vibratoGain);vibratoGain.connect(carrier.frequency);
     whistleGain.gain.setValueAtTime(.0001,start);
-    whistleGain.gain.exponentialRampToValueAtTime(.066,start+.035);
-    whistleGain.gain.setValueAtTime(.058,end-.09);
+    whistleGain.gain.exponentialRampToValueAtTime(.078,start+.035);
+    whistleGain.gain.setValueAtTime(.069,end-.09);
     whistleGain.gain.exponentialRampToValueAtTime(.0001,end);
     carrier.connect(whistleFilter);harmonic.connect(whistleFilter);whistleFilter.connect(whistleGain);connectAudioNode(ac,whistleGain,0);
     carrier.start(start);harmonic.start(start);vibrato.start(start);
     carrier.stop(end+.02);harmonic.stop(end+.02);vibrato.stop(end+.02);
-    playFilteredNoise(ac,{delay:.02,duration:.42,volume:.018,frequency:2600,q:2.1,attack:.018,playbackRate:1.08});
+    playFilteredNoise(ac,{delay:.02,duration:.42,volume:.022,frequency:2600,q:2.1,attack:.018,playbackRate:1.08});
     audioFxState.whistleCount++;audioFxState.lastCue="KICKOFF_WHISTLE";
     return true;
   }
@@ -1929,12 +1961,12 @@
   function playCrowdReaction(kind="CHANCE"){
     if(!hostAudioAllowed())return false;
     const profiles={
-      CHANCE:{priority:1,duration:.68,peak:.031,attack:.08,bands:[520,1050]},
-      TACKLE:{priority:1,duration:.38,peak:.022,attack:.025,bands:[610,1280]},
-      MURMUR:{priority:2,duration:1.10,peak:.026,attack:.18,bands:[330,720]},
-      HYPE:{priority:2,duration:1.02,peak:.047,attack:.055,bands:[560,1180]},
-      SAVE:{priority:3,duration:1.12,peak:.060,attack:.045,bands:[590,1260]},
-      GOAL:{priority:4,duration:3.65,peak:.105,attack:.095,bands:[510,980,1680]}
+      CHANCE:{priority:1,duration:.68,peak:.038,attack:.08,bands:[520,1050]},
+      TACKLE:{priority:1,duration:.38,peak:.027,attack:.025,bands:[610,1280]},
+      MURMUR:{priority:2,duration:1.10,peak:.032,attack:.18,bands:[330,720]},
+      HYPE:{priority:2,duration:1.02,peak:.057,attack:.055,bands:[560,1180]},
+      SAVE:{priority:3,duration:1.12,peak:.072,attack:.045,bands:[590,1260]},
+      GOAL:{priority:4,duration:3.65,peak:.125,attack:.095,bands:[510,980,1680]}
     };
     const profile=profiles[kind]||profiles.CHANCE;
     const now=performance.now(),since=now-audioFxState.lastCrowdAt;
@@ -1965,19 +1997,19 @@
     audioFxState.lastKickAt=now;audioFxState.kickCount++;audioFxState.lastCue=`KICK_${kind}`;
     const strength=clamp((power-12)/30,0,1);
     const shot=kind==="SHOT"||kind==="POWER";
-    const thumpVolume=kind==="POWER"?.046:kind==="SHOT"?.034:kind==="KILL"?.023:.014;
+    const thumpVolume=kind==="POWER"?.058:kind==="SHOT"?.043:kind==="KILL"?.029:.018;
     const thumpDuration=shot?.090:kind==="KILL"?.064:.045;
     const startFreq=(shot?128:kind==="KILL"?158:175)+strength*38;
     playTone(startFreq,thumpDuration,thumpVolume,shot?"sine":"triangle",0,shot?54:92);
     playFilteredNoise(ac,{
       duration:shot?.068:.038,
-      volume:shot?.030:kind==="KILL"?.020:.012,
+      volume:shot?.038:kind==="KILL"?.025:.015,
       frequency:shot?720:kind==="KILL"?1380:1040,
       q:shot?.72:1.05,
       attack:.002,
       playbackRate:.96+strength*.13
     });
-    if(kind==="POWER")playFilteredNoise(ac,{delay:.012,duration:.085,volume:.021,frequency:390,q:.68,attack:.003});
+    if(kind==="POWER")playFilteredNoise(ac,{delay:.012,duration:.085,volume:.027,frequency:390,q:.68,attack:.003});
     if(shot)playCrowdReaction("CHANCE");
     return true;
   }
@@ -2441,7 +2473,10 @@
 
   function widthFactor(teamName){
     const v=teamTactic(teamName).width;
-    const base=v==="WIDE"?1.12:v==="NARROW"?.88:1;
+    const base=
+      teamTactic(teamName).preset==="TIKI_TAKA" ? .83 :
+      v==="WIDE" ? 1.12 :
+      v==="NARROW" ? .88 : 1;
     return base*matchContextProfile(teamName).width;
   }
 
@@ -2635,6 +2670,7 @@
   const teamState = {
     blue:{
       possessionTime:0,
+      possessionSpell:0,
       phase:"BUILD_UP",
       attackDepth:0,
       supportBias:0,
@@ -2661,6 +2697,7 @@
     },
     red:{
       possessionTime:0,
+      possessionSpell:0,
       phase:"BUILD_UP",
       attackDepth:0,
       supportBias:0,
@@ -2734,6 +2771,7 @@
     wideReleases:0,
     crosses:0,
     passOut:0,
+    passOutByType:{},
     earlyLoosePasses:0,
     reactiveInterceptAssignments:0,
     receiveRuns:0,
@@ -2755,6 +2793,7 @@
     reactiveDiagnostics.wideReleases=0;
     reactiveDiagnostics.crosses=0;
     reactiveDiagnostics.passOut=0;
+    reactiveDiagnostics.passOutByType={};
     reactiveDiagnostics.earlyLoosePasses=0;
     reactiveDiagnostics.reactiveInterceptAssignments=0;
     reactiveDiagnostics.receiveRuns=0;
@@ -2994,7 +3033,7 @@
   // Host runs the authoritative match engine; students only join the room.
   // ============================================================
   const DSSOCCER_DEPLOY_URL="https://yeomt.github.io/DSsoccer/";
-  const DSSOCCER_BUILD="2.5.17";
+  const DSSOCCER_BUILD="2.5.18";
   const FIREBASE_CONFIG={
     apiKey:"AIzaSyBtK7NAfw4wDsS4LRacWF78PHT3zls50IQ",
     authDomain:"dsgames-fecef.firebaseapp.com",
@@ -4608,7 +4647,7 @@
     return clamp(Math.floor(clamp(Number(correct)||0,0,20)/2),0,10);
   }
   function breakPointsForCorrect(correct){
-    return clamp(Math.floor(clamp(Number(correct)||0,0,10)/3),0,3);
+    return clamp(Math.floor(clamp(Number(correct)||0,0,10)/2),0,5);
   }
   function phaseRoadmapHtml(active){
     const labels={Q1:"Q1 0-25",BREAK25:"QUIZ",Q2:"Q2 25-45",HALF:"HALF QUIZ",Q3:"Q3 45-70",BREAK70:"QUIZ",Q4:"Q4 70-90"};
@@ -4661,7 +4700,7 @@
       const bs=isPre?b.preQuizCorrect:(b.breakScores[key]||0);
       return bs-as||a.name.localeCompare(b.name,"ko");
     });
-    return `<div class="quiz-result-header"><div><b>자동채점 완료 · ${max}문항</b><br><span>무응답은 오답 처리됩니다. ${isPre?"2문제당 +1 성장":"3문제당 +1 성장"}</span></div><div class="quiz-result-rank">TOP · ${ranked[0]?escapeLobbyHtml(ranked[0].name):"-"}</div></div><div class="participation-grid">${ranked.map((s,idx)=>{
+    return `<div class="quiz-result-header"><div><b>자동채점 완료 · ${max}문항</b><br><span>무응답은 오답 처리됩니다. 2문제당 +1 성장</span></div><div class="quiz-result-rank">TOP · ${ranked[0]?escapeLobbyHtml(ranked[0].name):"-"}</div></div><div class="participation-grid">${ranked.map((s,idx)=>{
       const score=isPre?s.preQuizCorrect:(s.breakScores[key]||0);
       const pts=isPre?startPointsForCorrect(score):breakPointsForCorrect(score);
       const growthControl=!isPre?(remoteParticipationActive()?`<div class="growth-summary">선택한 성장 타입 · <b>${GROWTH_FOCUS_LABELS[s.growthFocus]||GROWTH_FOCUS_LABELS.BALANCED}</b><br>현재 성장 · ${growthSummaryHtml(s.statsBonus)}</div>`:`<select class="growth-focus-select" data-focus-student="${s.id}">${growthFocusOptions(s.growthFocus)}</select><div class="growth-summary">현재 성장 · ${growthSummaryHtml(s.statsBonus)}</div>`):"";
@@ -5000,7 +5039,7 @@
     showParticipationOverlay();
     participationKicker.textContent=`LIVE QUIZ · 10 QUESTIONS · 60 SEC`;
     participationTitle.textContent=breakTitle(key);
-    participationDesc.textContent="학생은 자기 기기에서 10문항을 순서대로 풀고, 선택 즉시 정답 여부를 확인합니다. 최종 채점 후 3문제당 성장 +1, 최대 +3을 적용합니다.";
+    participationDesc.textContent="학생은 자기 기기에서 10문항을 순서대로 풀고, 선택 즉시 정답 여부를 확인합니다. 최종 채점 후 2문제당 성장 +1, 최대 +5를 적용합니다.";
     participationPhaseChip.textContent=key==="HALF"?`HALF TIME · ${match.blueScore}-${match.redScore}`:`${Math.floor(match.elapsedSeconds/60)}' · ${match.blueScore}-${match.redScore}`;
     participationRoadmap.innerHTML=phaseRoadmapHtml(key);
     participationBackBtn.style.display="none";
@@ -5086,7 +5125,7 @@
     if(student){student.startingSlot=index;student.assignedRole=slot.role;student.assignedTacticalRole=slot.tacticalRole;student.shirtNumber=slot.number;}
   }
   function swapHalftimePositions(teamName,firstId,secondId){
-    if(gameFlow.currentBreak!=="HALF")return {ok:false,message:"포지션 재배치는 하프타임에만 가능합니다."};
+    if(!["BREAK25","HALF","BREAK70"].includes(gameFlow.currentBreak))return {ok:false,message:"포지션 재배치는 쿼터 휴식의 팀 관리 화면에서만 가능합니다."};
     const first=teams?.[teamName]?.players?.find(p=>p.id===firstId&&!p.sentOff),second=teams?.[teamName]?.players?.find(p=>p.id===secondId&&!p.sentOff);
     if(!first||!second||first.id===second.id)return {ok:false,message:"서로 다른 두 선수를 선택해주세요."};
     const firstBundle=halftimeIdentityBundle(first),secondBundle=halftimeIdentityBundle(second),formationKey=teams[teamName].formation;
@@ -5109,14 +5148,14 @@
     if(!lineupState.positionLog)lineupState.positionLog={blue:[],red:[]};
     if(!lineupState.positionLog[teamName])lineupState.positionLog[teamName]=[];
     lineupState.positionLog[teamName].push(message);
-    addCommentary(`${teamName.toUpperCase()} 하프타임 포지션 조정 · ${message}`,"major",{participation:true});
+    addCommentary(`${teamName.toUpperCase()} ${breakTitle(gameFlow.currentBreak)} 포지션 조정 · ${message}`,"major",{participation:true});
     return {ok:true,message};
   }
   function halftimePositionTeamHtml(teamName){
     const active=teams[teamName].players.filter(p=>!p.sentOff);
     const options=(selectedIndex=-1)=>active.map((p,i)=>`<option value="${p.id}" ${i===selectedIndex?"selected":""}>#${p.number} ${escapeLobbyHtml(playerName(p))} · ${p.role}</option>`).join("");
     const log=(lineupState.positionLog?.[teamName]||[]).slice(-3).map(x=>`✓ ${escapeLobbyHtml(x)}`).join("<br>");
-    return `<div class="halftime-position-card"><h4 style="color:${teamName==="blue"?"#77b8ff":"#ff858d"}">${teamName.toUpperCase()} 포지션 재배치</h4><p>${FORMATION_VOTE_LABELS[teams[teamName].formation]?.[0]||teams[teamName].formation} 안에서 두 선수의 자리를 맞바꿉니다. 경기 기록·카드·체력은 선수에게 그대로 따라가며 Q3 라인업에 확정 반영됩니다.</p>${active.length>1?`<div class="sub-select-row"><select class="sub-select" data-halftime-from="${teamName}">${options(0)}</select><div class="sub-arrow">↔</div><select class="sub-select" data-halftime-to="${teamName}">${options(1)}</select></div><button class="sub-apply" data-halftime-position-swap="${teamName}">두 선수 포지션 교환</button>`:`<div class="growth-summary">재배치 가능한 선수가 부족합니다.</div>`}${log?`<div class="sub-log">${log}</div>`:""}</div>`;
+    return `<div class="halftime-position-card"><h4 style="color:${teamName==="blue"?"#77b8ff":"#ff858d"}">${teamName.toUpperCase()} 포지션 재배치</h4><p>${FORMATION_VOTE_LABELS[teams[teamName].formation]?.[0]||teams[teamName].formation} 안에서 두 선수의 자리를 맞바꿉니다. 경기 기록·카드·체력은 선수에게 그대로 따라가며 다음 쿼터 라인업에 확정 반영됩니다.</p>${active.length>1?`<div class="sub-select-row"><select class="sub-select" data-halftime-from="${teamName}">${options(0)}</select><div class="sub-arrow">↔</div><select class="sub-select" data-halftime-to="${teamName}">${options(1)}</select></div><button class="sub-apply" data-halftime-position-swap="${teamName}">두 선수 포지션 교환</button>`:`<div class="growth-summary">재배치 가능한 선수가 부족합니다.</div>`}${log?`<div class="sub-log">${log}</div>`:""}</div>`;
   }
   function subTeamHtml(teamName){
     const active=teams[teamName].players.filter(p=>!p.sentOff);
@@ -5358,12 +5397,12 @@
     gameFlow.phase="SUBSTITUTION";
     gameFlow.currentBreak=key;
     showParticipationOverlay();
-    participationKicker.textContent=key==="HALF"?"HALF TIME · POSITIONS & SUBSTITUTIONS":"TEAM MANAGEMENT · SUBSTITUTIONS";
-    participationTitle.textContent=key==="HALF"?"하프타임 · 포지션 재배치와 교체":`${breakTitle(key)} · 교체`;
-    participationDesc.textContent=key==="HALF"?"포메이션과 전술 투표 결과가 적용되었습니다. 새 포메이션 안에서 선발 선수들의 위치를 바꾸거나 벤치 학생을 교체할 수 있습니다.":"포메이션·성장·팀 전술 투표가 적용되었습니다. 필요하면 벤치 학생을 교체한 뒤 다음 쿼터를 시작하세요.";
+    participationKicker.textContent=key==="HALF"?"HALF TIME · POSITIONS & SUBSTITUTIONS":"QUARTER BREAK · POSITIONS & SUBSTITUTIONS";
+    participationTitle.textContent=`${breakTitle(key)} · 포지션 재배치와 교체`;
+    participationDesc.textContent="포메이션·성장·팀 전술 투표가 적용되었습니다. 새 포메이션 안에서 선발 선수들의 위치를 바꾸거나 벤치 학생을 교체한 뒤 다음 쿼터를 시작하세요.";
     participationPhaseChip.textContent=`${Math.floor(match.elapsedSeconds/60)}' · ${match.blueScore}-${match.redScore}`;
     participationRoadmap.innerHTML=phaseRoadmapHtml(key);
-    const positionPanel=key==="HALF"?`<div class="host-stage-section"><h3>HALF-TIME POSITION CHANGE · HOST ONLY</h3><div class="halftime-position-grid">${halftimePositionTeamHtml("blue")}${halftimePositionTeamHtml("red")}</div></div>`:"";
+    const positionPanel=`<div class="host-stage-section"><h3>${key==="HALF"?"HALF-TIME":"QUARTER-BREAK"} POSITION CHANGE · HOST ONLY</h3><div class="halftime-position-grid">${halftimePositionTeamHtml("blue")}${halftimePositionTeamHtml("red")}</div></div>`;
     participationContent.innerHTML=`${positionPanel}<div class="sub-team-grid">${subTeamHtml("blue")}${subTeamHtml("red")}</div>`;
     participationBackBtn.style.display="none";participationAutoBtn.style.display="none";
     participationPrimaryBtn.textContent=key==="HALF"?"교체 확정 → SECOND HALF":"교체 확정 → 다음 쿼터";
@@ -5504,7 +5543,7 @@
   }
   function publicResultForRoom(){
     const so=match.shootout;const winner=so?.winner||((match.blueScore>match.redScore)?"blue":(match.redScore>match.blueScore)?"red":null);
-    const awards=matchAwards().map(a=>({icon:a.icon,title:a.title,theme:a.theme||"hero",name:playerName(a.p),team:a.p.team.toUpperCase(),participantId:publicParticipantIdForPlayer(a.p),desc:a.desc||""}));const pom=currentPOM();
+    const awards=matchAwards().map(a=>({icon:a.icon,title:a.title,theme:a.theme||"hero",name:playerName(a.p),team:a.p.team.toUpperCase(),participantId:publicParticipantIdForPlayer(a.p),desc:a.desc||""}));const pom=currentPOM(true);
     return {winner,shootout:so?.winner?{blue:so.blue,red:so.red,winner:so.winner}:null,pom:pom?{name:playerName(pom),team:pom.team,rating:Number(playerRating(pom).toFixed(1)),participantId:publicParticipantIdForPlayer(pom),theme:"pom",stats:pomPerformanceSnapshot(pom)}:null,awards};
   }
   async function syncOnlineMatchSnapshot(force=false){
@@ -5539,6 +5578,7 @@
     state:"CONTROLLED", // CONTROLLED | PASSING | SHOOTING | LOOSE | DEAD
     ownerId:null,ownerTeam:null,
     passerId:null,intendedReceiverId:null,passTeam:null,passType:null,
+    passAimX:null,passAimY:null,passLanded:false,passLandingAge:0,
     shooterId:null,shotTeam:null,shotTargetY:null,shotVariant:null,
     shotSkill:50,shotPressure:0,shotPower:0,shotAccuracyChance:.5,
     reboundTeam:null,reboundTimer:0,
@@ -6887,8 +6927,18 @@
       .slice(0,count);
   }
 
-  function currentPOM(){
+  function resultWinnerTeam(){
+    return match.shootout?.winner||(
+      match.blueScore>match.redScore?"blue":
+      match.redScore>match.blueScore?"red":null
+    );
+  }
+
+  function currentPOM(winnerOnly=false){
+    const winner=resultWinnerTeam();
+    if(winnerOnly&&!winner)return null;
     return allMatchPlayers()
+      .filter(p=>!winnerOnly||p.team===winner)
       .slice()
       .sort((a,b)=>{
         const ratingDiff=playerRating(b)-playerRating(a);
@@ -6954,8 +7004,8 @@
   }
 
   function possessionPercent(){
-    const b=teamState.blue.possessionTime||0;
-    const r=teamState.red.possessionTime||0;
+    const b=Math.max(0,Number(teamState.blue.possessionTime)||0);
+    const r=Math.max(0,Number(teamState.red.possessionTime)||0);
     const total=b+r;
     if(total<.01)return {blue:50,red:50};
     const blue=Math.round(b/total*100);
@@ -7249,44 +7299,54 @@
   }
 
   function matchAwards(){
-    const pom=currentPOM();
+    const pom=currentPOM(true);
 
     const passer=awardCandidate(p=>{
       const s=p.matchStats;
       const pct=s.passesAttempted?s.passesCompleted/s.passesAttempted:0;
       return s.keyPasses*4+s.progressivePasses*1.2+pct*4;
-    },p=>p.role!=="GK");
+    },p=>
+      ["CB","FB","DM","CM","AM","WING"].includes(roleRatingFamily(p))&&
+      p.matchStats.passesAttempted>=3
+    );
 
     const wall=awardCandidate(p=>{
       const s=p.matchStats;
       return s.blocks*4+s.interceptions*2.6+s.tacklesWon*2+s.recoveries*.35;
-    },p=>p.role!=="GK");
+    },p=>
+      ["CB","FB","DM"].includes(roleRatingFamily(p))&&
+      p.matchStats.blocks+p.matchStats.interceptions+p.matchStats.tacklesWon>0
+    );
 
-    const marathon=awardCandidate(p=>p.distanceRun);
+    const marathon=awardCandidate(p=>p.distanceRun,p=>p.role!=="GK");
 
     const magician=awardCandidate(p=>{
       const s=p.matchStats;
       return s.dribblesWon*2.5+s.keyPasses*1.3+s.assists*2;
-    },p=>p.role!=="GK");
+    },p=>
+      ["CM","AM","WING","ST","FB"].includes(roleRatingFamily(p))&&
+      p.matchStats.dribblesWon+p.matchStats.keyPasses+p.matchStats.assists>0
+    );
 
     const keeper=awardCandidate(
       p=>p.matchStats.saves*2.5+playerRating(p),
-      p=>p.role==="GK"
+      p=>p.role==="GK"&&p.matchStats.saves>0
     );
 
     const unsung=awardCandidate(p=>{
       const s=p.matchStats;
       return s.recoveries*1.5+s.tacklesWon*1.2+s.interceptions*1.3+s.passesCompleted*.025+s.touches*.012;
-    },p=>!pom||p.id!==pom.id);
-
-    const winner=match.shootout?.winner||(
-      match.blueScore>match.redScore?"blue":
-      match.redScore>match.blueScore?"red":null
+    },p=>
+      (!pom||p.id!==pom.id)&&
+      ["CB","FB","DM","CM"].includes(roleRatingFamily(p))&&
+      p.matchStats.recoveries+p.matchStats.tacklesWon+p.matchStats.interceptions>0
     );
+
+    const winner=resultWinnerTeam();
     const losingTeam=winner?otherTeam(winner):null;
     const xman=awardCandidate(
       p=>comicMistakeProfile(p).score,
-      p=>!losingTeam||p.team===losingTeam
+      p=>(!losingTeam||p.team===losingTeam)&&(!pom||p.id!==pom.id)
     );
     const missing=awardCandidate(
       p=>quietActivityProfile(p).score,
@@ -7459,7 +7519,7 @@
       resultShootout.textContent="";
     }
 
-    const pom=currentPOM();
+    const pom=currentPOM(true);
     resultPom.innerHTML=pom
       ? `<section class="result-pom-hero"><div class="pom-crown">👑</div><div class="pom-copy"><div class="pom-label">PLAYER OF THE MATCH</div><div class="pom-name">${escapeLobbyHtml(playerName(pom))}</div><div class="pom-team">${pom.team.toUpperCase()} TEAM · 오늘 경기 최고의 선수</div></div><div class="pom-side"><div class="pom-rating"><span>MATCH RATING</span><b>${playerRating(pom).toFixed(1)}</b></div>${pomStatStripHtml(pomPerformanceSnapshot(pom))}</div></section>`
       : "";
@@ -7732,6 +7792,7 @@
     ball.ownerId=null;ball.ownerTeam=null;
     ball.passerId=null;ball.intendedReceiverId=null;
     ball.passTeam=null;ball.passType=null;
+    ball.passAimX=null;ball.passAimY=null;ball.passLanded=false;
     ball.shooterId=null;ball.shotTeam=null;ball.shotTargetY=null;ball.shotVariant=null;
     ball.vx=ball.vy=0;
     ball.x=spotX;ball.y=34;
@@ -8846,6 +8907,7 @@
     ball.ownerId=null;ball.ownerTeam=null;
     ball.passerId=null;ball.intendedReceiverId=null;
     ball.passTeam=null;ball.passType=null;
+    ball.passAimX=null;ball.passAimY=null;ball.passLanded=false;
     ball.shooterId=null;ball.shotTeam=null;ball.shotTargetY=null;ball.shotVariant=null;
     ball.vx=ball.vy=0;
     ball.x=x;ball.y=y;
@@ -8891,6 +8953,7 @@
     ball.passType=type;
     ball.passAimX=aimX;
     ball.passAimY=aimY;
+    ball.passLanded=false;
     ball.setPieceSource=match.setPiece?.type||ball.setPieceSource||null;
     ball.x=taker.x+dx/len*.7;
     ball.y=taker.y+dy/len*.7;
@@ -8994,6 +9057,7 @@
         ball.passerId=taker.id;ball.intendedReceiverId=target.id;
         ball.passTeam=teamName;ball.passType="CROSS";
         ball.passAimX=aimX;ball.passAimY=aimY;
+        ball.passLanded=false;
         ball.setPieceSource="CORNER";
         ball.x=taker.x;ball.y=taker.y;
         ball.vx=dx/len*25.5*lerp(.92,1.08,taker.kick/100);
@@ -9071,6 +9135,7 @@
     }
     if(ball.state==="PASSING"){
       reactiveDiagnostics.passOut++;
+      bumpDiagBucket(reactiveDiagnostics.passOutByType,ball.passType||"UNKNOWN");
     }
     const lastTouch=ball.lastTouchTeam||ball.passTeam||lastPossessionTeam;
 
@@ -10104,6 +10169,7 @@
     ball.passType=null;
     ball.passAimX=null;
     ball.passAimY=null;
+    ball.passLanded=false;
     ball.setPieceSource=null;
     ball.shooterId=null;
     ball.shotTeam=null;
@@ -10227,6 +10293,7 @@
     for(const t of ["blue","red"]){
       for(const k of Object.keys(stats[t])) stats[t][k]=0;
       teamState[t].possessionTime=0;
+      teamState[t].possessionSpell=0;
       teamState[t].phase="BUILD_UP";
       teamState[t].attackDepth=0;
       teamState[t].supportBias=0;
@@ -10978,7 +11045,7 @@
     const distributionSkill=passExecutionSkill(gk,option.type);
     const error=
       lerp(
-        option.type==="LONG_GK"?2.05:.82,
+        option.type==="LONG_GK"?1.58:.66,
         .06,
         Math.pow(distributionSkill/100,1.12)
       );
@@ -10998,6 +11065,7 @@
     ball.passType=option.type;
     ball.passAimX=aimX;
     ball.passAimY=aimY;
+    ball.passLanded=false;
     ball.passLaneRisk=safety.laneRisk;
     ball.passReceivingSpace=safety.receivingSpace;
     ball.passSafety=safety.safety;
@@ -11274,7 +11342,8 @@
       state.compactness=clamp(
         state.compactness+
         (pressingFactor(teamName)-1)*.08+
-        (teamTactic(teamName).width==="NARROW"?.035:0)-
+        (teamTactic(teamName).preset==="TIKI_TAKA"?.065:
+         teamTactic(teamName).width==="NARROW"?.035:0)-
         (teamTactic(teamName).width==="WIDE"?.025:0),
         .42,.93
       );
@@ -11288,10 +11357,11 @@
                    (ball.state==="PASSING" && ball.passTeam===teamName);
 
       if(owns){
-        s.possessionTime += dt;
+        s.possessionSpell += dt;
       }else{
-        // 소유를 잃으면 공격 국면은 빠르게 초기화하되 완전 0으로 순간 삭제하지 않음.
-        s.possessionTime = Math.max(0,s.possessionTime-dt*3.2);
+        // 공격 국면용 연속 소유 시간만 줄인다. 경기 전체 점유 시간은
+        // updatePhysics에서 별도로 누적하며 절대 차감하지 않는다.
+        s.possessionSpell = Math.max(0,s.possessionSpell-dt*3.2);
       }
 
       const progress=teamAttackProgress(teamName);
@@ -11307,7 +11377,7 @@
         s.phase="DEFENSIVE";
       }else if(progress<0.36){
         s.phase="BUILD_UP";
-      }else if(finalThird && s.possessionTime>5.0){
+      }else if(finalThird && s.possessionSpell>5.0){
         s.phase="SUSTAINED_PRESSURE";
       }else if(progress>0.55){
         s.phase="FINAL_THIRD";
@@ -11335,7 +11405,7 @@
       s.supportBias =
         clamp(
           progress*.58 +
-          Math.min(s.possessionTime/10,.42) +
+          Math.min(s.possessionSpell/10,.42) +
           (s.isolatedWing?.20:0),
           0,1
         );
@@ -11779,10 +11849,10 @@
 
         const triangleX=owner.x-dir*(p.category==="DEF"?5.0:1.8)+
           dir*(p.category==="ATT"?4.0:0);
-        const triangleY=owner.y+supportSide*(6.0+(p.number%3)*1.2);
+        const triangleY=owner.y+supportSide*(5.1+(p.number%3)*.9);
 
-        x=lerp(x,clamp(triangleX,3,FIELD_W-3),.38);
-        y=lerp(y,clamp(triangleY,4,FIELD_H-4),.44);
+        x=lerp(x,clamp(triangleX,3,FIELD_W-3),.43);
+        y=lerp(y,clamp(triangleY,4,FIELD_H-4),.50);
         intent="TIKI_TRIANGLE_SUPPORT";
       }
 
@@ -12161,6 +12231,7 @@
       "PRESS_PRIMARY","TACKLE_PRESS","DOUBLE_TEAM",
       "INTERCEPT_PATH","INTERCEPT_RUN","INTERCEPT_COVER","REACTIVE_INTERCEPT",
       "SHOT_BLOCK_DIVE","RECEIVE_RUN",
+      "PASS_SUPPORT_RUN","PASS_SECOND_BALL_RUN",
       "PASS_LANE_STEP","LOOSE_INTERCEPT","LOOSE_CHALLENGE","SECOND_BALL_SQUEEZE","TIGHT_MARK","TRACK_RUNNER",
       "MID_CUTBACK_RUN","MID_SECOND_WAVE","AM_BOX_SURGE",
       "MID_LINE_BREAK","MID_CHANNEL_BREAK","LATE_BOX_RUN","ONE_TWO_BURST",
@@ -12441,6 +12512,88 @@
       }
     }
 
+    return map;
+  }
+
+  function bestPassRecoveryPlan(p,maxHorizon){
+    if(!p||p.role==="GK"||p.turnoverStun>0||p.beatenTimer>0)return null;
+    const read=clamp(
+      decisionIntelligence(p)*.56+
+      offBallRunSkill(p)/100*.44,
+      0,1
+    );
+    let best=null;
+    for(let t=.12;t<=maxHorizon;t+=.12){
+      const q=predictMovingBallAt(t);
+      if(q.x<1||q.x>FIELD_W-1||q.y<1||q.y>FIELD_H-1)break;
+      const travel=dist(p.x,p.y,q.x,q.y);
+      if(travel>18.5)continue;
+      const eta=estimatedArrivalTime(p,q.x,q.y);
+      const margin=t+lerp(.20,.48,read)-eta;
+      const corridorDistance=pointToSegmentDistance(
+        p.x,p.y,
+        ball.x,ball.y,
+        q.x,q.y
+      );
+      const landingDistance=
+        Number.isFinite(ball.passAimX)&&Number.isFinite(ball.passAimY)
+          ? dist(q.x,q.y,ball.passAimX,ball.passAimY)
+          : 0;
+      const score=
+        margin*7.8+
+        read*2.5-
+        corridorDistance*.10-
+        landingDistance*.035-
+        travel*.025;
+      if(
+        margin>-.82&&
+        corridorDistance<15.5&&
+        (!best||score>best.score)
+      ){
+        best={x:q.x,y:q.y,t,eta,margin,corridorDistance,score};
+      }
+    }
+    return best;
+  }
+
+  function buildPassRecoveryAssignments(teamName){
+    const map=new Map();
+    if(ball.state!=="PASSING"||ball.passTeam!==teamName)return map;
+    const recoveryTypes=[
+      "LONG","LONG_GK","SWITCH",
+      "EARLY_CROSS","CROSS","LONG_CROSS"
+    ];
+    if(!recoveryTypes.includes(ball.passType))return map;
+
+    const cross=["EARLY_CROSS","CROSS","LONG_CROSS"].includes(ball.passType);
+    const candidates=teams[teamName].players
+      .filter(p=>
+        p.role!=="GK"&&
+        p.id!==ball.intendedReceiverId&&
+        p.id!==ball.passerId&&
+        p.turnoverStun<=0&&
+        p.beatenTimer<=0
+      )
+      .map(p=>{
+        const plan=bestPassRecoveryPlan(p,cross?2.55:2.35);
+        const roleFit=cross
+          ? (p.category==="ATT"?2.2:p.category==="MID"?1.2:-.4)
+          : (p.category==="MID"?.9:p.category==="ATT"?.5:0);
+        return {p,plan,ranking:plan?plan.score+roleFit:-999};
+      })
+      .filter(x=>x.plan)
+      .sort((a,b)=>b.ranking-a.ranking);
+
+    const selected=[];
+    for(const candidate of candidates){
+      if(selected.some(x=>dist(x.plan.x,x.plan.y,candidate.plan.x,candidate.plan.y)<2.2))continue;
+      selected.push(candidate);
+      if(selected.length>=(cross?2:1))break;
+    }
+    selected.forEach((candidate,index)=>map.set(candidate.p.id,{
+      ...candidate.plan,
+      kind:index===0?"PASS_SUPPORT_RUN":"PASS_SECOND_BALL_RUN"
+    }));
     return map;
   }
 
@@ -13207,14 +13360,14 @@
               3,FIELD_W-3
             ),
             y:clamp(
-              patternOwner.y+supportSide*(5.6+(p.number%3)*1.1),
+              patternOwner.y+supportSide*(5.0+(p.number%3)*.85),
               4,FIELD_H-4
             )
           };
 
           target={
-            x:lerp(target.x,triangle.x,.46),
-            y:lerp(target.y,triangle.y,.52)
+            x:lerp(target.x,triangle.x,.50),
+            y:lerp(target.y,triangle.y,.57)
           };
           patternIntent="TIKI_TRIANGLE_SUPPORT";
         }
@@ -14951,6 +15104,7 @@
     ball.passTeam=player.team;
     ball.passType="HEADER_LAYOFF";
     ball.passAimX=aimX;ball.passAimY=aimY;
+    ball.passLanded=false;
     ball.passLaneRisk=safety.laneRisk;
     ball.passReceivingSpace=safety.receivingSpace;
     ball.passSafety=safety.safety;
@@ -15739,9 +15893,9 @@
       penalty+=2.0+recency*2.4;
     }
     if(!recent.includes(targetId)&&receivingSpace>4.2){
-      return 2.5+Math.min(2.5,(receivingSpace-4.2)*.55);
+      return 3.4+Math.min(3.0,(receivingSpace-4.2)*.65);
     }
-    return -Math.min(12,penalty);
+    return -Math.min(14,penalty);
   }
 
   function scorePassTarget(owner,target){
@@ -16243,6 +16397,26 @@
     return clamp((presetChance??custom)+teamState[owner.team].counterOpportunity*.08,.03,.40);
   }
 
+  function targetedCrossAim(owner,target,type){
+    const blue=owner.team==="blue";
+    const preferredX=
+      type==="EARLY_CROSS" ? (blue?89:16) :
+      type==="LONG_CROSS" ? (blue?92:13) :
+      (blue?94:11);
+    const targetX=lerp(target.x,target.tx,.68)+target.vx*.18;
+    const targetY=lerp(target.y,target.ty,.72)+target.vy*.18;
+    const striker=isStriker(target)||target.tacticalRole==="TARGET_FORWARD";
+    const farLane=owner.y<34?41.5:26.5;
+    const x=lerp(targetX,preferredX,striker?.44:.52);
+    const y=lerp(targetY,striker?34:farLane,striker?.30:.42)+rand(-.85,.85);
+    const minX=type==="EARLY_CROSS"?(blue?84:8):(blue?87:6);
+    const maxX=type==="EARLY_CROSS"?(blue?97:21):(blue?99:18);
+    return {
+      x:clamp(x,minX,maxX),
+      y:clamp(y,20.5,47.5)
+    };
+  }
+
   function choosePassOption(owner){
     const dir=attackDir(owner.team);
     const progress=attackProgressFor(owner);
@@ -16529,37 +16703,30 @@
       );
 
       for(const target of boxTargets){
-        const boxX=owner.team==="blue"?93:12;
-        const farSide=owner.y<34?41.5:26.5;
-
         if(progress>=.52&&progress<.76){
-          const ay=
-            isStriker(target)||target.tacticalRole==="TARGET_FORWARD"
-              ? 34+rand(-4,4)
-              : farSide;
+          const aim=targetedCrossAim(owner,target,"LONG_CROSS");
 
           options.push(makePassOption(
             owner,target,"LONG_CROSS",
-            boxX,ay,
+            aim.x,aim.y,
             rand(26,31),
             7.0+intel*7
           ));
         }
 
         if(progress>.72){
-          const ay=isStriker(target)?34+rand(-3,3):farSide;
+          const aim=targetedCrossAim(owner,target,"CROSS");
           options.push(makePassOption(
             owner,target,"CROSS",
-            boxX,ay,
+            aim.x,aim.y,
             rand(24,29),
             11.0+intel*4
           ));
         }else if(progress>.58){
-          const earlyX=owner.team==="blue"?89:16;
-          const ay=isStriker(target)?34+rand(-4,4):farSide;
+          const aim=targetedCrossAim(owner,target,"EARLY_CROSS");
           options.push(makePassOption(
             owner,target,"EARLY_CROSS",
-            earlyX,ay,
+            aim.x,aim.y,
             rand(25,30),
             11.0+intel*5+
             (isStriker(target)?9:0)+
@@ -16681,7 +16848,7 @@
     if(
       smartOpenOutlet&&
       smartOpenOutlet.score>=options[0].score-13&&
-      Math.random()<clamp(.46+intel*.30,.56,.80)
+      Math.random()<clamp(.53+intel*.31,.62,.86)
     )return smartOpenOutlet;
 
     // First look forward: a clean short outlet, a line-breaking midfield pass
@@ -16732,8 +16899,8 @@
       if(openOptions[0]){
         const openChance=
           teamTactic(owner.team).preset==="TIKI_TAKA"
-            ? .90
-            : zone==="BUILDUP"?.68:.50;
+            ? .94
+            : zone==="BUILDUP"?.74:.58;
         if(Math.random()<openChance)return openOptions[0];
       }
     }
@@ -17102,16 +17269,16 @@
       const tiki=options
         .filter(o=>
           o.type==="SHORT" &&
-          dist(owner.x,owner.y,o.target.x,o.target.y)<17.5 &&
-          o.safetyData.receivingSpace>3.2 &&
-          o.safetyData.laneRisk<4.25
+          dist(owner.x,owner.y,o.target.x,o.target.y)<15.8 &&
+          o.safetyData.receivingSpace>2.9 &&
+          o.safetyData.laneRisk<4.0
         )
         .sort((a,b)=>
           (b.safetyData.safety+b.safetyData.receivingSpace*1.55+b.score*.20)-
           (a.safetyData.safety+a.safetyData.receivingSpace*1.55+a.score*.20)
         )[0];
 
-      if(tiki&&tiki.score>10&&Math.random()<.94){
+      if(tiki&&tiki.score>10&&Math.random()<.97){
         return tiki;
       }
     }
@@ -17188,17 +17355,7 @@
     aimY=clamp(aimY,touchlineMargin,FIELD_H-touchlineMargin);
 
     // Different pass types carry different natural error profiles.
-    const typeError={
-      SHORT:.052,
-      CUTBACK:.088,
-      THROUGH:.188,
-      KILL_PASS:.225,
-      SWITCH:.44,
-      LONG:.49,
-      EARLY_CROSS:.42,
-      CROSS:.50,
-      LONG_CROSS:.58
-    }[option.type] || 1;
+    const typeError=PASS_TYPE_ERROR_FACTORS[option.type] || 1;
 
     const passSkill=passExecutionSkill(owner,option.type);
     const execution=clamp(passSkill/100,0,1);
@@ -17239,7 +17396,12 @@
       PASS_EXECUTION_ERROR_FACTOR*
       pressureMultiplier*
       matchFlowPassErrorFactor(owner.team)*
-      openExecutionBonus;
+      openExecutionBonus*
+      (
+        teamTactic(owner.team).preset==="TIKI_TAKA"&&option.type==="SHORT"
+          ? .76
+          : 1
+      );
 
     const ang=Math.random()*Math.PI*2;
     aimX+=Math.cos(ang)*error;
@@ -17272,6 +17434,7 @@
     ball.passType=option.type;
     ball.passAimX=aimX;
     ball.passAimY=aimY;
+    ball.passLanded=false;
     ball.passLaneRisk=safetyData.laneRisk;
     ball.passReceivingSpace=safetyData.receivingSpace;
     ball.passSafety=safetyData.safety;
@@ -18596,6 +18759,7 @@
     ball.passType=null;
     ball.passAimX=null;
     ball.passAimY=null;
+    ball.passLanded=false;
     ball.passLaneRisk=null;
     ball.passReceivingSpace=null;
     ball.passSafety=null;
@@ -18745,8 +18909,8 @@
 
   function applyFirstTouch(receiver){
     const incomingType=ball.passType;
-    const aerialCross=["EARLY_CROSS","CROSS","LONG_CROSS"].includes(incomingType);
-    const aerialLong=["LONG","LONG_GK","SWITCH"].includes(incomingType);
+    const aerialCross=!ball.passLanded&&["EARLY_CROSS","CROSS","LONG_CROSS"].includes(incomingType);
+    const aerialLong=!ball.passLanded&&["LONG","LONG_GK","SWITCH"].includes(incomingType);
 
     const headerRange=incomingType==="LONG_CROSS"?22.0:19.5;
 
@@ -18820,12 +18984,12 @@
       CUTBACK:0,
       THROUGH:-.5,
       KILL_PASS:-1.0,
-      LONG:-2.5,
-      SWITCH:-2.5,
-      LONG_GK:-3.5,
-      EARLY_CROSS:-2.4,
-      CROSS:-3.2,
-      LONG_CROSS:-4.0
+      LONG:-2.0,
+      SWITCH:-2.0,
+      LONG_GK:-2.8,
+      EARLY_CROSS:-1.8,
+      CROSS:-2.4,
+      LONG_CROSS:-3.1
     }[ball.passType] || 0;
 
     const touch=firstTouchSkill(receiver);
@@ -18885,6 +19049,7 @@
     ball.state="LOOSE";ball.ownerId=null;ball.ownerTeam=null;
     ball.passerId=null;ball.intendedReceiverId=null;ball.passTeam=null;ball.passType=null;
     ball.passAimX=null;ball.passAimY=null;
+    ball.passLanded=false;
     ball.setPieceSource=null;
     ball.passLaneRisk=null;ball.passReceivingSpace=null;ball.passSafety=null;
     ball.shooterId=null;ball.shotTeam=null;ball.shotTargetY=null;ball.shotVariant=null;
@@ -19381,7 +19546,9 @@
       const intended=getPlayer(ball.intendedReceiverId);
       const defendingTeam=otherTeam(ball.passTeam);
       const incomingType=ball.passType;
-      const aerialLong=["LONG","LONG_GK","SWITCH"].includes(incomingType);
+      const flightLanded=!!ball.passLanded;
+      const aerialLong=!flightLanded&&["LONG","LONG_GK","SWITCH"].includes(incomingType);
+      const aerialCross=!flightLanded&&["EARLY_CROSS","CROSS","LONG_CROSS"].includes(incomingType);
 
       const contacts=[];
 
@@ -19424,20 +19591,49 @@
             ? 1.18
             : ball.passType==="CUTBACK"
               ? 1.11
+              : aerialCross
+                ? 1.14
               : aerialLong&&aerialRelayPlayer(intended)
                 ? 1.10
                 : 1;
         const radius=
-          lerp(1.46,1.88,firstTouchSkill(intended)/100)*receiveBoost;
+          lerp(1.60,2.06,firstTouchSkill(intended)/100)*receiveBoost;
 
         if(d<radius){
           contacts.push({
             type:"RECEIVER",
             p:intended,d,
-            quality:aerialLong
+            quality:aerialLong||aerialCross
               ? weightedSkill([firstTouchSkill(intended),.58],[aerialDuelSkill(intended),.42])
               : firstTouchSkill(intended)
           });
+        }
+      }
+
+      // A cross or long pass is not visible only to its nominated receiver.
+      // Nearby teammates who read the flight may attack the same corridor and
+      // rescue a slightly overhit or deflected delivery.
+      if([
+        "LONG","LONG_GK","SWITCH",
+        "EARLY_CROSS","CROSS","LONG_CROSS"
+      ].includes(incomingType)){
+        for(const p of teams[ball.passTeam].players){
+          if(
+            p.id===ball.intendedReceiverId||
+            p.id===ball.passerId||
+            p.role==="GK"||
+            p.turnoverStun>0||p.beatenTimer>0||
+            !["PASS_SUPPORT_RUN","PASS_SECOND_BALL_RUN"].includes(p.assignment)
+          )continue;
+          const d=pointToSegmentDistance(p.x,p.y,x1,y1,x2,y2);
+          const read=weightedSkill(
+            [firstTouchSkill(p),.58],
+            [offBallRunSkill(p),.42]
+          );
+          const radius=lerp(1.30,1.72,read/100)*(aerialCross?1.08:1);
+          if(d<radius){
+            contacts.push({type:"TEAMMATE",p,d,quality:read});
+          }
         }
       }
 
@@ -19452,7 +19648,7 @@
 
         const first=contacts[0];
 
-        if(first.type==="RECEIVER"){
+        if(first.type==="RECEIVER"||first.type==="TEAMMATE"){
           if(aerialLong&&maybeExecuteAerialRelay(first.p,incomingType,"RECEIVE",true))return;
           applyFirstTouch(first.p);
           return;
@@ -19641,6 +19837,10 @@
         : new Map();
 
     const receiver=getPlayer(ball.intendedReceiverId);
+    const passRecoveryAssignments=
+      ball.state==="PASSING"&&ball.passTeam===teamName
+        ? buildPassRecoveryAssignments(teamName)
+        : new Map();
 
     const defensiveAssignments =
       defending && owner
@@ -19838,6 +20038,19 @@
           p.focus=1.03;
           p.assignment="RECEIVE";
         }
+      }
+
+      if(
+        ball.state==="PASSING"&&
+        ball.passTeam===teamName&&
+        p.id!==receiver?.id&&
+        passRecoveryAssignments.has(p.id)
+      ){
+        const recovery=passRecoveryAssignments.get(p.id);
+        tx=recovery.x;
+        ty=recovery.y;
+        p.assignment=recovery.kind;
+        p.focus=recovery.kind==="PASS_SUPPORT_RUN"?1.18:1.06;
       }
 
       if(ball.state==="PASSING"&&ball.passTeam!==teamName&&p.role!=="GK"){
@@ -20075,10 +20288,11 @@
           const s=secondBallTarget(p,index);
           const c=contestedFormationTarget(p);
 
-          tx=lerp(c.x,s.x,.30);
-          ty=lerp(c.y,s.y,.30);
-          p.assignment="SECOND_BALL_SHAPE";
-          p.focus=.48;
+          const activeSupport=index===1;
+          tx=lerp(c.x,s.x,activeSupport?.58:.34);
+          ty=lerp(c.y,s.y,activeSupport?.58:.34);
+          p.assignment=activeSupport?"SECOND_BALL_SUPPORT":"SECOND_BALL_SHAPE";
+          p.focus=activeSupport?.78:.50;
         }else{
           const c=contestedFormationTarget(p);
           tx=c.x;
@@ -20384,6 +20598,7 @@
 
     const urgentMovingBallMove=[
       "INTERCEPT_RUN","INTERCEPT_COVER","REACTIVE_INTERCEPT","SHOT_BLOCK_DIVE","RECEIVE_RUN",
+      "PASS_SUPPORT_RUN","PASS_SECOND_BALL_RUN",
       "ONE_TWO_BURST","FORWARD_LINE_BURST"
     ].includes(p.assignment);
 
@@ -20406,7 +20621,7 @@
         speedFactor,
         p.assignment==="SHOT_BLOCK_DIVE" ? (d<1.5?.96:.88) :
         p.assignment==="REACTIVE_INTERCEPT" ? (d<1.8?.86:.76) :
-        ["RECEIVE_RUN","ONE_TWO_BURST","FORWARD_LINE_BURST"].includes(p.assignment) ? (d<2.2?.88:.80) :
+        ["RECEIVE_RUN","PASS_SUPPORT_RUN","PASS_SECOND_BALL_RUN","ONE_TWO_BURST","FORWARD_LINE_BURST"].includes(p.assignment) ? (d<2.2?.88:.80) :
         (d<2.0?.86:.76)
       );
     }
@@ -20438,7 +20653,7 @@
 
     if(urgentMovingBallMove){
       const reactionSkill=
-        ["RECEIVE_RUN","ONE_TWO_BURST","FORWARD_LINE_BURST"].includes(p.assignment)
+        ["RECEIVE_RUN","PASS_SUPPORT_RUN","PASS_SECOND_BALL_RUN","ONE_TWO_BURST","FORWARD_LINE_BURST"].includes(p.assignment)
           ? offBallRunSkill(p)/100
           : defensivePositionSkill(p)/100;
       focusBoost*=lerp(1.03,1.10,reactionSkill);
@@ -20503,7 +20718,7 @@
       const cap=
         p.assignment==="SHOT_BLOCK_DIVE"
           ? 1.18
-          : ["RECEIVE_RUN","ONE_TWO_BURST","FORWARD_LINE_BURST"].includes(p.assignment)
+          : ["RECEIVE_RUN","PASS_SUPPORT_RUN","PASS_SECOND_BALL_RUN","ONE_TWO_BURST","FORWARD_LINE_BURST"].includes(p.assignment)
             ? 1.14
             : 1.10;
       desiredSpeed=Math.min(desiredSpeed,effectiveMaxSpeed(p)*cap);
@@ -20516,7 +20731,7 @@
         ? (
             p.assignment==="SHOT_BLOCK_DIVE"
               ? lerp(16.2,19.4,defensivePositionSkill(p)/100)
-              : ["RECEIVE_RUN","ONE_TWO_BURST","FORWARD_LINE_BURST"].includes(p.assignment)
+              : ["RECEIVE_RUN","PASS_SUPPORT_RUN","PASS_SECOND_BALL_RUN","ONE_TWO_BURST","FORWARD_LINE_BURST"].includes(p.assignment)
                 ? lerp(14.0,16.4,offBallRunSkill(p)/100)
                 : lerp(14.4,17.0,defensivePositionSkill(p)/100)
           ) :
@@ -20582,6 +20797,23 @@
         b.y=clamp(b.y+ny*push,1.5,FIELD_H-1.5);
       }
     }
+  }
+
+  function flightPassReachedLandingZone(){
+    if(
+      ball.state!=="PASSING"||
+      ball.passLanded||
+      !["LONG","LONG_GK","SWITCH","EARLY_CROSS","CROSS","LONG_CROSS"].includes(ball.passType)||
+      !Number.isFinite(ball.passAimX)||
+      !Number.isFinite(ball.passAimY)||
+      ball.flightTime<.28
+    )return false;
+    const dx=ball.passAimX-ball.x;
+    const dy=ball.passAimY-ball.y;
+    const distance=Math.hypot(dx,dy);
+    const passed=dx*ball.vx+dy*ball.vy<=0;
+    const stepReach=Math.max(1.0,Math.hypot(ball.vx,ball.vy)*PHYSICS_DT*1.35);
+    return passed||distance<=stepReach;
   }
 
   function passClearlyLostToReceiver(){
@@ -20685,6 +20917,9 @@
     const prevX=ball.x, prevY=ball.y;
 
     ball.flightTime+=dt;
+    if(ball.state==="PASSING"&&ball.passLanded){
+      ball.passLandingAge=(ball.passLandingAge||0)+dt;
+    }
     ball.looseAge+=dt;
     ball.x+=ball.vx*dt;
     ball.y+=ball.vy*dt;
@@ -20718,12 +20953,39 @@
       return;
     }
 
+    if(ball.state==="PASSING"&&flightPassReachedLandingZone()){
+      // Give every player who reached the swept landing segment one final
+      // chance to make contact before the aerial ball drops into a contest.
+      checkBallContact(prevX,prevY);
+      if(ball.state!=="PASSING")return;
+      const cross=["EARLY_CROSS","CROSS","LONG_CROSS"].includes(ball.passType);
+      ball.passLanded=true;
+      ball.passLandingAge=0;
+      ball.passAimX=null;
+      ball.passAimY=null;
+      ball.vx*=cross?.36:.48;
+      ball.vy*=cross?.36:.48;
+      for(const p of allPlayers())p.offBallRefresh=0;
+      showEvent(
+        cross
+          ? "크로스가 흘렀지만 주변 선수들이 즉시 세컨볼로 달려듭니다."
+          : "롱패스가 떨어진 지점으로 양 팀 선수들이 곧바로 반응합니다."
+      );
+      return;
+    }
+
     if(ball.x<0||ball.x>FIELD_W||ball.y<0||ball.y>FIELD_H){
       handleBallOut();
       return;
     }
 
     if(ball.state==="PASSING"){
+      if(ball.passLanded&&(ball.passLandingAge||0)>.55){
+        makeLooseBall(ball.x,ball.y,ball.vx*.72,ball.vy*.72,false);
+        showEvent("흐른 공을 두고 가까운 선수들이 즉시 세컨볼 경합에 들어갑니다.");
+        return;
+      }
+
       if(passClearlyLostToReceiver()){
         reactiveDiagnostics.earlyLoosePasses++;
         makeLooseBall(ball.x,ball.y,ball.vx*.90,ball.vy*.90,false);
@@ -20864,7 +21126,7 @@
     if(eventLife>0){
       eventLife-=dt;
       if(eventLife<=0&&eventNote){
-        eventNote.textContent="v2.5.17 · SMART PATTERNS / EFFICIENT CLASSROOM SYNC";
+        eventNote.textContent="v2.5.18 · SMART PASSING / SHARED-BALL REACTIONS";
       }
     }
   }
@@ -21155,8 +21417,12 @@
     ctx.fillText(String(p.number),s.x,s.y+.5);
 
     if(showLabels){
-      ctx.font=`700 ${Math.max(9,v.scale*.75)}px system-ui`;
-      ctx.textBaseline="top";ctx.fillStyle="rgba(255,255,255,.94)";
+      ctx.font=`750 ${Math.max(10.5,v.scale*.82)}px system-ui`;
+      ctx.textBaseline="top";
+      ctx.lineWidth=3;
+      ctx.strokeStyle="rgba(4,10,16,.82)";
+      ctx.strokeText(liveName,s.x,s.y+r+4);
+      ctx.fillStyle="rgba(255,255,255,.97)";
       ctx.fillText(
         liveName,
         s.x,s.y+r+4
@@ -21912,7 +22178,7 @@
 
   // Lightweight internal telemetry for regression testing.
   window.__matchDebug = {
-    audioSystem(){return {enabled:soundEnabled,hostAllowed:hostAudioAllowed(),contextState:audioCtx?.state||"uninitialized",masterReady:!!audioMaster,fullyEmbedded:true,kickCount:audioFxState.kickCount,crowdCount:audioFxState.crowdCount,whistleCount:audioFxState.whistleCount,lastCue:audioFxState.lastCue,bgm:{wanted:classBgmWanted,playing:!!classBgm&&!classBgm.paused,volume:Number(classBgm?.volume||0),primed:classBgmPrimed,source:"DROPBOX"}};},
+    audioSystem(){return {enabled:soundEnabled,hostAllowed:hostAudioAllowed(),contextState:audioCtx?.state||"uninitialized",masterReady:!!audioMaster,configuredMasterGain:MATCH_AUDIO_MASTER_GAIN,fullyEmbedded:true,kickCount:audioFxState.kickCount,crowdCount:audioFxState.crowdCount,whistleCount:audioFxState.whistleCount,lastCue:audioFxState.lastCue,bgm:{wanted:classBgmWanted,playing:!!classBgm&&!classBgm.paused,volume:Number(classBgm?.volume||0),configuredVolume:CLASS_BGM_VOLUME,primed:classBgmPrimed,source:"DROPBOX"}};},
     previewAudioCue(kind="GOAL"){
       audioFxState.lastKickAt=-Infinity;audioFxState.lastCrowdAt=-Infinity;audioFxState.lastCrowdPriority=0;
       const cue=String(kind||"GOAL").toUpperCase();
@@ -21924,7 +22190,7 @@
     },
     publicResult(){return publicResultForRoom();},
     matchSpeed(multiplier=null){if(multiplier!==null)setMatchSpeed(multiplier);return {multiplier:matchSpeedMultiplier,onePressed:matchSpeed1Btn?.getAttribute("aria-pressed"),twoPressed:matchSpeed2Btn?.getAttribute("aria-pressed")};},
-    matchTuning(){return {passExecutionErrorFactor:PASS_EXECUTION_ERROR_FACTOR,passReceiveScoreBonus:PASS_RECEIVE_SCORE_BONUS,decisionTempoMultiplier:AI_DECISION_TEMPO_MULTIPLIER,defDecisionTempoBonus:DEF_MID_DECISION_TEMPO_BONUS,midfieldDecisionTempoBonus:MIDFIELD_DECISION_TEMPO_BONUS,freeKickDirectChance:.63,forwardTackleFactor:.73,cornerCbTargetBonus:23};},
+    matchTuning(){return {passExecutionErrorFactor:PASS_EXECUTION_ERROR_FACTOR,passReceiveScoreBonus:PASS_RECEIVE_SCORE_BONUS,passTypeErrorFactors:{...PASS_TYPE_ERROR_FACTORS},tikiWidthFactor:.83,decisionTempoMultiplier:AI_DECISION_TEMPO_MULTIPLIER,defDecisionTempoBonus:DEF_MID_DECISION_TEMPO_BONUS,midfieldDecisionTempoBonus:MIDFIELD_DECISION_TEMPO_BONUS,freeKickDirectChance:.63,forwardTackleFactor:.73,cornerCbTargetBonus:23};},
     fastMatchAudit(bluePreset="BALANCED",redPreset="BALANCED",maxSteps=65000){
       resetMatch(false);applyTacticPreset("blue",bluePreset,false);applyTacticPreset("red",redPreset,false);
       let steps=0,aiCounter=0;
@@ -21934,7 +22200,8 @@
         else{if(++aiCounter>=3){updateAI();aiCounter=0;}updatePhysics(PHYSICS_DT);}
         steps++;
       }
-      return {ended:match.ended,steps,minute:match.elapsedSeconds/60,score:[match.blueScore,match.redScore],shots:[stats.blue.shots,stats.red.shots],passes:[stats.blue.passAttempts,stats.red.passAttempts],diagnostics:JSON.parse(JSON.stringify(reactiveDiagnostics)),integrity:{players:allPlayers().length,finite:allPlayers().every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(p.stamina)),ballFinite:[ball.x,ball.y,ball.vx,ball.vy].every(Number.isFinite)}};
+      const possession=possessionPercent();
+      return {ended:match.ended,steps,minute:match.elapsedSeconds/60,score:[match.blueScore,match.redScore],shots:[stats.blue.shots,stats.red.shots],passes:[stats.blue.passAttempts,stats.red.passAttempts],passCompleted:[stats.blue.passCompleted,stats.red.passCompleted],passPct:[teamPassPct("blue"),teamPassPct("red")],possession:[possession.blue,possession.red],diagnostics:JSON.parse(JSON.stringify(reactiveDiagnostics)),integrity:{players:allPlayers().length,finite:allPlayers().every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(p.stamina)),ballFinite:[ball.x,ball.y,ball.vx,ball.vy].every(Number.isFinite)}};
     },
     forceOneTwoTrials(trials=100){
       let started=0,returnOptions=0,noRunner=0,returnTooClose=0,returnTooFar=0,otherChoice=0,noChoice=0;
@@ -22070,7 +22337,12 @@
     closeFormationVote(){return finalizeFormationVote();},
     closeTacticVote(){return finalizeTacticVote();},
     growthDistribution(points=8,focus="BALANCED"){return distributePoints(points,focus);},
+    breakGrowthPoints(correct=10){return breakPointsForCorrect(correct);},
     debugSwapHalftimePositions(teamName="blue",firstId=null,secondId=null){const active=teams[teamName].players.filter(p=>!p.sentOff);gameFlow.currentBreak="HALF";return swapHalftimePositions(teamName,firstId||active[0]?.id,secondId||active[1]?.id);},
+    debugSwapQuarterPositions(key="BREAK25",teamName="blue",firstId=null,secondId=null){const active=teams[teamName].players.filter(p=>!p.sentOff);gameFlow.currentBreak=key;return swapHalftimePositions(teamName,firstId||active[0]?.id,secondId||active[1]?.id);},
+    resultAwardAudit(){const pom=currentPOM(true);return {winner:resultWinnerTeam(),pom:pom?{id:pom.id,team:pom.team,role:pom.role,family:roleRatingFamily(pom)}:null,awards:matchAwards().map(a=>({title:a.title,id:a.p.id,team:a.p.team,role:a.p.role,family:roleRatingFamily(a.p)}))};},
+    resetForAudit(){resetMatch(false);return {ended:match.ended,score:[match.blueScore,match.redScore]};},
+    advanceAuditTicks(steps=30){let aiCounter=0;for(let i=0;i<steps;i++){if(++aiCounter>=3){updateAI();aiCounter=0;}updatePhysics(PHYSICS_DT);}return {ball:{state:ball.state,type:ball.passType,landed:!!ball.passLanded,x:ball.x,y:ball.y},assignments:allPlayers().filter(p=>["PASS_SUPPORT_RUN","PASS_SECOND_BALL_RUN","LOOSE_INTERCEPT","LOOSE_CHALLENGE","SECOND_BALL_SUPPORT"].includes(p.assignment)).map(p=>({id:p.id,team:p.team,role:p.role,assignment:p.assignment,x:p.x,y:p.y}))};},
     currentTeamTactics(){return {blue:{...teamTactics.blue},red:{...teamTactics.red}};},
     comebackBonus(){return {blue:comebackPerformanceBonus("blue"),red:comebackPerformanceBonus("red")};},
     forceQuarterMinute(minute){
@@ -24244,7 +24516,7 @@
       ownerDecisionTimer=99;
       return owner.id;
     },
-    forceCrossToStriker(teamName="blue",longCross=false){
+    forceCrossToStriker(teamName="blue",longCross=false,missY=0){
       const passer=teams[teamName].players.find(p=>isWinger(p)||isFullback(p));
       const target=teams[teamName].players.find(p=>isStriker(p));
       if(!passer||!target)return false;
@@ -24261,7 +24533,8 @@
         p.y=i%2===0?4:64;
       });
 
-      const dx=target.x-passer.x,dy=target.y-passer.y;
+      const aimY=clamp(target.y+(Number(missY)||0),3,FIELD_H-3);
+      const dx=target.x-passer.x,dy=aimY-passer.y;
       const len=Math.hypot(dx,dy)||1;
 
       ball.state="PASSING";
@@ -24270,6 +24543,8 @@
       ball.intendedReceiverId=target.id;
       ball.passTeam=teamName;
       ball.passType=longCross?"LONG_CROSS":"CROSS";
+      ball.passAimX=target.x;ball.passAimY=aimY;ball.passLanded=false;
+      ball.passLaneRisk=1.2;ball.passReceivingSpace=6;ball.passSafety=10;
       ball.x=passer.x;ball.y=passer.y;
       ball.vx=dx/len*28;ball.vy=dy/len*28;
       ball.flightTime=0;ball.looseAge=0;
