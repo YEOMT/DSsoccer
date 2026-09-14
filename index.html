@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.18 Passing Intelligence &amp; Match Report</title>
+  <title>Class Football Simulator - v2.5.19 Natural Finishes &amp; Role Ratings</title>
   <style>
     :root{
       --bg:#10141b;
@@ -1000,7 +1000,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.18</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.19</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1165,7 +1165,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.18 · Passing Intelligence &amp; Match Report</p>
+      <p>v2.5.19 · Natural Finishes &amp; Role Ratings</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -1517,7 +1517,7 @@
   "use strict";
 
   // ============================================================
-  // MATCH ENGINE v2.5.18
+  // MATCH ENGINE v2.5.19
   // Carries every v2.5.17 classroom/network/tactical feature forward, then
   // improves targeted delivery, shared-ball reactions and match reporting.
   // ============================================================
@@ -2689,6 +2689,7 @@
       counterOpportunity:0,
       gkResetTimer:0,
       gkPossessionMode:false,
+      kickoffCalmTimer:0,
       nonProgressivePasses:0,
       defenderRecycleCount:0,
       recentPassTargets:[],
@@ -2716,6 +2717,7 @@
       counterOpportunity:0,
       gkResetTimer:0,
       gkPossessionMode:false,
+      kickoffCalmTimer:0,
       nonProgressivePasses:0,
       defenderRecycleCount:0,
       recentPassTargets:[],
@@ -2733,6 +2735,7 @@
     lastShotVariant:null,
     setPiece:null,
     pendingSetPiece:null,
+    periodEndPending:null,
 
     // v1.0 match presentation / stats
     elapsedSeconds:0,
@@ -3033,7 +3036,7 @@
   // Host runs the authoritative match engine; students only join the room.
   // ============================================================
   const DSSOCCER_DEPLOY_URL="https://yeomt.github.io/DSsoccer/";
-  const DSSOCCER_BUILD="2.5.18";
+  const DSSOCCER_BUILD="2.5.19";
   const FIREBASE_CONFIG={
     apiKey:"AIzaSyBtK7NAfw4wDsS4LRacWF78PHT3zls50IQ",
     authDomain:"dsgames-fecef.firebaseapp.com",
@@ -5030,6 +5033,7 @@
   }
   function beginParticipationBreak(key){
     if(!gameFlow.active||document.body.classList.contains("participation-open"))return;
+    match.periodEndPending=null;
     finalizeQuarterTacticTracking(key);
     gameFlow.phase=key;
     gameFlow.currentBreak=key;
@@ -5052,7 +5056,7 @@
     for(const k of GROWTH_STATS)p[k]=clamp((p[k]||0)+(delta[k]||0),1,100);
   }
   function freshMatchStats(){
-    return {touches:0,passesAttempted:0,passesCompleted:0,progressivePasses:0,keyPasses:0,shots:0,shotsOnTarget:0,blockedShots:0,blocks:0,goals:0,assists:0,dribblesAttempted:0,dribblesWon:0,tacklesAttempted:0,tacklesWon:0,interceptions:0,recoveries:0,saves:0,fouls:0,offsides:0,yellowCards:0,redCards:0};
+    return {touches:0,passesAttempted:0,passesCompleted:0,progressivePasses:0,keyPasses:0,shots:0,shotsOnTarget:0,blockedShots:0,blocks:0,goals:0,assists:0,dribblesAttempted:0,dribblesWon:0,tacklesAttempted:0,tacklesWon:0,interceptions:0,recoveries:0,saves:0,turnovers:0,bigChancesMissed:0,fouls:0,offsides:0,yellowCards:0,redCards:0};
   }
   function activeStudentIds(teamName){
     return new Set(teams[teamName].players.map(p=>p.studentId).filter(Boolean));
@@ -5473,20 +5477,99 @@
     return !presentation.active&&!replay.active&&!match.shootout?.active&&
       !match.setPiece&&!match.pendingSetPiece&&match.goalPause<=0&&ball.state!=="PASSING"&&ball.state!=="SHOOTING";
   }
+  function livePeriodPossessionTeam(){
+    return ball.state==="CONTROLLED" ? ball.ownerTeam :
+      ball.state==="PASSING" ? ball.passTeam :
+      ball.state==="SHOOTING" ? ball.shotTeam :
+      ball.state==="LOOSE" ? lastPossessionTeam : null;
+  }
+  function activePeriodAttackTeam(){
+    const teamName=livePeriodPossessionTeam();
+    if(!teamName||ball.state==="DEAD")return null;
+    if(ball.state==="SHOOTING")return teamName;
+
+    const progress=teamName==="blue"
+      ? ball.x/FIELD_W
+      : (FIELD_W-ball.x)/FIELD_W;
+    const forwardVelocity=(ball.vx||0)*attackDir(teamName);
+
+    // Only preserve a recognisable attack. Harmless possession in a team's
+    // own third may still be whistled at the scheduled end, as in real football.
+    return (
+      progress>=.44 ||
+      (ball.state==="PASSING"&&progress>=.34&&forwardVelocity>2.2)
+    ) ? teamName : null;
+  }
+  function naturalPeriodEndReady(key,thresholdSeconds,label){
+    if(match.elapsedSeconds<thresholdSeconds)return false;
+
+    let pending=match.periodEndPending;
+    if(!pending||pending.key!==key){
+      const attackingTeam=activePeriodAttackTeam();
+      pending={
+        key,thresholdSeconds,label,attackingTeam,
+        armedAt:match.elapsedSeconds,
+        blueScore:match.blueScore,redScore:match.redScore
+      };
+      match.periodEndPending=pending;
+
+      if(attackingTeam){
+        const message=`${label} 종료 시각이 지났지만 ${attackingTeam.toUpperCase()}의 마지막 공격은 계속됩니다.`;
+        addCommentary(message,"major");
+        renderTicker(`${label} · LAST ATTACK · 턴오버 또는 아웃까지 진행`,"danger",{immediate:true});
+      }
+    }
+
+    if(presentation.active||replay.active||match.goalPause>0)return false;
+
+    const scoreChanged=
+      match.blueScore!==pending.blueScore||
+      match.redScore!==pending.redScore;
+    const deadBall=
+      ball.state==="DEAD"||
+      !!match.setPiece||
+      !!match.pendingSetPiece;
+    const currentTeam=livePeriodPossessionTeam();
+    const turnover=
+      !!pending.attackingTeam&&
+      !!currentTeam&&
+      currentTeam!==pending.attackingTeam;
+    const noAttackSafe=!pending.attackingTeam&&participationPauseSafe();
+    const safetyLimit=
+      match.elapsedSeconds-pending.armedAt>=75&&
+      participationPauseSafe();
+
+    if(scoreChanged||deadBall||turnover||noAttackSafe||safetyLimit){
+      match.periodEndPending=null;
+      return true;
+    }
+    return false;
+  }
   function handleParticipationClock(){
     if(gameFlow.fastSimulating)return false;
     if(!gameFlow.active||document.body.classList.contains("participation-open"))return false;
-    const m=match.elapsedSeconds/60;
-    if(gameFlow.phase==="Q1"&&m>=25&&participationPauseSafe()){
+    if(
+      gameFlow.phase==="Q1"&&
+      naturalPeriodEndReady("Q1_END",25*60,"Q1")
+    ){
       beginParticipationBreak("BREAK25");return true;
     }
-    if(gameFlow.phase==="Q2"&&m>=45&&participationPauseSafe()){
+    if(
+      gameFlow.phase==="Q2"&&
+      naturalPeriodEndReady("Q2_END",45*60,"Q2")
+    ){
       beginParticipationBreak("HALF");return true;
     }
-    if(gameFlow.phase==="Q3"&&m>=70&&participationPauseSafe()){
+    if(
+      gameFlow.phase==="Q3"&&
+      naturalPeriodEndReady("Q3_END",70*60,"Q3")
+    ){
       beginParticipationBreak("BREAK70");return true;
     }
-    if(gameFlow.phase==="Q4"&&m>=90&&participationPauseSafe()){
+    if(
+      gameFlow.phase==="Q4"&&
+      naturalPeriodEndReady("Q4_END",90*60,"Q4")
+    ){
       match.elapsedSeconds=Math.max(match.elapsedSeconds,90*60);
       gameFlow.phase=match.blueScore===match.redScore?"SHOOTOUT":"RESULT";
       updateGamePhaseBadge();
@@ -5533,7 +5616,8 @@
         keyPasses:p.matchStats?.keyPasses||0,shots:p.matchStats?.shots||0,shotsOnTarget:p.matchStats?.shotsOnTarget||0,
         dribblesAttempted:p.matchStats?.dribblesAttempted||0,dribblesWon:p.matchStats?.dribblesWon||0,
         tacklesWon:p.matchStats?.tacklesWon||0,interceptions:p.matchStats?.interceptions||0,
-        saves:p.matchStats?.saves||0,blocks:p.matchStats?.blocks||0,recoveries:p.matchStats?.recoveries||0
+        saves:p.matchStats?.saves||0,blocks:p.matchStats?.blocks||0,recoveries:p.matchStats?.recoveries||0,
+        turnovers:p.matchStats?.turnovers||0,bigChancesMissed:p.matchStats?.bigChancesMissed||0
       }:{}
     };
   }
@@ -5581,6 +5665,7 @@
     passAimX:null,passAimY:null,passLanded:false,passLandingAge:0,
     shooterId:null,shotTeam:null,shotTargetY:null,shotVariant:null,
     shotSkill:50,shotPressure:0,shotPower:0,shotAccuracyChance:.5,
+    shotBigChance:false,shotMissRecorded:false,
     reboundTeam:null,reboundTimer:0,
     flightTime:0,looseAge:0,
     lastTouchTeam:null,
@@ -6706,7 +6791,7 @@
 
       if(
         !match.halfTimeAnnounced &&
-        match.elapsedSeconds>=firstHalfEnd
+        naturalPeriodEndReady("FIRST_HALF_END",firstHalfEnd,"전반")
       ){
         match.halfTimeAnnounced=true;
         match.halfTimePause=1.35;
@@ -6805,81 +6890,101 @@
       ? s.dribblesWon/s.dribblesAttempted
       : .52;
     const km=p.distanceRun/1000;
+    const conceded=match[otherTeam(p.team)+"Score"];
+    const turnovers=s.turnovers||0;
+    const bigChancesMissed=s.bigChancesMissed||0;
+    const failedTackles=Math.max(0,(s.tacklesAttempted||0)-(s.tacklesWon||0));
+    const participated=
+      p.distanceRun>200||
+      (s.touches||0)+(s.passesAttempted||0)+(s.tacklesAttempted||0)+(s.saves||0)>0;
 
     let rating=6.0;
 
     if(family==="GK"){
-      rating+=s.saves*.19;
-      rating+=(passPct-.67)*.55;
-      rating+=s.recoveries*.025;
-      rating-=match[otherTeam(p.team)+"Score"]*.11;
+      const shotsFaced=s.saves+conceded;
+      const savePct=shotsFaced?s.saves/shotsFaced:.62;
+      rating+=s.saves*.27;
+      if(shotsFaced>=2)rating+=(savePct-.62)*.58;
+      rating+=(passPct-.67)*.62;
+      rating+=Math.min(s.passesCompleted,24)*.006;
+      rating+=s.recoveries*.035;
+      rating-=conceded*.10;
+      if(participated&&conceded===0)rating+=.18;
     }
 
     if(family==="CB"){
-      rating+=s.blocks*.32;
-      rating+=s.interceptions*.235;
+      rating+=s.blocks*.34;
+      rating+=s.interceptions*.24;
       rating+=s.tacklesWon*.19;
-      rating+=s.recoveries*.070;
-      rating+=(passPct-.70)*.72;
-      rating+=s.progressivePasses*.025;
+      rating+=s.recoveries*.060;
+      rating+=(passPct-.70)*.80;
+      rating+=Math.min(s.passesCompleted,45)*.0035;
+      rating+=s.progressivePasses*.030;
       rating+=s.goals*.78;
       rating+=s.assists*.42;
-      rating-=match[otherTeam(p.team)+"Score"]*.050;
-      if(match[otherTeam(p.team)+"Score"]===0)rating+=.16;
-      else if(match[otherTeam(p.team)+"Score"]===1)rating+=.06;
+      rating-=conceded*.045;
+      if(participated&&conceded===0)rating+=.22;
+      else if(conceded===1)rating+=.06;
     }
 
     if(family==="FB"){
-      rating+=s.tacklesWon*.115;
-      rating+=s.interceptions*.125;
-      rating+=s.blocks*.15;
-      rating+=s.recoveries*.040;
-      rating+=s.progressivePasses*.035;
-      rating+=s.keyPasses*.105;
+      rating+=s.tacklesWon*.14;
+      rating+=s.interceptions*.15;
+      rating+=s.blocks*.17;
+      rating+=s.recoveries*.047;
+      rating+=s.progressivePasses*.040;
+      rating+=s.keyPasses*.12;
       rating+=s.dribblesWon*.055;
       rating+=s.assists*.50;
       rating+=s.goals*.72;
-      rating+=(passPct-.68)*.58;
-      rating+=(tacklePct-.55)*.20;
+      rating+=(passPct-.68)*.64;
+      rating+=Math.min(s.passesCompleted,42)*.003;
+      if(s.tacklesAttempted)rating+=(tacklePct-.55)*.24;
       rating+=clamp(km-7,0,6)*.018;
+      rating-=conceded*.022;
+      if(participated&&conceded===0)rating+=.10;
     }
 
     if(family==="DM"){
-      rating+=s.tacklesWon*.18;
-      rating+=s.interceptions*.225;
-      rating+=s.recoveries*.085;
-      rating+=s.blocks*.18;
-      rating+=s.progressivePasses*.032;
-      rating+=s.keyPasses*.075;
-      rating+=(passPct-.72)*.82;
-      rating+=(tacklePct-.55)*.24;
+      rating+=s.tacklesWon*.20;
+      rating+=s.interceptions*.24;
+      rating+=s.recoveries*.090;
+      rating+=s.blocks*.20;
+      rating+=s.progressivePasses*.040;
+      rating+=s.keyPasses*.095;
+      rating+=(passPct-.72)*.92;
+      rating+=Math.min(s.passesCompleted,50)*.0042;
+      if(s.tacklesAttempted)rating+=(tacklePct-.55)*.28;
       rating+=s.assists*.45;
       rating+=s.goals*.62;
-      if(match[otherTeam(p.team)+"Score"]===0)rating+=.10;
+      rating-=conceded*.018;
+      if(participated&&conceded===0)rating+=.12;
     }
 
     if(family==="CM"){
       const playmaker=p.tacticalRole==="PLAYMAKER";
-      rating+=s.keyPasses*(playmaker?.22:.17);
-      rating+=s.progressivePasses*(playmaker?.062:.052);
-      rating+=s.dribblesWon*.060;
-      rating+=s.recoveries*.052;
-      rating+=s.interceptions*.092;
-      rating+=s.tacklesWon*.070;
-      rating+=(passPct-.72)*(playmaker?1.02:.84);
+      rating+=s.keyPasses*(playmaker?.24:.19);
+      rating+=s.progressivePasses*(playmaker?.066:.056);
+      rating+=s.dribblesWon*.065;
+      rating+=s.recoveries*.060;
+      rating+=s.interceptions*.105;
+      rating+=s.tacklesWon*.085;
+      rating+=(passPct-.72)*(playmaker?1.08:.92);
+      rating+=Math.min(s.passesCompleted,52)*.0042;
       rating+=s.assists*.58;
-      rating+=s.goals*.76;
+      rating+=s.goals*.74;
       rating+=clamp(km-7.5,0,5)*.014;
     }
 
     if(family==="AM"){
-      rating+=s.goals*.88;
+      rating+=s.goals*.84;
       rating+=s.assists*.59;
-      rating+=s.keyPasses*.145;
-      rating+=s.progressivePasses*.028;
+      rating+=s.keyPasses*.16;
+      rating+=s.progressivePasses*.032;
       rating+=s.shotsOnTarget*.055;
       rating+=s.dribblesWon*.045;
-      rating+=(passPct-.68)*.42;
+      rating+=s.recoveries*.026;
+      rating+=(passPct-.68)*.48;
     }
 
     if(family==="WING"){
@@ -6898,7 +7003,11 @@
     }
 
     if(family==="ST"){
-      rating+=s.goals*1.10;
+      const goalBonus=
+        Math.min(s.goals,1)*1.02+
+        Math.min(Math.max(s.goals-1,0),1)*.90+
+        Math.max(s.goals-2,0)*.82;
+      rating+=goalBonus;
       rating+=s.assists*.43;
       rating+=s.shotsOnTarget*.085;
       rating+=Math.min(s.shots,4)*.022;
@@ -6906,6 +7015,21 @@
       rating+=s.dribblesWon*.035;
       rating+=(passPct-.62)*.18;
       rating-=s.offsides*.055;
+    }
+
+    // Every role is accountable for losing possession and failed execution.
+    const turnoverWeight=
+      family==="GK"?.07:
+      ["CB","DM"].includes(family)?.075:
+      ["FB","CM"].includes(family)?.085:
+      family==="AM"?.10:.115;
+    const bigMissWeight=
+      family==="ST"?.20:
+      ["AM","WING"].includes(family)?.16:.10;
+    rating-=turnovers*turnoverWeight;
+    rating-=bigChancesMissed*bigMissWeight;
+    if(["CB","FB","DM","CM"].includes(family)){
+      rating-=failedTackles*(family==="CB"?.035:.025);
     }
 
     // Universal match discipline / rare contributions.
@@ -7272,15 +7396,53 @@
     const missedPasses=Math.max(0,(s.passesAttempted||0)-(s.passesCompleted||0));
     const failedDribbles=Math.max(0,(s.dribblesAttempted||0)-(s.dribblesWon||0));
     const offTarget=Math.max(0,(s.shots||0)-(s.shotsOnTarget||0));
+    const turnovers=s.turnovers||0;
+    const bigChancesMissed=s.bigChancesMissed||0;
     const discipline=(s.fouls||0)+(s.yellowCards||0)*1.4+(s.redCards||0)*4.5;
+    const positiveProduction=
+      (s.goals||0)*5.5+
+      (s.assists||0)*2.8+
+      (s.keyPasses||0)*.30+
+      (s.tacklesWon||0)*.20+
+      (s.interceptions||0)*.20+
+      (s.saves||0)*.28;
     const score=
-      missedPasses*.62+
-      failedDribbles*1.55+
-      offTarget*.82+
+      turnovers*2.9+
+      bigChancesMissed*3.8+
+      missedPasses*.36+
+      failedDribbles*1.25+
+      offTarget*.55+
       (s.offsides||0)*1.10+
       discipline+
-      Math.max(0,6.6-playerRating(p))*1.8;
-    return {missedPasses,failedDribbles,offTarget,score};
+      Math.max(0,6.8-playerRating(p))*3.2-
+      positiveProduction;
+    return {missedPasses,failedDribbles,offTarget,turnovers,bigChancesMissed,score};
+  }
+
+  function selectXman(pom){
+    const winner=resultWinnerTeam();
+    const losingTeam=winner?otherTeam(winner):null;
+    const base=eligibleResultPlayers().filter(p=>
+      (!losingTeam||p.team===losingTeam)&&
+      (!pom||p.id!==pom.id)
+    );
+    if(!base.length)return null;
+
+    // A player who produced a genuinely strong scoring performance must never
+    // become the comic scapegoat merely because he also took many attempts.
+    const unprotected=base.filter(p=>{
+      const s=p.matchStats||{};
+      return (s.goals||0)<2&&
+        !((s.goals||0)>=1&&playerRating(p)>=7.35);
+    });
+    const candidates=unprotected.length?unprotected:base;
+    const lowest=Math.min(...candidates.map(playerRating));
+    const lowRated=candidates.filter(p=>playerRating(p)<=lowest+.48);
+
+    return lowRated.slice().sort((a,b)=>
+      comicMistakeProfile(b).score-comicMistakeProfile(a).score||
+      playerRating(a)-playerRating(b)
+    )[0]||null;
   }
 
   function quietActivityProfile(p){
@@ -7342,12 +7504,7 @@
       p.matchStats.recoveries+p.matchStats.tacklesWon+p.matchStats.interceptions>0
     );
 
-    const winner=resultWinnerTeam();
-    const losingTeam=winner?otherTeam(winner):null;
-    const xman=awardCandidate(
-      p=>comicMistakeProfile(p).score,
-      p=>(!losingTeam||p.team===losingTeam)&&(!pom||p.id!==pom.id)
-    );
+    const xman=selectXman(pom);
     const missing=awardCandidate(
       p=>quietActivityProfile(p).score,
       p=>p.id!==xman?.id&&p.id!==pom?.id,
@@ -7396,7 +7553,7 @@
       },
       xman&&{
         icon:"🕳️",title:"X맨 · 패배 지분 1위",theme:"comic",p:xman,
-        desc:`패스 실수 ${comicMistakeProfile(xman).missedPasses} · 드리블 실패 ${comicMistakeProfile(xman).failedDribbles} · 슈팅 빗나감 ${comicMistakeProfile(xman).offTarget}`
+        desc:`평점 ${playerRating(xman).toFixed(1)} · 턴오버 ${comicMistakeProfile(xman).turnovers} · 결정적 기회 놓침 ${comicMistakeProfile(xman).bigChancesMissed}`
       },
       missing&&{
         icon:"🫥",title:"실종자 · 활약 없음",theme:"comic",p:missing,
@@ -8014,6 +8171,7 @@
     matchFx.classList.remove("active");
     match.setPiece=null;
     match.pendingSetPiece=null;
+    match.periodEndPending=null;
     match.goalPause=0;
     match.restartTeam=null;
 
@@ -8123,6 +8281,7 @@
     }
 
     match.ended=true;
+    match.periodEndPending=null;
     if(reason!=="FULL_TIME"&&reason!=="SHOOTOUT"){
       match.elapsedSeconds=90*60;
     }
@@ -9133,11 +9292,20 @@
       resolveShootoutKick(false,"MISS");
       return true;
     }
+    const outgoingPassTeam=ball.state==="PASSING"?ball.passTeam:null;
+    const outgoingPasserId=ball.state==="PASSING"?ball.passerId:null;
     if(ball.state==="PASSING"){
       reactiveDiagnostics.passOut++;
       bumpDiagBucket(reactiveDiagnostics.passOutByType,ball.passType||"UNKNOWN");
     }
     const lastTouch=ball.lastTouchTeam||ball.passTeam||lastPossessionTeam;
+    if(outgoingPassTeam&&lastTouch===outgoingPassTeam){
+      stats[outgoingPassTeam].turnovers++;
+      const passer=getPlayer(outgoingPasserId);
+      if(passer?.matchStats){
+        passer.matchStats.turnovers=(passer.matchStats.turnovers||0)+1;
+      }
+    }
 
     if(ball.y<0||ball.y>FIELD_H){
       startSetPiece(
@@ -10150,6 +10318,7 @@
   function kickoff(teamName){
     const taker=prepareKickoffShape(teamName,true);
     if(!taker)return;
+    const support=teams[teamName].players.find(p=>p.assignment==="KICKOFF_SUPPORT")||null;
 
     match.setPiece=null;
     match.pendingSetPiece=null;
@@ -10175,6 +10344,8 @@
     ball.shotTeam=null;
     ball.shotTargetY=null;
     ball.shotVariant=null;
+    ball.shotBigChance=false;
+    ball.shotMissRecorded=false;
     ball.reboundTeam=null;
     ball.reboundTimer=0;
     ball.vx=0;
@@ -10202,11 +10373,24 @@
     teamState.red.defenderRecycleCount=0;
     teamState.blue.recentPassTargets=[];
     teamState.red.recentPassTargets=[];
+    teamState.blue.kickoffCalmTimer=0;
+    teamState.red.kickoffCalmTimer=0;
+    teamState[teamName].kickoffCalmTimer=2.2;
 
-    showEvent(
-      `KICK OFF · ${teamName.toUpperCase()}가 센터서클에서 경기를 다시 시작합니다.`,
-      "major"
-    );
+    if(support){
+      ball.setPieceSource="KICKOFF";
+      setPiecePass(taker,support,"SHORT",11.8,true);
+      ownerDecisionTimer=.34;
+      showEvent(
+        `KICK OFF · ${teamName.toUpperCase()}가 짧은 백패스로 차분하게 점유를 시작합니다.`,
+        "major"
+      );
+    }else{
+      showEvent(
+        `KICK OFF · ${teamName.toUpperCase()}가 센터서클에서 경기를 다시 시작합니다.`,
+        "major"
+      );
+    }
   }
 
   function resetMatch(autoStart=true){
@@ -10226,6 +10410,7 @@
     match.lastShotVariant=null;
     match.setPiece=null;
     match.pendingSetPiece=null;
+    match.periodEndPending=null;
     match.elapsedSeconds=0;
     match.ended=false;
     match.lastPasserId=null;
@@ -10247,6 +10432,8 @@
     match.firstHalfAddedAnnounced=false;
     match.secondHalfAddedAnnounced=false;
     match.shootout=createShootoutState();
+    ball.shotBigChance=false;
+    ball.shotMissRecorded=false;
     shootoutBoard.classList.remove("active");
     resultShootout.classList.remove("active");
     clearPendingTicker();
@@ -10312,6 +10499,7 @@
       teamState[t].counterOpportunity=0;
       teamState[t].gkResetTimer=0;
       teamState[t].gkPossessionMode=false;
+      teamState[t].kickoffCalmTimer=0;
       teamState[t].nonProgressivePasses=0;
       teamState[t].defenderRecycleCount=0;
       teamState[t].recentPassTargets=[];
@@ -11252,6 +11440,7 @@
       state.lastPossessionChange+=dt;
       state.transitionTimer=Math.max(0,state.transitionTimer-dt);
       state.gkResetTimer=Math.max(0,state.gkResetTimer-dt);
+      state.kickoffCalmTimer=Math.max(0,(state.kickoffCalmTimer||0)-dt);
 
       const context=matchContextProfile(teamName);
       state.contextMode=context.mode;
@@ -14693,6 +14882,45 @@
     }
   }
 
+  function shotIsBigChance(shooter,distance,angleQuality,pressureLoad,variant){
+    if(!shooter||match.shootout?.active)return false;
+    if(variant==="PENALTY")return true;
+    const closeCentral=
+      distance<=14.5&&
+      angleQuality>=.43&&
+      pressureLoad<=.82;
+    const cleanBreak=
+      distance<=18&&
+      angleQuality>=.61&&
+      pressureLoad<=.34;
+    const closeDirect=
+      ["FIRST_TIME","VOLLEY","HEADER"].includes(variant)&&
+      distance<=15.5&&
+      angleQuality>=.38;
+    return closeCentral||cleanBreak||closeDirect;
+  }
+
+  function armShotChance(shooter,distance,angleQuality,pressureLoad,variant){
+    ball.shotBigChance=shotIsBigChance(
+      shooter,distance,angleQuality,pressureLoad,variant
+    );
+    ball.shotMissRecorded=false;
+  }
+
+  function recordBigChanceMiss(){
+    if(
+      match.shootout?.active||
+      !ball.shotBigChance||
+      ball.shotMissRecorded
+    )return false;
+    const shooter=getPlayer(ball.shooterId);
+    if(!shooter?.matchStats)return false;
+    shooter.matchStats.bigChancesMissed=
+      (shooter.matchStats.bigChancesMissed||0)+1;
+    ball.shotMissRecorded=true;
+    return true;
+  }
+
   function attemptShot(owner,variant="NORMAL"){
     const defendingTeam=otherTeam(owner.team);
     const gk=teams[defendingTeam].players.find(p=>p.role==="GK")||null;
@@ -14807,6 +15035,7 @@
     ball.shotPressure=pressureLoad;
     ball.shotPower=speed;
     ball.shotAccuracyChance=onTargetChance;
+    armShotChance(owner,d,angleQuality,pressureLoad,variant);
     ball.flightTime=0;
     ball.looseAge=0;
 
@@ -14913,6 +15142,7 @@
     ball.shotPressure=pressureLoad;
     ball.shotPower=speed;
     ball.shotAccuracyChance=onTargetChance;
+    armShotChance(receiver,d,angle,pressureLoad,variant);
     ball.flightTime=0;ball.looseAge=0;
     ball.x=receiver.x+dx/len*.55;
     ball.y=receiver.y+dy/len*.55;
@@ -15011,6 +15241,7 @@
     ball.shotPressure=pressureLoad;
     ball.shotPower=speed;
     ball.shotAccuracyChance=onTargetChance;
+    armShotChance(receiver,d,angle,pressureLoad,"HEADER");
     ball.flightTime=0;
     ball.looseAge=0;
 
@@ -15079,6 +15310,9 @@
       }
     }else if(oldPassTeam){
       stats[oldPassTeam].turnovers++;
+      if(oldPasser?.matchStats){
+        oldPasser.matchStats.turnovers=(oldPasser.matchStats.turnovers||0)+1;
+      }
       player.matchStats.interceptions++;
       teamState[player.team].nonProgressivePasses=0;
       teamState[player.team].defenderRecycleCount=0;
@@ -15450,6 +15684,7 @@
     if(Math.random()>=blockChance)return false;
 
     const blocker=first.p;
+    recordBigChanceMiss();
     blocker.matchStats.blocks++;
     blocker.matchStats.touches++;
     stats[defendingTeam].blocks++;
@@ -15614,6 +15849,8 @@
       // placement / pace / trajectory. Let the shot continue naturally.
       return false;
     }
+
+    recordBigChanceMiss();
 
     const saveImpact=
       2.8+
@@ -15840,6 +16077,7 @@
           resolveShootoutKick(false,"MISS");
           return;
         }
+        recordBigChanceMiss();
         const defendingTeam=otherTeam(scoringTeam);
 
         if(ball.lastTouchTeam===defendingTeam){
@@ -15867,6 +16105,7 @@
         resolveShootoutKick(false,"MISS");
         return;
       }
+      recordBigChanceMiss();
       handleBallOut();
     }
   }
@@ -16788,6 +17027,31 @@
 
     options.splice(0,options.length,...viable);
     options.sort((a,b)=>b.score-a.score);
+
+    if((teamState[owner.team].kickoffCalmTimer||0)>0){
+      const calmShorts=options
+        .filter(o=>
+          o.type==="SHORT"&&
+          dist(owner.x,owner.y,o.target.x,o.target.y)<=19&&
+          o.safetyData.receivingSpace>2.2&&
+          o.safetyData.laneRisk<4.8
+        )
+        .sort((a,b)=>{
+          const calmValue=o=>{
+            const roleBias=
+              o.target.category==="MID" ? 7 :
+              o.target.category==="DEF" ? 4 : 1;
+            const forward=o.safetyData.forward;
+            return o.safetyData.safety*1.15+
+              o.safetyData.receivingSpace*1.35+
+              roleBias-
+              Math.max(0,forward-9)*.70-
+              Math.max(0,-forward-11)*.28;
+          };
+          return calmValue(b)-calmValue(a);
+        });
+      if(calmShorts[0])return calmShorts[0];
+    }
 
     const wallReturn=options.find(o=>o.oneTwoReturn);
     if(
@@ -18714,6 +18978,11 @@
 
     if(wasPass&&oldPassTeam&&player.team!==oldPassTeam){
       stats[oldPassTeam].turnovers++;
+      const dispossessedPasser=getPlayer(oldPasserId);
+      if(dispossessedPasser?.matchStats){
+        dispossessedPasser.matchStats.turnovers=
+          (dispossessedPasser.matchStats.turnovers||0)+1;
+      }
       player.matchStats.interceptions++;
       player.matchStats.touches++;
       bumpLiveImpact(
@@ -19223,6 +19492,7 @@
       stats[defender.team].tackleWon++;
       defender.matchStats.tacklesWon++;
       stats[attacker.team].turnovers++;
+      attacker.matchStats.turnovers=(attacker.matchStats.turnovers||0)+1;
       attacker.onBallAction="CONTROL";
       applyTurnoverStun(attacker,.62);
       controlBall(defender,"TACKLE");
@@ -19246,6 +19516,7 @@
       stats[defender.team].tackleWon++;
       defender.matchStats.tacklesWon++;
       stats[attacker.team].turnovers++;
+      attacker.matchStats.turnovers=(attacker.matchStats.turnovers||0)+1;
       const dx=attacker.x-defender.x,dy=attacker.y-defender.y;
       const len=Math.hypot(dx,dy)||1;
       markLastTouch(defender.team);
@@ -19433,6 +19704,7 @@
     defender.matchStats.tacklesAttempted++;
     defender.matchStats.tacklesWon++;
     stats[attacker.team].turnovers++;
+    attacker.matchStats.turnovers=(attacker.matchStats.turnovers||0)+1;
     applyTurnoverStun(attacker,.58);
 
     if(margin<-8 || Math.random()<.68){
@@ -20947,6 +21219,7 @@
           resolveShootoutKick(false,"MISS");
           return;
         }
+        recordBigChanceMiss();
         makeLooseBall(ball.x,ball.y,ball.vx*.58,ball.vy*.58,false);
         showEvent("슈팅이 힘을 잃고 루즈볼이 됩니다.");
       }
@@ -21078,8 +21351,11 @@
         !gameFlow.active &&
         match.secondHalfStarted &&
         match.secondHalfAddedMinutes!==null &&
-        match.elapsedSeconds>=
-          (90+match.secondHalfAddedMinutes)*60
+        naturalPeriodEndReady(
+          "FULL_TIME_END",
+          (90+match.secondHalfAddedMinutes)*60,
+          "후반"
+        )
       ){
         endMatch("FULL_TIME");
         return;
@@ -21126,7 +21402,7 @@
     if(eventLife>0){
       eventLife-=dt;
       if(eventLife<=0&&eventNote){
-        eventNote.textContent="v2.5.18 · SMART PASSING / SHARED-BALL REACTIONS";
+        eventNote.textContent="v2.5.19 · NATURAL FINISHES / ROLE-AWARE RATINGS";
       }
     }
   }
@@ -22191,6 +22467,144 @@
     publicResult(){return publicResultForRoom();},
     matchSpeed(multiplier=null){if(multiplier!==null)setMatchSpeed(multiplier);return {multiplier:matchSpeedMultiplier,onePressed:matchSpeed1Btn?.getAttribute("aria-pressed"),twoPressed:matchSpeed2Btn?.getAttribute("aria-pressed")};},
     matchTuning(){return {passExecutionErrorFactor:PASS_EXECUTION_ERROR_FACTOR,passReceiveScoreBonus:PASS_RECEIVE_SCORE_BONUS,passTypeErrorFactors:{...PASS_TYPE_ERROR_FACTORS},tikiWidthFactor:.83,decisionTempoMultiplier:AI_DECISION_TEMPO_MULTIPLIER,defDecisionTempoBonus:DEF_MID_DECISION_TEMPO_BONUS,midfieldDecisionTempoBonus:MIDFIELD_DECISION_TEMPO_BONUS,freeKickDirectChance:.63,forwardTackleFactor:.73,cornerCbTargetBonus:23};},
+    kickoffBackpassAudit(teamName="blue"){
+      resetMatch(false);
+      kickoff(teamName);
+      const taker=getPlayer(match.kickoffTakerId);
+      const support=getPlayer(ball.intendedReceiverId);
+      const result={
+        state:ball.state,
+        passType:ball.passType,
+        passerId:ball.passerId,
+        takerId:taker?.id||null,
+        receiverId:support?.id||null,
+        backward:!!taker&&!!support&&
+          (support.x-taker.x)*attackDir(teamName)<0,
+        calmTimer:teamState[teamName].kickoffCalmTimer,
+        passAttempts:stats[teamName].passAttempts
+      };
+      resetMatch(false);
+      return result;
+    },
+    naturalPeriodEndAudit(){
+      const threshold=25*60;
+      const setAttack=()=>{
+        resetMatch(false);
+        const attacker=teams.blue.players.find(isStriker)||teams.blue.players.find(p=>p.category==="ATT");
+        attacker.x=82;attacker.y=34;
+        ball.state="CONTROLLED";ball.ownerId=attacker.id;ball.ownerTeam="blue";
+        ball.x=attacker.x;ball.y=attacker.y;ball.vx=ball.vy=0;
+        lastPossessionTeam="blue";
+        match.elapsedSeconds=threshold+.1;
+      };
+
+      setAttack();
+      const attackEnded=naturalPeriodEndReady("AUDIT_TURNOVER",threshold,"AUDIT");
+      const pendingDuringAttack=match.periodEndPending?.attackingTeam||null;
+      const defender=teams.red.players.find(p=>p.role!=="GK");
+      ball.state="CONTROLLED";ball.ownerId=defender.id;ball.ownerTeam="red";
+      ball.x=defender.x;ball.y=defender.y;lastPossessionTeam="red";
+      const turnoverEnded=naturalPeriodEndReady("AUDIT_TURNOVER",threshold,"AUDIT");
+
+      setAttack();
+      naturalPeriodEndReady("AUDIT_OUT",threshold,"AUDIT");
+      match.setPiece={type:"THROW_IN",team:"red"};
+      ball.state="DEAD";
+      const outEnded=naturalPeriodEndReady("AUDIT_OUT",threshold,"AUDIT");
+
+      resetMatch(false);
+      return {attackEnded,pendingDuringAttack,turnoverEnded,outEnded};
+    },
+    ratingAndXmanAudit(){
+      resetMatch(false);
+      match.blueScore=4;match.redScore=3;
+      const gk=teams.blue.players.find(p=>p.role==="GK");
+      const cb=teams.blue.players.find(isCentralDefender);
+      const cm=teams.blue.players.find(p=>p.category==="MID"&&p.role!=="AM");
+      const redStar=teams.red.players.find(isStriker)||teams.red.players.find(p=>p.category==="ATT");
+      const redLow=teams.red.players.find(p=>p.id!==redStar.id&&p.role!=="GK");
+
+      Object.assign(gk.matchStats,{saves:6,passesAttempted:18,passesCompleted:15,recoveries:2,touches:20});
+      Object.assign(cb.matchStats,{blocks:3,interceptions:4,tacklesAttempted:4,tacklesWon:3,recoveries:6,passesAttempted:31,passesCompleted:27,progressivePasses:5,touches:38});
+      Object.assign(cm.matchStats,{keyPasses:3,progressivePasses:8,dribblesAttempted:4,dribblesWon:3,recoveries:7,interceptions:2,tacklesAttempted:3,tacklesWon:2,passesAttempted:42,passesCompleted:37,assists:1,touches:51});
+      Object.assign(redStar.matchStats,{goals:3,shots:10,shotsOnTarget:5,turnovers:7,bigChancesMissed:3,dribblesAttempted:5,dribblesWon:1,passesAttempted:12,passesCompleted:7,touches:34});
+      Object.assign(redLow.matchStats,{turnovers:4,bigChancesMissed:1,passesAttempted:13,passesCompleted:6,tacklesAttempted:3,tacklesWon:0,touches:22});
+      gk.distanceRun=3500;cb.distanceRun=9300;cm.distanceRun=10100;redStar.distanceRun=9000;redLow.distanceRun=9200;
+
+      const pom=currentPOM(true);
+      const xman=selectXman(pom);
+      const result={
+        ratings:{GK:playerRating(gk),CB:playerRating(cb),CM:playerRating(cm),hatTrickST:playerRating(redStar),lowPlayer:playerRating(redLow)},
+        xmanId:xman?.id||null,
+        lowPlayerId:redLow.id,
+        hatTrickId:redStar.id,
+        protectedHatTrick:xman?.id!==redStar.id
+      };
+      resetMatch(false);
+      return result;
+    },
+    mistakeTrackingAudit(){
+      resetMatch(false);
+      const passer=teams.blue.players.find(p=>p.role!=="GK");
+      const target=teams.blue.players.find(p=>p.id!==passer.id&&p.role!=="GK");
+      ball.state="PASSING";ball.passTeam="blue";ball.passerId=passer.id;
+      ball.intendedReceiverId=target.id;ball.passType="SHORT";
+      ball.lastTouchTeam="blue";ball.x=FIELD_W+1;ball.y=34;
+      handleBallOut();
+      const passOutTurnovers={
+        team:stats.blue.turnovers,
+        player:passer.matchStats.turnovers||0
+      };
+
+      resetMatch(false);
+      const shooter=teams.blue.players.find(isStriker)||teams.blue.players.find(p=>p.category==="ATT");
+      shooter.x=92;shooter.y=34;
+      for(const p of teams.red.players){
+        if(p.role==="GK"){p.x=103;p.y=34;}
+        else{p.x=67;p.y=p.number%2?3:65;}
+      }
+      ball.state="CONTROLLED";ball.ownerId=shooter.id;ball.ownerTeam="blue";
+      ball.x=shooter.x;ball.y=shooter.y;
+      attemptShot(shooter,"PLACED");
+      const markedBigChance=ball.shotBigChance;
+      const goalX=opponentGoalX("blue");
+      ball.x=goalX+.4;ball.y=45;ball.shotTargetY=45;
+      ball.vx=20;ball.vy=0;ball.lastTouchTeam="blue";
+      detectShotOutcome(goalX-.4,45);
+      const bigChancesMissed=shooter.matchStats.bigChancesMissed||0;
+
+      resetMatch(false);
+      return {passOutTurnovers,markedBigChance,bigChancesMissed};
+    },
+    resultRatingAudit(){
+      const players=allMatchPlayers().map(p=>({
+        id:p.id,team:p.team,role:p.role,family:roleRatingFamily(p),
+        rating:Number(playerRating(p).toFixed(2)),
+        goals:p.matchStats?.goals||0,
+        turnovers:p.matchStats?.turnovers||0,
+        bigChancesMissed:p.matchStats?.bigChancesMissed||0
+      }));
+      const families={};
+      for(const p of players){
+        if(!families[p.family])families[p.family]=[];
+        families[p.family].push(p.rating);
+      }
+      const byRole={};
+      for(const [family,values] of Object.entries(families)){
+        byRole[family]={
+          average:Number((values.reduce((a,b)=>a+b,0)/values.length).toFixed(2)),
+          max:Math.max(...values),min:Math.min(...values)
+        };
+      }
+      const pom=currentPOM(true);
+      const xman=selectXman(pom);
+      return {
+        byRole,
+        top:players.slice().sort((a,b)=>b.rating-a.rating).slice(0,5),
+        pom:pom?{id:pom.id,team:pom.team,role:pom.role,rating:Number(playerRating(pom).toFixed(2)),goals:pom.matchStats?.goals||0}:null,
+        xman:xman?{id:xman.id,team:xman.team,role:xman.role,rating:Number(playerRating(xman).toFixed(2)),goals:xman.matchStats?.goals||0,turnovers:xman.matchStats?.turnovers||0,bigChancesMissed:xman.matchStats?.bigChancesMissed||0}:null
+      };
+    },
     fastMatchAudit(bluePreset="BALANCED",redPreset="BALANCED",maxSteps=65000){
       resetMatch(false);applyTacticPreset("blue",bluePreset,false);applyTacticPreset("red",redPreset,false);
       let steps=0,aiCounter=0;
