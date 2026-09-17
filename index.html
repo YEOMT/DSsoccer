@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.21 Subtle Match Feel</title>
+  <title>Class Football Simulator - v2.5.22 Player Choice Polish</title>
   <style>
     :root{
       --bg:#10141b;
@@ -897,6 +897,13 @@
     .student-build-card{display:grid;grid-template-columns:78px 1fr auto;gap:10px;align-items:center;width:100%;padding:10px 11px;text-align:left;border:1px solid #354760;background:#142131;border-radius:11px}
     .student-build-card .stat-key{font-size:11px;font-weight:1000;color:#eaf1fa}.student-build-card .stat-effect{font-size:8px;line-height:1.45;color:#8fa1b7}.student-build-card .stat-plus{font-size:20px;font-weight:1000;color:#9dffc2;min-width:38px;text-align:right}
     .student-build-card:disabled{opacity:.48}.student-build-card:not(:disabled):hover{border-color:#5c7ea7;background:#19283a}
+    .student-build-card.stat-editor{grid-template-columns:minmax(0,1fr) 34px auto;gap:8px;box-sizing:border-box}
+    .stat-editor .stat-effect,.stat-editor .stat-detail{display:block;margin-top:4px;font-size:10px;line-height:1.4}
+    .stat-editor .stat-detail{color:#b8c8dc}.stat-editor .stat-detail em{font-style:normal;color:#9dffc2}
+    .stat-editor .stat-current{font-size:22px;color:#fff;font-weight:950;text-align:right;font-variant-numeric:tabular-nums}
+    .stat-stepper{display:flex;gap:4px}.stat-stepper button{width:34px;height:40px;padding:0;border:1px solid #49617d;border-radius:8px;background:#1b2b3e;color:#eef5ff;font-size:19px}
+    .stat-stepper button:disabled{opacity:.3;cursor:not-allowed}.student-build-identity{margin:9px 0;color:#c7d7e9;font-size:11px;line-height:1.5}
+    .student-role-card span{font-size:10px;line-height:1.5}.student-growth-type span,.student-growth-hint{font-size:10px}
     .host-quiz-overview{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}.host-quiz-kpi{border:1px solid #33455d;background:#101b28;border-radius:11px;padding:10px;text-align:center}.host-quiz-kpi span{display:block;font-size:8px;color:#8fa0b5}.host-quiz-kpi b{display:block;font-size:20px;margin-top:3px}
     .host-response-item .progress{font-variant-numeric:tabular-nums;font-weight:950;color:#c6d4e5}.host-response-item .complete{color:#9dffc2}
     body.broadcast-mode{overflow:hidden}
@@ -1000,7 +1007,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.21</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.22</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1165,7 +1172,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.21 · Subtle Match Feel</p>
+      <p>v2.5.22 · Player Choice Polish</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -1357,10 +1364,10 @@
         <section class="section">
           <h2>v0.6 역할 AI</h2>
           <div class="small">
-            <b>공격</b> · POA 포처 / AF 침투형 / TF 타깃 / F9 펄스나인 / WF 윙포워드<br>
-            <b>중원</b> · PM 플레이메이커 / AM 공격형 / BBM 박투박 / BWM 볼위닝 / ANC 앵커 / WM 와이드미드<br>
-            <b>수비</b> · CB 센터백 / BPD 빌드업CB / FB 풀백 / WB 윙백<br>
-            <b>GK</b> · GK 골키퍼 / SK 스위퍼키퍼<br>
+            <b>공격</b> · POA 골문 사냥꾼 / AF 침투형 공격수 / TF 타깃 공격수 / F9 연계형 공격수 / WF 윙 포워드<br>
+            <b>중원</b> · PM 플레이메이커 / AM 공격형 미드필더 / BBM 공수 왕복형 / BWM 볼 탈취형 / ANC 수비 보호형 / WM 클래식 윙어<br>
+            <b>수비</b> · CB 센터백 / BPD 빌드업 센터백 / FB 풀백 / WB 윙백<br>
+            <b>GK</b> · GK 골키퍼 / SK 스위퍼 키퍼<br>
             선수 라벨 아래에 역할 약어가 함께 표시됩니다.
           </div>
         </section>
@@ -1517,7 +1524,7 @@
   "use strict";
 
   // ============================================================
-  // MATCH ENGINE v2.5.21
+  // MATCH ENGINE v2.5.22
   // Carries every v2.5.17 classroom/network/tactical feature forward, then
   // improves targeted delivery, shared-ball reactions and match reporting.
   // ============================================================
@@ -3024,7 +3031,26 @@
     WING:["WIDE_FORWARD","WIDE_MIDFIELDER"],
     ST:["POACHER","ADVANCED_FORWARD","TARGET_FORWARD","FALSE_NINE"]
   };
-  const ROLE_DESCRIPTIONS={AUTO:"포메이션 자리와 팀 구성에 맞춰 자동 선택",KEEPER:"골문을 지키는 안정형 골키퍼",SWEEPER_KEEPER:"박스 밖까지 빠르게 커버하는 골키퍼",CENTRE_BACK:"마킹·클리어링 중심의 정통 센터백",BALL_PLAYING_DEFENDER:"후방 빌드업과 롱패스에 적극적인 센터백",FULLBACK:"수비 균형과 안정적인 측면 지원",WINGBACK:"오버래핑·크로스를 적극적으로 시도",ANCHOR:"수비진 앞을 지키며 패스길을 차단",BALL_WINNER:"강한 압박과 탈취에 집중",PLAYMAKER:"공을 오래 받고 패스 방향을 설계",BOX_TO_BOX:"공수 전 지역을 왕복하며 적극 가담",ATTACKING_MIDFIELDER:"2선 침투·킬패스·슈팅에 적극적",WIDE_FORWARD:"측면에서 안쪽으로 파고드는 공격수",WIDE_MIDFIELDER:"폭을 유지하며 연결과 크로스를 담당",POACHER:"박스 안 득점 위치를 우선 탐색",ADVANCED_FORWARD:"뒷공간 침투와 전진 드리블을 적극 시도",TARGET_FORWARD:"몸싸움으로 공을 지키고 동료에게 연결",FALSE_NINE:"아래로 내려와 연계하며 공간을 만듦"};
+  const ROLE_DESCRIPTIONS={
+    AUTO:"팀 포메이션의 빈자리에 맞는 역할로 뛰어요. 직접 고르기 어렵다면 이 선택!",
+    KEEPER:"골문 가까이서 슈팅을 막아요. 무리한 전진보다 골문을 지키는 데 집중해요.",
+    SWEEPER_KEEPER:"골문 앞에서 더 넓게 움직여 수비 뒤로 흐른 공을 걷어내고 패스를 연결해요.",
+    CENTRE_BACK:"상대 공격수를 막고 위험한 공을 걷어내요. 자리를 지키며 수비를 안정시켜요.",
+    BALL_PLAYING_DEFENDER:"수비하면서 앞으로 패스를 연결해요. 후방에서 긴 패스로 공격의 출발점을 만들어요.",
+    FULLBACK:"측면 수비를 지키며 동료를 지원해요. 공격에 올라가더라도 수비 균형을 더 챙겨요.",
+    WINGBACK:"측면을 따라 더 적극적으로 올라가요. 동료를 앞질러 패스를 받고 크로스를 노려요.",
+    ANCHOR:"수비수 앞에 남아 상대 패스길을 막아요. 동료가 공격할 때 뒤쪽 빈 공간을 지켜요.",
+    BALL_WINNER:"상대에게 가까이 붙어 압박하고 공을 빼앗아요. 탈취한 공은 동료에게 간결하게 연결해요.",
+    PLAYMAKER:"공을 받을 공간을 찾아 패스로 공격을 풀어요. 침투 패스와 긴 패스로 동료의 기회를 만들어요.",
+    BOX_TO_BOX:"공격과 수비를 오가며 동료를 도와요. 뒤에서 출발해 상대 골문 쪽으로도 뛰어들어요.",
+    ATTACKING_MIDFIELDER:"공격수 뒤의 빈 공간으로 움직여요. 결정적인 패스와 늦게 뛰어드는 침투로 득점을 노려요.",
+    WIDE_FORWARD:"측면에서 출발해 중앙으로 파고들어요. 동료가 바깥을 맡으면 안쪽 침투와 직접 슈팅을 노려요.",
+    WIDE_MIDFIELDER:"측면을 넓게 쓰며 돌파와 크로스를 노려요. 중앙 득점보다 측면 연결과 수비 지원을 더 챙겨요.",
+    POACHER:"상대 골문 가까이서 득점할 자리를 찾아요. 패스와 크로스를 받아 빠르게 마무리하는 데 집중해요.",
+    ADVANCED_FORWARD:"수비 뒤와 옆의 빈 공간으로 뛰어들어요. 스루패스를 받거나 공을 몰고 전진해 득점을 노려요.",
+    TARGET_FORWARD:"몸으로 공을 지키며 동료에게 연결해요. 긴 패스와 크로스를 받아주는 공격의 중심이 돼요.",
+    FALSE_NINE:"공을 받으러 중원 쪽으로 내려와요. 직접 돌진하기보다 패스로 연결하며 동료가 침투할 공간을 만들어요."
+  };
   const FORMATION_VOTE_PRESETS=["433","442","4231","352","3421","4222","4141"];
   const FORMATION_VOTE_LABELS={
     433:["4-3-3","폭넓은 3톱과 중원 균형"],
@@ -3092,7 +3118,7 @@
   // Host runs the authoritative match engine; students only join the room.
   // ============================================================
   const DSSOCCER_DEPLOY_URL="https://yeomt.github.io/DSsoccer/";
-  const DSSOCCER_BUILD="2.5.21";
+  const DSSOCCER_BUILD="2.5.22";
   const FIREBASE_CONFIG={
     apiKey:"AIzaSyBtK7NAfw4wDsS4LRacWF78PHT3zls50IQ",
     authDomain:"dsgames-fecef.firebaseapp.com",
@@ -3242,6 +3268,8 @@
     if(typeof d.buildReady==="boolean")student.buildReady=d.buildReady;
     if(d.breakReady)student.breakReady={...student.breakReady,...d.breakReady};
     if(d.growthFocus in GROWTH_FOCUS_LABELS)student.growthFocus=d.growthFocus;
+    if(d.buildPresetVersion===1)student.buildPresetVersion=1;
+    if(d.buildBase!==undefined)student.buildBase=d.buildBase;
     if(typeof d.roleReady==="boolean")student.roleReady=d.roleReady;
     if(typeof d.preferredRole==="string")student.preferredRole=d.preferredRole;
     if(d.formationVotes)student.formationVotes={...(student.formationVotes||{}),...d.formationVotes};
@@ -3825,6 +3853,7 @@
         merged.breakReady={...(merged.breakReady||{}),[entry.key]:!!entry.ready};
       }
       if(entry.growthFocus)merged.growthFocus=entry.growthFocus;
+      if(entry.buildPresetVersion===1)merged.buildPresetVersion=1;
     }
     return merged;
   }
@@ -3927,7 +3956,7 @@
     return `<div class="student-quiz-feedback ${correct?"correct":"wrong"}" role="status" aria-live="assertive"><div class="mark">${correct?"✓":"✕"}</div><div><strong>${correct?"정답입니다!":"아쉽습니다. 오답입니다."}</strong><span>${correct?"좋은 선택이에요.":`정답은 ${letters[correctIndex]||""}. ${escapeLobbyHtml(answerText)}입니다.`}</span><small>잠시 후 다음 문제로 자동 이동합니다.</small></div></div>`;
   }
   function studentStatsHtml(snapshot,data){
-    const vals=snapshot?.stats||null;
+    const vals=snapshot?.stats||(data?.buildBase?studentBuildValues(data,"TOTAL").current:null);
     const bonus=data?.statsBonus||{};
     return `<div class="student-stat-grid">${GROWTH_STATS.map(k=>`<div class="student-stat"><span>${GROWTH_LABELS[k]}</span><b>${vals?Math.round(vals[k]||0):`+${Number(bonus[k])||0}`}</b></div>`).join("")}</div>`;
   }
@@ -4021,17 +4050,30 @@
     intelligence:"위치선정 · 판단 · 패스 선택 · 압박/마킹 · 세컨드볼 반응"
   };
   const GROWTH_FOCUS_DESCRIPTIONS={
-    BALANCED:"다섯 능력치를 고르게 성장",
-    SPEED:"주력과 침투 속도를 우선 강화",
-    TECHNIQUE:"볼 키핑과 탈압박을 우선 강화",
-    KICK:"패스·크로스·슈팅을 우선 강화",
-    PHYSICAL:"몸싸움과 활동량을 우선 강화",
-    INTELLIGENCE:"판단과 위치선정을 우선 강화"
+    BALANCED:"포지션·역할의 기본 균형을 유지",
+    SPEED:"기본 분포를 주력·침투 쪽으로",
+    TECHNIQUE:"기본 분포를 볼 키핑·탈압박 쪽으로",
+    KICK:"기본 분포를 패스·크로스·슈팅 쪽으로",
+    PHYSICAL:"기본 분포를 몸싸움·활동량 쪽으로",
+    INTELLIGENCE:"기본 분포를 판단·위치선정 쪽으로"
   };
+  function buildStatCardsHtml(data,points,allocation,ready,mode,key="",hostId=null){
+    const values=studentBuildValues(data,mode,allocation),remain=Math.max(0,points-growthTotal(allocation));
+    return `<div class="student-build-cards">${GROWTH_STATS.map(k=>{
+      const attrs=hostId?`data-build-student="${hostId}" data-build-stat="${k}"`:`data-student-build-stat="${k}"`;
+      const controls=step=>`${attrs} data-stat-step="${step}" data-build-mode="${mode}" data-build-key="${key}"`;
+      return `<div class="student-build-card stat-editor"><div><span class="stat-key">${k.toUpperCase()}</span><span class="stat-effect">${GROWTH_EFFECTS[k]}</span><span class="stat-detail">기본 ${values.base[k]}${mode!=="START"?` · 누적 +${values.prior[k]}`:""} · <em>이번 +${allocation[k]||0}</em></span></div><b class="stat-current">${values.current[k]}</b><div class="stat-stepper"><button ${controls(-1)} aria-label="${k.toUpperCase()} 1포인트 회수" ${ready||!(allocation[k]>0)?"disabled":""}>−</button><button ${controls(1)} aria-label="${k.toUpperCase()} 1포인트 추가" ${ready||remain<=0||values.current[k]>=100?"disabled":""}>+</button></div></div>`;
+    }).join("")}</div>`;
+  }
+  function buildPreviewNote(data){
+    const profile=data.buildBase||studentBuildBaseProfile(data);
+    return `<div class="student-build-identity">${profile.role} · ${detailedRoleLabel(profile.tacticalRole)}<br>${profile.estimated?"희망 포지션 기준 예상 능력치 · 선발 자리 확정 시 기본값이 조정될 수 있어요.":"현재 배치된 포지션·역할 기준 능력치"}</div>`;
+  }
   function studentBuildHtml(data,points,allocation,ready,mode,key=""){
     const spent=growthTotal(allocation),remain=Math.max(0,points-spent),focus=data.growthFocus in GROWTH_FOCUS_LABELS?data.growthFocus:"BALANCED";
     const typeButtons=Object.entries(GROWTH_FOCUS_LABELS).map(([value,label])=>`<button class="student-growth-type ${focus===value?"selected":""}" data-student-growth-focus="${value}" data-build-mode="${mode}" data-build-key="${key}" ${ready?"disabled":""}><b>${label}</b><span>${GROWTH_FOCUS_DESCRIPTIONS[value]||""}</span></button>`).join("");
-    return `<div class="student-stage-title">${mode==="START"?"PLAYER BUILD":"BREAK GROWTH"}</div><div class="student-stage-head"><strong>성장 포인트 +${points}</strong><span class="student-stage-chip">남음 ${remain}</span></div><div class="student-growth-type-head"><b>내 성장 타입 선택</b><span>선택 즉시 타입에 맞게 자동 배분</span></div><div class="student-growth-type-grid">${typeButtons}</div><div class="student-growth-hint">원하는 타입을 누르면 포인트가 자동 배분됩니다. 직접 조절하려면 아래 ‘초기화’를 누른 뒤 능력치를 선택하세요.</div><div class="student-build-cards">${GROWTH_STATS.map(k=>`<button class="student-build-card" data-student-build-stat="${k}" data-build-mode="${mode}" data-build-key="${key}" ${ready||remain<=0?"disabled":""}><span class="stat-key">${GROWTH_LABELS[k]}</span><span class="stat-effect">${GROWTH_EFFECTS[k]}</span><span class="stat-plus">+${allocation?.[k]||0}</span></button>`).join("")}</div><div class="student-build-meta"><button class="lobby-mini" data-student-build-reset="${mode}" data-build-key="${key}" ${ready?"disabled":""}>↺ 초기화</button><span>${spent} / ${points} 사용</span></div><button class="primary student-ready ${ready?"done":""}" data-student-build-ready="${mode}" data-build-key="${key}" ${ready?"disabled":""}>${ready?"✓ READY 완료":remain?"포인트를 모두 사용해주세요":"READY"}</button>`;
+    const complete=studentAllocationComplete(data,points,allocation,mode);
+    return `<div class="student-stage-title">${mode==="START"?"PLAYER BUILD":"BREAK GROWTH"}</div><div class="student-stage-head"><strong>추가 포인트 +${points}</strong><span class="student-stage-chip" role="status">남음 ${remain}</span></div>${mode==="START"?`<div class="student-growth-type-head"><b>① 기본 프리셋 선택</b><span>기본 스탯 총합은 같아요</span></div><div class="student-growth-type-grid">${typeButtons}</div><div class="student-growth-hint">프리셋을 바꾸면 기본 분포만 바뀝니다. 퀴즈 포인트는 소비하지 않고, 직접 배분한 포인트도 유지돼요.</div>`:`<div class="student-growth-hint">기본 프리셋 · ${GROWTH_FOCUS_LABELS[focus]} (경기 중 유지)<br>지난 쿼터까지의 성장은 유지됩니다. 이번 포인트만 자유롭게 더하고 회수하세요.</div>`}${buildPreviewNote(data)}<div class="student-growth-type-head"><b>${mode==="START"?"② ":""}추가 포인트 직접 배분</b><span>스탯 상한 100</span></div>${buildStatCardsHtml(data,points,allocation,ready,mode,key)}<div class="student-build-meta"><button class="lobby-mini" data-student-build-reset="${mode}" data-build-key="${key}" ${ready?"disabled":""}>↺ 이번 배분 초기화</button><span>${spent} / ${points} 사용</span></div><button class="primary student-ready ${ready?"done":""}" data-student-build-ready="${mode}" data-build-key="${key}" ${ready||!complete?"disabled":""}>${ready?"✓ READY 완료":complete?"이 능력치로 READY":"남은 포인트를 배분해주세요"}</button>`;
   }
   function effectiveStudentRoomState(){
     const room=onlineRoomState.studentRoomData||{};
@@ -4209,34 +4251,26 @@
   async function saveStudentAllocation(mode,key,allocation,ready=false){
     const code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId;if(!code||!id)return;
     const data=onlineRoomState.studentData||(onlineRoomState.studentData={});
-    const clean=plainGrowth(allocation);
+    if(mode==="START"?data.buildReady:data.breakReady?.[key])return false;
+    const points=mode==="START"?(Number(data.preQuizPoints)||0):(Number(data.breakPoints?.[key])||0);
+    const clean=fitStudentAllocation(data,points,allocation,mode);
+    if(ready&&!studentAllocationComplete(data,points,clean,mode))return false;
     if(mode==="START"){data.startAllocation=clean;data.buildReady=!!ready;}
     else{if(!data.breakAllocations)data.breakAllocations={};data.breakAllocations[key]=clean;if(!data.breakReady)data.breakReady={};data.breakReady[key]=!!ready;}
     renderStudentStage();
     const saveKey=studentAllocationSaveKey(mode,key);
-    const patch=mode==="START"?{startAllocation:clean,buildReady:!!ready}:{[`breakAllocations.${key}`]:clean,[`breakReady.${key}`]:!!ready};
-    onlineRoomState.studentPendingAllocations[saveKey]={mode,key,allocation:clean,ready:!!ready,patch,code,id,token:`${Date.now()}:${Math.random()}`};
+    const preset=mode==="START"?{growthFocus:data.growthFocus||"BALANCED",...(data.buildPresetVersion===1?{buildPresetVersion:1}:{})}:{};
+    const patch=mode==="START"?{...preset,startAllocation:clean,buildReady:!!ready}:{[`breakAllocations.${key}`]:clean,[`breakReady.${key}`]:!!ready};
+    onlineRoomState.studentPendingAllocations[saveKey]={...preset,mode,key,allocation:clean,ready:!!ready,patch,code,id,token:`${Date.now()}:${Math.random()}`};
     if(ready)return await persistPendingStudentAllocation(saveKey);
     scheduleStudentAllocationSave(mode,key);
     return true;
   }
   async function saveStudentGrowthFocus(focus,mode,key=""){
     const code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId,data=onlineRoomState.studentData||(onlineRoomState.studentData={});
-    if(!code||!id||!(focus in GROWTH_FOCUS_LABELS))return;
-    const isStart=mode==="START",points=isStart?(Number(data.preQuizPoints)||0):(Number(data.breakPoints?.[key])||0);
-    const allocation=distributePoints(points,focus);
-    data.growthFocus=focus;
-    if(isStart){data.startAllocation=allocation;data.buildReady=false;}
-    else{if(!data.breakAllocations)data.breakAllocations={};if(!data.breakReady)data.breakReady={};data.breakAllocations[key]=allocation;data.breakReady[key]=false;}
-    renderStudentStage();
-    const patch=isStart
-      ? {growthFocus:focus,startAllocation:plainGrowth(allocation),buildReady:false}
-      : {growthFocus:focus,[`breakAllocations.${key}`]:plainGrowth(allocation),[`breakReady.${key}`]:false};
-    const saveKey=studentAllocationSaveKey(mode,key);
-    clearStudentAllocationSaveTimer(saveKey);
-    onlineRoomState.studentPendingAllocations[saveKey]={mode,key,allocation:plainGrowth(allocation),ready:false,growthFocus:focus,patch,code,id,token:`${Date.now()}:${Math.random()}`};
-    const saved=await persistPendingStudentAllocation(saveKey);
-    if(!saved&&studentJoinMessage&&!studentJoinMessage.textContent) setStudentMessage("성장 타입 저장이 지연되고 있습니다.");
+    if(!code||!id||mode!=="START"||data.buildReady||!(focus in GROWTH_FOCUS_LABELS))return false;
+    data.growthFocus=focus;data.buildPresetVersion=1;
+    return await saveStudentAllocation("START","",plainGrowth(data.startAllocation),false);
   }
   async function saveStudentRole(role,ready=false){
     const code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId,data=onlineRoomState.studentData||(onlineRoomState.studentData={});if(!code||!id)return;
@@ -4640,6 +4674,7 @@
     student.breakScores={};
     student.breakPoints={};
     student.growthFocus="BALANCED";
+    student.buildPresetVersion=1;student.buildBase=null;
     student.preQuizCorrect=0;
     student.preQuizPoints=0;
     student.totalQuizCorrect=0;
@@ -4677,7 +4712,7 @@
     const rows=participationStudents().map(s=>[s,{
       quizAnswers:{PRE_QUIZ:{},BREAK25:{},HALF:{},BREAK70:{}},preQuizCorrect:0,preQuizPoints:0,
       startAllocation:blankGrowth(),statsBonus:blankGrowth(),breakScores:{},breakPoints:{},breakAllocations:{},breakReady:{},
-      buildReady:false,roleReady:false,preferredRole:"AUTO",growthFocus:"BALANCED",formationVotes:{},tacticVotes:{},quizFlushAck:null,totalQuizCorrect:0,totalGrowthEarned:0,lineupStatus:"UNSET",assignedRole:null,assignedTacticalRole:null,shirtNumber:null
+      buildReady:false,roleReady:false,preferredRole:"AUTO",growthFocus:"BALANCED",buildPresetVersion:1,buildBase:null,formationVotes:{},tacticVotes:{},quizFlushAck:null,totalQuizCorrect:0,totalGrowthEarned:0,lineupStatus:"UNSET",assignedRole:null,assignedTacticalRole:null,shirtNumber:null
     }]);
     return await batchParticipantPatches(rows);
   }
@@ -4697,6 +4732,63 @@
     const seq=GROWTH_FOCUS_SEQUENCES[focus]||GROWTH_FOCUS_SEQUENCES.BALANCED;
     for(let i=0;i<points;i++)out[seq[i%seq.length]]++;
     return out;
+  }
+  // The existing six types now shape the BASE, not the earned quiz budget.
+  // Ten notional points are redistributed (net zero); no extra points awarded.
+  // Unversioned participants retain their previous base for saved-room safety.
+  function presetBaseStats(base,student){
+    const out={...base};
+    if(student?.buildPresetVersion!==1)return out;
+    const weights=distributePoints(10,student.growthFocus);
+    for(const k of GROWTH_STATS)out[k]=clamp(base[k]+weights[k]-2,1,100);
+    return out;
+  }
+  function studentRoleBaseStats(student,role,index,mode,slotRole){
+    return presetBaseStats(statsForRole(role,index,mode,slotRole),student);
+  }
+  function studentBuildBaseProfile(student,live=false){
+    const team=student.team||"blue",formation=document.getElementById(team+"Formation")?.value||"433";
+    const slots=FORMATIONS[formation]||FORMATIONS["433"];
+    const p=live?allPlayers().find(q=>q.studentId===student.id):null;
+    const assigned=lineupState.prepared?(lineupState.assignments[team]||[]).indexOf(student.id):-1;
+    const wanted=student.preferredPosition||"FLEX";
+    const fallback=slots.findIndex(s=>slotPositionGroup(s.role)===wanted);
+    const index=p?Number(p.id.match(/-(\d+)$/)?.[1]??0):assigned>=0?assigned:fallback>=0?fallback:6;
+    const slotRole=p?.role||slots[index]?.role||"LCM";
+    const role=p?.tacticalRole||resolvedStudentTacticalRole(student,slotRole,formation,index);
+    return {stats:statsForRole(role,index,currentStatMode,slotRole),role:slotRole,tacticalRole:role,
+      estimated:!p&&assigned<0,currentStats:p?Object.fromEntries(GROWTH_STATS.map(k=>[k,p[k]])):null};
+  }
+  function studentBuildValues(data,mode="START",allocation=blankGrowth()){
+    const profile=data.buildBase||studentBuildBaseProfile(data);
+    const base=presetBaseStats(profile.stats,data),prior=mode==="START"?blankGrowth():plainGrowth(data.statsBonus);
+    const before={},current={};
+    for(const k of GROWTH_STATS){
+      before[k]=mode==="BREAK"&&profile.currentStats?profile.currentStats[k]:clamp(base[k]+prior[k],1,100);
+      current[k]=clamp(before[k]+(allocation[k]||0),1,100);
+    }
+    return {profile,base,prior,before,current};
+  }
+  function fitStudentAllocation(data,points,allocation,mode="START",fill=false){
+    const out=blankGrowth(),{before}=studentBuildValues(data,mode);
+    let remaining=Math.max(0,Math.floor(Number(points)||0));
+    for(const k of GROWTH_STATS){
+      out[k]=Math.min(remaining,Math.max(0,100-before[k]),Math.max(0,Math.floor(Number(allocation?.[k])||0)));
+      remaining-=out[k];
+    }
+    if(fill){
+      const seq=GROWTH_FOCUS_SEQUENCES[data.growthFocus]||GROWTH_FOCUS_SEQUENCES.BALANCED;
+      while(remaining>0){
+        let added=0;
+        for(const k of seq){if(remaining>0&&before[k]+out[k]<100){out[k]++;remaining--;added++;}}
+        if(!added)break;
+      }
+    }
+    return out;
+  }
+  function studentAllocationComplete(data,points,allocation,mode){
+    const clean=fitStudentAllocation(data,points,allocation,mode);
+    return growthTotal(clean)===Math.min(points,growthTotal(fitStudentAllocation(data,points,clean,mode,true)));
   }
   function addGrowthVector(target,delta){
     for(const k of GROWTH_STATS)target[k]=(target[k]||0)+(delta[k]||0);
@@ -4762,7 +4854,7 @@
     return `<div class="quiz-result-header"><div><b>자동채점 완료 · ${max}문항</b><br><span>무응답은 오답 처리됩니다. 2문제당 +1 성장</span></div><div class="quiz-result-rank">TOP · ${ranked[0]?escapeLobbyHtml(ranked[0].name):"-"}</div></div><div class="participation-grid">${ranked.map((s,idx)=>{
       const score=isPre?s.preQuizCorrect:(s.breakScores[key]||0);
       const pts=isPre?startPointsForCorrect(score):breakPointsForCorrect(score);
-      const growthControl=!isPre?(remoteParticipationActive()?`<div class="growth-summary">선택한 성장 타입 · <b>${GROWTH_FOCUS_LABELS[s.growthFocus]||GROWTH_FOCUS_LABELS.BALANCED}</b><br>현재 성장 · ${growthSummaryHtml(s.statsBonus)}</div>`:`<select class="growth-focus-select" data-focus-student="${s.id}">${growthFocusOptions(s.growthFocus)}</select><div class="growth-summary">현재 성장 · ${growthSummaryHtml(s.statsBonus)}</div>`):"";
+      const growthControl=!isPre?`<div class="growth-summary">기본 프리셋 · <b>${GROWTH_FOCUS_LABELS[s.growthFocus]||GROWTH_FOCUS_LABELS.BALANCED}</b><br>누적 성장 · ${growthSummaryHtml(s.statsBonus)}</div>`:"";
       return `<div class="participation-card ${s.team}"><div class="participation-card-head"><span class="participation-name">${escapeLobbyHtml(s.name)}</span><span class="participation-team">${idx+1}위 · ${s.team.toUpperCase()}</span></div><div class="quiz-result-score">정답 <b>${score}</b> / ${max} · <span class="quiz-result-points">성장 +${pts}</span></div>${growthControl}</div>`;
     }).join("")}</div>`;
   }
@@ -4919,14 +5011,15 @@
   }
   async function finalizeRoleSelection(){
     if(remoteParticipationActive()&&!(await refreshRemoteProgressBeforeGrade()))throw new Error("학생 역할 선택을 불러오지 못했습니다.");
-    for(const st of participationStudents()){const allowed=detailedRoleChoices(st.preferredPosition||"FLEX");if(!allowed.includes(st.preferredRole))st.preferredRole=allowed[0]||"AUTO";st.roleReady=true;}
-    if(remoteParticipationActive()&&!(await batchParticipantPatches(participationStudents().map(st=>[st,{preferredRole:st.preferredRole,roleReady:true}]))))throw new Error("역할 확정 정보를 저장하지 못했습니다.");
+    for(const st of participationStudents()){const allowed=detailedRoleChoices(st.preferredPosition||"FLEX");if(!allowed.includes(st.preferredRole))st.preferredRole=allowed[0]||"AUTO";st.roleReady=true;st.buildPresetVersion=1;st.buildBase=studentBuildBaseProfile(st);}
+    if(remoteParticipationActive()&&!(await batchParticipantPatches(participationStudents().map(st=>[st,{preferredRole:st.preferredRole,roleReady:true,buildPresetVersion:1,buildBase:st.buildBase}]))))throw new Error("역할 확정 정보를 저장하지 못했습니다.");
     showPlayerBuild();
   }
 
-  function buildCardHtml(st){
-    const spent=growthTotal(st.startAllocation),unspent=Math.max(0,st.preQuizPoints-spent);
-    return `<div class="participation-card ${st.team}" data-build-card="${st.id}"><div class="participation-card-head"><span class="participation-name">${escapeLobbyHtml(st.name)}</span><span class="participation-team">${st.team.toUpperCase()} · ${st.preQuizCorrect}/20 → +${st.preQuizPoints}</span></div><select class="growth-focus-select" data-focus-student="${st.id}">${growthFocusOptions(st.growthFocus)}</select><div class="build-stat-grid">${GROWTH_STATS.map(k=>`<button class="build-stat-btn" data-build-student="${st.id}" data-build-stat="${k}" ${unspent<=0?"disabled":""}>${GROWTH_LABELS[k]}<b>+${st.startAllocation[k]||0}</b></button>`).join("")}</div><div class="build-footer"><span>남은 포인트 <b>${unspent}</b></span><button class="lobby-mini" data-build-reset="${st.id}">↺ 초기화</button></div></div>`;
+  function buildCardHtml(st,mode="START",key=""){
+    const points=mode==="START"?st.preQuizPoints:(st.breakPoints?.[key]||0),allocation=plainGrowth(mode==="START"?st.startAllocation:st.breakAllocations?.[key]);
+    const spent=growthTotal(allocation),unspent=Math.max(0,points-spent);
+    return `<div class="participation-card ${st.team}" data-build-card="${st.id}"><div class="participation-card-head"><span class="participation-name">${escapeLobbyHtml(st.name)}</span><span class="participation-team">${st.team.toUpperCase()} · 추가 +${points}</span></div>${mode==="START"?`<label class="growth-summary">기본 프리셋<select class="growth-focus-select" data-focus-student="${st.id}">${growthFocusOptions(st.growthFocus)}</select></label>`:`<div class="growth-summary">기본 프리셋 · ${GROWTH_FOCUS_LABELS[st.growthFocus]||GROWTH_FOCUS_LABELS.BALANCED}</div>`}${buildPreviewNote(st)}${buildStatCardsHtml(st,points,allocation,false,mode,key,st.id)}<div class="build-footer"><span>남은 포인트 <b>${unspent}</b> · ${spent}/${points} 사용</span><button class="lobby-mini" data-build-reset="${st.id}" data-build-mode="${mode}" data-build-key="${key}">↺ 이번 배분 초기화</button></div></div>`;
   }
   function renderPlayerBuild(){
     if(remoteParticipationActive()){
@@ -4934,18 +5027,18 @@
       participationContent.innerHTML=`${hostTeamDashboardHtml("build")}<div class="host-ready-summary">학생 휴대폰에서 성장 타입과 스탯을 직접 결정합니다. <b>${ready} / ${students.length}명 READY</b> · 미완료 학생은 선택한 타입에 따라 자동 배분됩니다.</div><div class="host-response-list">${students.map(st=>{const spent=growthTotal(st.startAllocation);return `<div class="host-response-item"><span>${escapeLobbyHtml(st.name)} · ${GROWTH_FOCUS_LABELS[st.growthFocus]||GROWTH_FOCUS_LABELS.BALANCED} · +${spent}/${st.preQuizPoints}</span><span class="${st.buildReady?"ok":"wait"}">${st.buildReady?"✓ READY":"배분 중"}</span></div>`}).join("")}</div>`;
       return;
     }
-    participationContent.innerHTML=`<div class="participation-grid">${participationStudents().map(buildCardHtml).join("")}</div>`;
+    participationContent.innerHTML=`<div class="participation-grid">${participationStudents().map(st=>buildCardHtml(st)).join("")}</div>`;
   }
   function showPlayerBuild(){
     gameFlow.phase="BUILD";showParticipationOverlay();
     participationKicker.textContent="PLAYER BUILD · STUDENT DEVICES";participationTitle.textContent="선수 성장 포인트 분배";
-    participationDesc.textContent=remoteParticipationActive()?"학생은 자기 휴대폰에서 성장 타입을 고르고 SPEED · TECHNIQUE · KICK · PHYSICAL · INTELLIGENCE를 결정합니다. 호스트는 READY 현황만 확인합니다.":"SPEED · TECHNIQUE · KICK · PHYSICAL · INTELLIGENCE에 포인트를 배분하세요.";
+    participationDesc.textContent="기본 프리셋을 고르고 현재 능력치를 비교한 뒤, 퀴즈로 얻은 추가 포인트를 직접 배분하세요. 확정 전에는 + / −로 수정할 수 있습니다.";
     participationPhaseChip.textContent="BUILD";participationRoadmap.innerHTML=phaseRoadmapHtml("Q1");renderPlayerBuild();
     participationBackBtn.style.display=remoteParticipationActive()?"none":"";participationAutoBtn.style.display=remoteParticipationActive()?"none":"";participationAutoBtn.textContent="⚡ 전체 자동 분배";
     participationPrimaryBtn.textContent=remoteParticipationActive()?"미완료 자동배분 → 포메이션 투표":"선수 확정 → 포메이션 투표";
     if(remoteParticipationActive())syncRoomState({status:"LIVE",phase:"BUILD",quiz:null});
   }
-  function autoAllocateStart(student){ensureStudentProgress(student);student.startAllocation=distributePoints(student.preQuizPoints,student.growthFocus);}
+  function autoAllocateStart(student){ensureStudentProgress(student);student.startAllocation=fitStudentAllocation(student,student.preQuizPoints,blankGrowth(),"START",true);}
   async function syncLineupToRemote(){
     if(!remoteParticipationActive())return true;
     const rows=[];
@@ -4962,7 +5055,8 @@
           const idx=assigned.indexOf(st.id);st.lineupStatus=idx>=0?"STARTER":"BENCH";st.assignedRole=idx>=0?slots[idx]?.role:null;st.shirtNumber=idx>=0?idx+1:null;
         }
         if(st.assignedRole){const idx=teams?.[teamName]?.players?.findIndex(p=>p.studentId===st.id);const form=document.getElementById(teamName+"Formation")?.value||"433";st.assignedTacticalRole=idx>=0?teams[teamName].players[idx].tacticalRole:resolvedStudentTacticalRole(st,st.assignedRole,form,Math.max(0,idx));}else st.assignedTacticalRole=null;
-        rows.push([st,{lineupStatus:st.lineupStatus,assignedRole:st.assignedRole||null,assignedTacticalRole:st.assignedTacticalRole||null,shirtNumber:st.shirtNumber||null,statsBonus:plainGrowth(st.statsBonus),totalGrowthEarned:st.totalGrowthEarned}]);
+        st.buildBase=studentBuildBaseProfile(st,livePhase);
+        rows.push([st,{lineupStatus:st.lineupStatus,assignedRole:st.assignedRole||null,assignedTacticalRole:st.assignedTacticalRole||null,shirtNumber:st.shirtNumber||null,statsBonus:plainGrowth(st.statsBonus),buildBase:st.buildBase,totalGrowthEarned:st.totalGrowthEarned}]);
       }
     }
     if(!(await batchParticipantPatches(rows)))return false;
@@ -4971,10 +5065,10 @@
   async function finalizePlayerBuild(){
     if(remoteParticipationActive()&&!(await refreshRemoteProgressBeforeGrade()))throw new Error("학생 성장 배분을 불러오지 못했습니다.");
     for(const st of participationStudents()){
-      if(growthTotal(st.startAllocation)<st.preQuizPoints){const rem=st.preQuizPoints-growthTotal(st.startAllocation);addGrowthVector(st.startAllocation,distributePoints(rem,st.growthFocus));}
+      st.startAllocation=fitStudentAllocation(st,st.preQuizPoints,st.startAllocation,"START",true);
       st.statsBonus={...st.startAllocation};st.totalGrowthEarned=growthTotal(st.statsBonus);st.buildReady=true;
     }
-    if(remoteParticipationActive()&&!(await batchParticipantPatches(participationStudents().map(st=>[st,{growthFocus:st.growthFocus,startAllocation:plainGrowth(st.startAllocation),statsBonus:plainGrowth(st.statsBonus),buildReady:true,totalGrowthEarned:st.totalGrowthEarned}]))))throw new Error("성장 배분 결과를 저장하지 못했습니다.");
+    if(remoteParticipationActive()&&!(await batchParticipantPatches(participationStudents().map(st=>[st,{growthFocus:st.growthFocus,buildPresetVersion:st.buildPresetVersion||0,startAllocation:plainGrowth(st.startAllocation),statsBonus:plainGrowth(st.statsBonus),buildReady:true,totalGrowthEarned:st.totalGrowthEarned}]))))throw new Error("성장 배분 결과를 저장하지 못했습니다.");
     showFormationVote("Q1");
   }
 
@@ -5143,7 +5237,7 @@
     const slotIndex=Number((p.id.match(/-(\d+)$/)||[])[1]);
     const index=Number.isFinite(slotIndex)?slotIndex:teams[teamName].players.indexOf(p);
     p.tacticalRole=resolvedStudentTacticalRole(student,p.role,teams[teamName].formation,index);
-    const base=statsForRole(p.tacticalRole,index,currentStatMode,p.role);
+    const base=studentRoleBaseStats(student,p.tacticalRole,index,currentStatMode,p.role);
     const b=student.statsBonus||blankGrowth();
     p.displayName=student.name;p.studentId=student.id;p.isAI=false;
     p.speed=clamp(base.speed+(b.speed||0),1,100);p.technique=clamp(base.technique+(b.technique||0),1,100);
@@ -5231,6 +5325,7 @@
   }
   function renderBreakBuild(){
     const key=gameFlow.currentBreak,students=participationStudents(),ready=students.filter(st=>st.breakReady?.[key]).length;
+    if(!remoteParticipationActive()){participationContent.innerHTML=`<div class="participation-grid">${students.map(st=>buildCardHtml(st,"BREAK",key)).join("")}</div>`;return;}
     participationContent.innerHTML=`${hostTeamDashboardHtml("breakBuild")}<div class="host-ready-summary">중간 퀴즈 성장 포인트를 학생들이 휴대폰에서 직접 배분합니다. <b>${ready} / ${students.length}명 READY</b></div><div class="host-response-list">${students.map(st=>breakBuildCardHost(st,key)).join("")}</div>`;
   }
   async function beginBreakBuild(key){
@@ -5239,11 +5334,12 @@
       if(!st.breakAllocations)st.breakAllocations={};if(!st.breakReady)st.breakReady={};
       st.breakAllocations[key]=blankGrowth();st.breakReady[key]=false;
       st.breakPoints[key]=breakPointsForCorrect(st.breakScores?.[key]||0);
+      st.buildBase=studentBuildBaseProfile(st,true);
     }
-    if(remoteParticipationActive()&&!(await batchParticipantPatches(participationStudents().map(st=>[st,{breakPoints:{...(st.breakPoints||{})},breakAllocations:{...(st.breakAllocations||{})},breakReady:{...(st.breakReady||{})}}]))))throw new Error("중간 성장 포인트를 참가자에게 전송하지 못했습니다.");
+    if(remoteParticipationActive()&&!(await batchParticipantPatches(participationStudents().map(st=>[st,{buildBase:st.buildBase,breakPoints:{...(st.breakPoints||{})},breakAllocations:{...(st.breakAllocations||{})},breakReady:{...(st.breakReady||{})}}]))))throw new Error("중간 성장 포인트를 참가자에게 전송하지 못했습니다.");
     gameFlow.phase="BREAK_BUILD";gameFlow.currentBreak=key;quizSystem.current=null;showParticipationOverlay();
     participationKicker.textContent="PLAYER GROWTH · STUDENT DEVICES";participationTitle.textContent=`${breakTitle(key)} · 성장 배분`;
-    participationDesc.textContent="학생이 자기 휴대폰에서 성장 타입을 고르고 포인트를 투자합니다. 완료하지 않은 학생의 남은 포인트는 선택한 타입에 따라 자동 배분됩니다.";
+    participationDesc.textContent="기본 프리셋과 누적 성장은 유지됩니다. 이번 퀴즈 포인트를 + / −로 배분하세요. 미완료 학생의 남은 포인트만 기존 타입에 따라 자동 배분됩니다.";
     participationPhaseChip.textContent="GROWTH";participationRoadmap.innerHTML=phaseRoadmapHtml(key);participationBackBtn.style.display="none";participationAutoBtn.style.display="none";participationPrimaryBtn.textContent="미완료 자동배분 → 포메이션 투표";renderBreakBuild();
     if(remoteParticipationActive())syncRoomState({status:"LIVE",phase:"BREAK_BUILD",breakKey:key,quiz:null});
   }
@@ -5253,7 +5349,7 @@
       if(remoteParticipationActive()&&!(await refreshRemoteProgressBeforeGrade()))throw new Error("학생 성장 배분을 불러오지 못했습니다.");
       for(const st of participationStudents()){
         const pts=Number(st.breakPoints?.[key])||0;if(!st.breakAllocations)st.breakAllocations={};let alloc=plainGrowth(st.breakAllocations[key]);
-        const spent=growthTotal(alloc);if(spent<pts)addGrowthVector(alloc,distributePoints(pts-spent,st.growthFocus));st.breakAllocations[key]=alloc;
+        alloc=fitStudentAllocation(st,pts,alloc,"BREAK",true);st.breakAllocations[key]=alloc;
         addGrowthVector(st.statsBonus,alloc);st.totalQuizCorrect+=(Number(st.breakScores?.[key])||0);st.totalGrowthEarned+=pts;if(!st.breakReady)st.breakReady={};st.breakReady[key]=true;
         applyGrowthDeltaToLiveStudent(st.id,alloc);
       }
@@ -9403,7 +9499,7 @@
   const PLAYER_ROLES = {
     // Attack 5
     POACHER:{
-      code:"POA",label:"포처",group:"ATT",
+      code:"POA",label:"골문 사냥꾼",group:"ATT",
       move:{forward:1.35,width:.55,roam:.72,drop:-.25,box:1.45},
       action:{pass:-7,dribble:-2,sprint:3,shield:-5,shoot:16},
       pass:{SHORT:-2,THROUGH:1,LONG:-5,EARLY_CROSS:-7,CROSS:-7},
@@ -9411,7 +9507,7 @@
       press:.42,mark:.30
     },
     ADVANCED_FORWARD:{
-      code:"AF",label:"침투형",group:"ATT",
+      code:"AF",label:"침투형 공격수",group:"ATT",
       move:{forward:1.30,width:.82,roam:1.10,drop:0,box:1.22},
       action:{pass:-2,dribble:5,sprint:13,shield:-4,shoot:10},
       pass:{SHORT:0,THROUGH:2,LONG:-3,EARLY_CROSS:-5,CROSS:-5},
@@ -9419,7 +9515,7 @@
       press:.62,mark:.30
     },
     TARGET_FORWARD:{
-      code:"TF",label:"타깃",group:"ATT",
+      code:"TF",label:"타깃 공격수",group:"ATT",
       move:{forward:.88,width:.46,roam:.55,drop:.78,box:1.20},
       action:{pass:4,dribble:-7,sprint:-5,shield:16,shoot:8},
       pass:{SHORT:5,THROUGH:-4,LONG:-2,EARLY_CROSS:-5,CROSS:-5},
@@ -9427,7 +9523,7 @@
       press:.38,mark:.35
     },
     FALSE_NINE:{
-      code:"F9",label:"펄스나인",group:"ATT",
+      code:"F9",label:"연계형 공격수",group:"ATT",
       move:{forward:.62,width:.70,roam:1.10,drop:1.35,box:.68},
       action:{pass:13,dribble:4,sprint:-5,shield:3,shoot:2},
       pass:{SHORT:8,THROUGH:11,LONG:2,EARLY_CROSS:-3,CROSS:-3},
@@ -9435,7 +9531,7 @@
       press:.55,mark:.35
     },
     WIDE_FORWARD:{
-      code:"WF",label:"윙포워드",group:"ATT",
+      code:"WF",label:"윙 포워드",group:"ATT",
       move:{forward:1.08,width:1.30,roam:1.22,drop:.10,box:1.02},
       action:{pass:2,dribble:13,sprint:12,shield:-5,shoot:6},
       pass:{SHORT:0,THROUGH:5,LONG:0,EARLY_CROSS:8,CROSS:11},
@@ -9445,7 +9541,7 @@
 
     // Midfield 6
     PLAYMAKER:{
-      code:"PM",label:"플메",group:"MID",
+      code:"PM",label:"플레이메이커",group:"MID",
       move:{forward:.72,width:.72,roam:1.02,drop:.58,box:.42},
       action:{pass:18,dribble:-1,sprint:-7,shield:1,shoot:-4},
       pass:{SHORT:11,THROUGH:16,LONG:12,EARLY_CROSS:1,CROSS:0},
@@ -9453,7 +9549,7 @@
       press:.42,mark:.48
     },
     ATTACKING_MIDFIELDER:{
-      code:"AM",label:"공미",group:"MID",
+      code:"AM",label:"공격형 미드필더",group:"MID",
       move:{forward:1.14,width:.74,roam:1.12,drop:.20,box:1.14},
       action:{pass:8,dribble:8,sprint:4,shield:-2,shoot:9},
       pass:{SHORT:5,THROUGH:13,LONG:2,EARLY_CROSS:1,CROSS:1},
@@ -9461,7 +9557,7 @@
       press:.54,mark:.42
     },
     BOX_TO_BOX:{
-      code:"BBM",label:"박투박",group:"MID",
+      code:"BBM",label:"공수 왕복형",group:"MID",
       move:{forward:1.00,width:.75,roam:1.28,drop:.18,box:.92},
       action:{pass:3,dribble:3,sprint:8,shield:1,shoot:3},
       pass:{SHORT:4,THROUGH:5,LONG:3,EARLY_CROSS:0,CROSS:0},
@@ -9469,7 +9565,7 @@
       press:.78,mark:.74
     },
     BALL_WINNER:{
-      code:"BWM",label:"볼위닝",group:"MID",
+      code:"BWM",label:"볼 탈취형",group:"MID",
       move:{forward:.66,width:.62,roam:.92,drop:.35,box:.35},
       action:{pass:1,dribble:-7,sprint:0,shield:4,shoot:-8},
       pass:{SHORT:6,THROUGH:-3,LONG:0,EARLY_CROSS:-4,CROSS:-4},
@@ -9477,7 +9573,7 @@
       press:1.35,mark:1.08
     },
     ANCHOR:{
-      code:"ANC",label:"앵커",group:"MID",
+      code:"ANC",label:"수비 보호형",group:"MID",
       move:{forward:.34,width:.45,roam:.42,drop:.75,box:.10},
       action:{pass:8,dribble:-9,sprint:-9,shield:7,shoot:-12},
       pass:{SHORT:10,THROUGH:1,LONG:7,EARLY_CROSS:-6,CROSS:-6},
@@ -9485,7 +9581,7 @@
       press:.46,mark:1.20
     },
     WIDE_MIDFIELDER:{
-      code:"WM",label:"와이드M",group:"MID",
+      code:"WM",label:"클래식 윙어",group:"MID",
       move:{forward:.78,width:1.32,roam:.92,drop:.30,box:.54},
       action:{pass:6,dribble:6,sprint:5,shield:-1,shoot:-3},
       pass:{SHORT:3,THROUGH:3,LONG:5,EARLY_CROSS:12,CROSS:14},
@@ -9503,7 +9599,7 @@
       press:.48,mark:1.28
     },
     BALL_PLAYING_DEFENDER:{
-      code:"BPD",label:"빌드업CB",group:"DEF",
+      code:"BPD",label:"빌드업 센터백",group:"DEF",
       move:{forward:.42,width:.52,roam:.40,drop:.62,box:.08},
       action:{pass:14,dribble:-4,sprint:-8,shield:5,shoot:-13},
       pass:{SHORT:11,THROUGH:5,LONG:15,EARLY_CROSS:-6,CROSS:-6},
@@ -9536,7 +9632,7 @@
       press:0,mark:0
     },
     SWEEPER_KEEPER:{
-      code:"SK",label:"스위퍼키퍼",group:"GK",
+      code:"SK",label:"스위퍼 키퍼",group:"GK",
       move:{forward:.30,width:0,roam:.12,drop:0,box:0},
       action:{pass:22,dribble:-18,sprint:-16,shield:0,shoot:-30},
       pass:{SHORT:14,THROUGH:-8,LONG:12,EARLY_CROSS:-20,CROSS:-20},
@@ -10024,8 +10120,8 @@
   }
 
   function applyStatModeToPlayer(p,index,mode=currentStatMode){
-    const s=statsForRole(p.tacticalRole,index,mode,p.role);
     const student=lobbyState.students.find(x=>x.id===p.studentId);
+    const s=studentRoleBaseStats(student,p.tacticalRole,index,mode,p.role);
     const b=student?.statsBonus||blankGrowth();
     p.speed=clamp(s.speed+(b.speed||0),1,100);
     p.technique=clamp(s.technique+(b.technique||0),1,100);
@@ -10269,7 +10365,7 @@
         const tacticalRole=lobbyStudent
           ? resolvedStudentTacticalRole(lobbyStudent,slot.role,formationKey,i)
           : (slot.role==="GK"?selectedGoalkeeperRole(teamName):defaultTacticalRole(slot.role,formationKey,i));
-        const initialStats=statsForRole(tacticalRole,i,currentStatMode,slot.role);
+        const initialStats=studentRoleBaseStats(lobbyStudent,tacticalRole,i,currentStatMode,slot.role);
         const displayName=lobbyStudent?.name || aiNameForSlot(teamName,i);
 
         return {
@@ -21497,7 +21593,7 @@
     if(eventLife>0){
       eventLife-=dt;
       if(eventLife<=0&&eventNote){
-        eventNote.textContent="v2.5.21 · SUBTLE MATCH FEEL / SAME MATCH LOGIC";
+        eventNote.textContent="v2.5.22 · PLAYER CHOICE POLISH";
       }
     }
   }
@@ -21740,68 +21836,12 @@
     ctx.strokeRect(v.ox+v.fw,goalY,2.2*v.scale,goalW);
   }
 
-  function drawPlayerMotion(p,s,r,v){
-    const speed=Math.hypot(p.vx,p.vy);
-    if(speed<3.8)return;
-    const maxSpeed=Math.max(2,effectiveMaxSpeed(p));
-    const intensity=clamp((speed/maxSpeed-.62)/.38,0,1);
-    const urgent=[
-      "SPRINT_DRIBBLE","FORWARD_LINE_BURST","ONE_TWO_BURST",
-      "RECEIVE_RUN","PASS_SUPPORT_RUN","PASS_SECOND_BALL_RUN",
-      "FB_RECOVERY_RUN","WB_RECOVERY_RUN","INTERCEPT_RUN",
-      "REACTIVE_INTERCEPT","LOOSE_INTERCEPT","GK_DIVE"
-    ].includes(p.onBallAction)||[
-      "FORWARD_LINE_BURST","ONE_TWO_BURST","RECEIVE_RUN",
-      "PASS_SUPPORT_RUN","PASS_SECOND_BALL_RUN","FB_RECOVERY_RUN",
-      "WB_RECOVERY_RUN","INTERCEPT_RUN","REACTIVE_INTERCEPT",
-      "LOOSE_INTERCEPT","GK_DIVE"
-    ].includes(p.assignment);
-    if(intensity<(urgent?.18:.52))return;
-
-    const ux=p.vx/speed,uy=p.vy/speed;
-    const px=-uy,py=ux;
-    const reach=r*(.42+intensity*.72)*(urgent?1.08:1);
-    const alpha=(urgent?.095:.060)+intensity*.055;
-
-    ctx.save();
-    ctx.globalAlpha=alpha;
-    ctx.lineCap="round";
-    ctx.strokeStyle=p.team==="blue"?"#b9ddff":"#ffd1d4";
-    ctx.lineWidth=Math.max(1,v.scale*.13);
-    for(const side of [-1,1]){
-      const lateral=side*r*.34;
-      ctx.beginPath();
-      ctx.moveTo(s.x-ux*r*.72+px*lateral,s.y-uy*r*.72+py*lateral);
-      ctx.lineTo(s.x-ux*(r+reach)+px*lateral*.72,s.y-uy*(r+reach)+py*lateral*.72);
-      ctx.stroke();
-    }
-
-    // A tiny braking crescent makes a hard turn legible without shifting the disc.
-    const tx=p.tx-p.x,ty=p.ty-p.y,targetLen=Math.hypot(tx,ty);
-    if(targetLen>.25){
-      const alignment=(p.vx*tx+p.vy*ty)/(speed*targetLen);
-      if(alignment<.45&&intensity>.38){
-        const turn=(p.vx*ty-p.vy*tx)>=0?1:-1;
-        ctx.globalAlpha=alpha*.72;
-        ctx.beginPath();
-        ctx.arc(s.x-ux*r*.55,s.y-uy*r*.55,r*.78,
-          turn>0?Math.PI*.18:Math.PI*.82,
-          turn>0?Math.PI*.70:Math.PI*1.30,
-          turn<0);
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
-  }
-
   function drawPlayer(p,v){
     const display=celebrationPosition(p);
     const s=toScreen(display.x,display.y,v),r=clamp(v.scale*1.25,8,14);
     const isOwner=ball.ownerId===p.id;
     const isReceiver=ball.intendedReceiverId===p.id;
     const isSelected=selectedPlayerId===p.id;
-
-    drawPlayerMotion(p,s,r,v);
 
     ctx.beginPath();ctx.ellipse(s.x+2,s.y+3,r*.92,r*.62,0,0,Math.PI*2);
     ctx.fillStyle="rgba(0,0,0,.28)";ctx.fill();
@@ -22077,6 +22117,7 @@
       <div style="margin:-2px 0 7px;color:#ffd76a;font-size:11px">
         ${roleProfile.label} · ${identity.label} (${identity.stat} ${identity.value}) ·
         개인성향 <b>${personalMentalityLabel(p)}</b>
+        <br><span style="color:#aabbd0">${ROLE_DESCRIPTIONS[p.tacticalRole]||""}</span>
         ${p.studentId?`<br><span style="color:#9cf2bb">퀴즈 성장 · ${growthSummaryHtml(lobbyState.students.find(s=>s.id===p.studentId)?.statsBonus||blankGrowth())}</span>`:""}
       </div>
       <div class="field-row" style="margin-bottom:8px">
@@ -22247,9 +22288,11 @@
   participationContent.addEventListener("change",e=>{
     const roleSel=e.target.closest("[data-role-student]");if(roleSel){const s=lobbyState.students.find(x=>x.id===roleSel.dataset.roleStudent);if(s){s.preferredRole=roleSel.value;s.roleReady=true;showRoleSelection();}return;}
     const select=e.target.closest("[data-focus-student]");
-    if(!select)return;
+    if(!select||gameFlow.phase!=="BUILD")return;
     const s=lobbyState.students.find(x=>x.id===select.dataset.focusStudent);if(!s)return;
     s.growthFocus=select.value in GROWTH_FOCUS_LABELS?select.value:"BALANCED";
+    s.buildPresetVersion=1;s.startAllocation=fitStudentAllocation(s,s.preQuizPoints,s.startAllocation,"START");
+    renderPlayerBuild();
   });
   participationContent.addEventListener("click",e=>{
     const answerBtn=e.target.closest("[data-live-answer]");
@@ -22259,14 +22302,18 @@
     const statBtn=e.target.closest("[data-build-stat]");
     if(statBtn){
       const s=lobbyState.students.find(x=>x.id===statBtn.dataset.buildStudent);if(!s)return;
-      if(growthTotal(s.startAllocation)>=s.preQuizPoints)return;
-      const k=statBtn.dataset.buildStat;if(GROWTH_STATS.includes(k))s.startAllocation[k]++;
-      renderPlayerBuild();return;
+      const mode=statBtn.dataset.buildMode||"START",key=statBtn.dataset.buildKey||"",k=statBtn.dataset.buildStat,step=Number(statBtn.dataset.statStep)||1;
+      const points=mode==="START"?s.preQuizPoints:(s.breakPoints?.[key]||0),alloc=plainGrowth(mode==="START"?s.startAllocation:s.breakAllocations?.[key]);
+      if(!GROWTH_STATS.includes(k)||(step>0&&(growthTotal(alloc)>=points||studentBuildValues(s,mode,alloc).current[k]>=100))||(step<0&&alloc[k]<=0))return;
+      alloc[k]+=step>0?1:-1;
+      if(mode==="START"){s.startAllocation=alloc;renderPlayerBuild();}
+      else{s.breakAllocations[key]=alloc;renderBreakBuild();}return;
     }
     const resetBtn=e.target.closest("[data-build-reset]");
     if(resetBtn){
       const s=lobbyState.students.find(x=>x.id===resetBtn.dataset.buildReset);if(!s)return;
-      s.startAllocation=blankGrowth();renderPlayerBuild();return;
+      if(resetBtn.dataset.buildMode==="BREAK"){s.breakAllocations[resetBtn.dataset.buildKey]=blankGrowth();renderBreakBuild();}
+      else{s.startAllocation=blankGrowth();renderPlayerBuild();}return;
     }
     const lineupBtn=e.target.closest("[data-lineup-swap]");
     if(lineupBtn){
@@ -22372,7 +22419,9 @@
       const mode=statBtn.dataset.buildMode,key=statBtn.dataset.buildKey||"",data=onlineRoomState.studentData||{};
       const points=mode==="START"?(Number(data.preQuizPoints)||0):(Number(data.breakPoints?.[key])||0);
       const alloc=mode==="START"?plainGrowth(data.startAllocation):plainGrowth(data.breakAllocations?.[key]);
-      if(growthTotal(alloc)>=points)return;const k=statBtn.dataset.studentBuildStat;if(GROWTH_STATS.includes(k))alloc[k]++;
+      const k=statBtn.dataset.studentBuildStat,step=Number(statBtn.dataset.statStep)||1;
+      if(!GROWTH_STATS.includes(k)||(step>0&&(growthTotal(alloc)>=points||studentBuildValues(data,mode,alloc).current[k]>=100))||(step<0&&alloc[k]<=0))return;
+      alloc[k]+=step>0?1:-1;
       saveStudentAllocation(mode,key,alloc,false);return;
     }
     const reset=e.target.closest("[data-student-build-reset]");
@@ -22381,7 +22430,7 @@
     if(ready){
       const mode=ready.dataset.studentBuildReady,key=ready.dataset.buildKey||"",data=onlineRoomState.studentData||{};
       const points=mode==="START"?(Number(data.preQuizPoints)||0):(Number(data.breakPoints?.[key])||0),alloc=mode==="START"?plainGrowth(data.startAllocation):plainGrowth(data.breakAllocations?.[key]);
-      if(growthTotal(alloc)!==points)return;saveStudentAllocation(mode,key,alloc,true);return;
+      if(!studentAllocationComplete(data,points,alloc,mode))return;saveStudentAllocation(mode,key,alloc,true);return;
     }
   });
   document.getElementById("studentHomeBtn")?.addEventListener("click",()=>{location.href=DSSOCCER_DEPLOY_URL;});
