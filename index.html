@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.22 Player Choice Polish</title>
+  <title>Class Football Simulator - v2.5.23 Match Polish</title>
   <style>
     :root{
       --bg:#10141b;
@@ -1007,7 +1007,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.22</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.23</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1172,7 +1172,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.22 · Player Choice Polish</p>
+      <p>v2.5.23 · Match Polish</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -1524,7 +1524,7 @@
   "use strict";
 
   // ============================================================
-  // MATCH ENGINE v2.5.22
+  // MATCH ENGINE v2.5.23
   // Carries every v2.5.17 classroom/network/tactical feature forward, then
   // improves targeted delivery, shared-ball reactions and match reporting.
   // ============================================================
@@ -3118,7 +3118,7 @@
   // Host runs the authoritative match engine; students only join the room.
   // ============================================================
   const DSSOCCER_DEPLOY_URL="https://yeomt.github.io/DSsoccer/";
-  const DSSOCCER_BUILD="2.5.22";
+  const DSSOCCER_BUILD="2.5.23";
   const FIREBASE_CONFIG={
     apiKey:"AIzaSyBtK7NAfw4wDsS4LRacWF78PHT3zls50IQ",
     authDomain:"dsgames-fecef.firebaseapp.com",
@@ -5817,6 +5817,8 @@
     passAimX:null,passAimY:null,passLanded:false,passLandingAge:0,
     shooterId:null,shotTeam:null,shotTargetY:null,shotVariant:null,
     shotSkill:50,shotPressure:0,shotPower:0,shotAccuracyChance:.5,
+    shotVisualClass:"NONE",shotVisualHeight:0,shotVisualDuration:1.12,
+    shotCurveStrength:0,shotCurveSign:1,
     shotBigChance:false,shotMissRecorded:false,
     reboundTeam:null,reboundTimer:0,
     flightTime:0,looseAge:0,
@@ -8170,7 +8172,8 @@
     targetY+=rand(-1.10,1.10)*lerp(1,.30,composure);
 
     const onTargetChance=clamp(.76+skill*.15+composure*.05,.80,.96);
-    if(Math.random()<onTargetChance){
+    const onTarget=Math.random()<onTargetChance;
+    if(onTarget){
       targetY=clamp(targetY,34-3.42,34+3.42);
     }else{
       targetY=forceShotWide(targetY);
@@ -8196,6 +8199,7 @@
     ball.shotPressure=0;
     ball.shotPower=speed;
     ball.shotAccuracyChance=onTargetChance;
+    configureShotPresentation(taker,"PENALTY",targetY,onTarget,speed,len);
     ball.flightTime=0;ball.looseAge=0;
     ball.x=taker.x+dx/len*.72;
     ball.y=taker.y+dy/len*.72;
@@ -8514,6 +8518,8 @@
     p.turnoverStun=0;
     p.reboundShotWindow=0;
     p.quickShotWindow=0;
+    p.attackAdvantageTimer=0;
+    p.attackAdvantageStrength=0;
     p.shotBlockTimer=0;
     p.oneTwoPartnerId=null;
     p.oneTwoReturnTargetId=null;
@@ -10429,6 +10435,10 @@
           turnoverStun:0,
           reboundShotWindow:0,
           quickShotWindow:0,
+          // A brief memory of an advantage just created by a successful carry.
+          // It only nudges the next normal decision; it is not a separate AI state.
+          attackAdvantageTimer:0,
+          attackAdvantageStrength:0,
           recentReceiveType:null,
           receiveMomentumTimer:0,
           receiveMomentumX:0,
@@ -12932,11 +12942,13 @@
     if(ball.state!=="PASSING"||ball.passTeam!==teamName)return map;
     const recoveryTypes=[
       "LONG","LONG_GK","SWITCH",
-      "EARLY_CROSS","CROSS","LONG_CROSS"
+      "EARLY_CROSS","CROSS","LONG_CROSS",
+      "THROUGH","KILL_PASS"
     ];
     if(!recoveryTypes.includes(ball.passType))return map;
 
     const cross=["EARLY_CROSS","CROSS","LONG_CROSS"].includes(ball.passType);
+    const penetrative=["THROUGH","KILL_PASS"].includes(ball.passType);
     const candidates=teams[teamName].players
       .filter(p=>
         p.role!=="GK"&&
@@ -12946,10 +12958,12 @@
         p.beatenTimer<=0
       )
       .map(p=>{
-        const plan=bestPassRecoveryPlan(p,cross?2.55:2.35);
+        const plan=bestPassRecoveryPlan(p,cross?2.55:penetrative?2.15:2.35);
         const roleFit=cross
           ? (p.category==="ATT"?2.2:p.category==="MID"?1.2:-.4)
-          : (p.category==="MID"?.9:p.category==="ATT"?.5:0);
+          : penetrative
+            ? (p.category==="ATT"?1.4:p.category==="MID"?.8:-.7)
+            : (p.category==="MID"?.9:p.category==="ATT"?.5:0);
         return {p,plan,ranking:plan?plan.score+roleFit:-999};
       })
       .filter(x=>x.plan)
@@ -14587,18 +14601,25 @@
   }
 
   function insideForwardWindow(p){
-    if(!p || p.tacticalRole!=="WIDE_FORWARD")return false;
+    if(!p)return false;
+    const eligible=
+      p.tacticalRole==="WIDE_FORWARD"||
+      p.tacticalRole==="ATTACKING_MIDFIELDER"||
+      isWinger(p)||p.role==="AM"||p.category==="ATT";
+    if(!eligible)return false;
 
     const progress=teamAttackProgress(p.team);
     const wideDistance=Math.abs(p.y-34);
     const d=shootingDistance(p);
 
     return (
-      progress>.73 &&
-      wideDistance>8 &&
-      wideDistance<20.5 &&
+      progress>.70 &&
+      wideDistance>7.5 &&
+      wideDistance<21.5 &&
       d>10 &&
-      d<27
+      d<26 &&
+      shootingAngleQuality(p)>.20 &&
+      technicalPressureLoad(p)<.78
     );
   }
 
@@ -15116,6 +15137,48 @@
     return 34+side*rand(4.05,7.3);
   }
 
+  function configureShotPresentation(shooter,variant,targetY,onTarget,speed,distance){
+    const wideBy=Math.max(0,Math.abs(targetY-34)-3.66);
+    const missSeverity=clamp(wideBy/3.65,0,1);
+    const powerLevel=clamp((speed-23)/14,0,1);
+    const highProne=["POWER","LONG","VOLLEY","QUICK"].includes(variant);
+    const controlled=["PLACED","CURLED","LOW_DRIVEN"].includes(variant);
+    const highScore=
+      missSeverity*.58+
+      powerLevel*.24+
+      (highProne?.15:0)-
+      (controlled?.12:0);
+    const clearlyHigh=!onTarget&&highScore>.60;
+
+    ball.shotVisualClass=onTarget
+      ? "ON_TARGET"
+      : clearlyHigh
+        ? "HIGH"
+        : wideBy<1.15
+          ? "NEAR_WIDE"
+          : "WIDE";
+    ball.shotVisualHeight=clearlyHigh
+      ? lerp(.95,2.15,clamp((highScore-.60)/.32,0,1))
+      : variant==="LONG"?.22:
+        variant==="CURLED"?.10:0;
+    ball.shotVisualDuration=clamp(
+      Math.max(1,Number(distance)||1)/Math.max(8,speed),
+      .42,1.35
+    );
+
+    if(variant==="CURLED"&&shooter){
+      const curlSkill=curledShotSkill(shooter)/100;
+      const sideAngle=clamp((Math.abs(shooter.y-34)-6)/15,0,1);
+      ball.shotCurveStrength=lerp(.42,.72,curlSkill)*lerp(.78,1,sideAngle);
+      // With the velocity-perpendicular render offset below, this sign bows
+      // the visible path toward the far-post side for either attack direction.
+      ball.shotCurveSign=(shooter.y<34?1:-1)*attackDir(shooter.team);
+    }else{
+      ball.shotCurveStrength=0;
+      ball.shotCurveSign=1;
+    }
+  }
+
   function shotVariantKeeperDifficulty(variant){
     return {
       POWER:.15,
@@ -15245,7 +15308,8 @@
       owner,variant,d,angleQuality,pressureLoad,finishing
     );
 
-    if(Math.random()<onTargetChance){
+    const onTarget=Math.random()<onTargetChance;
+    if(onTarget){
       targetY=clamp(targetY,34-3.42,34+3.42);
     }else{
       targetY=forceShotWide(targetY);
@@ -15272,7 +15336,7 @@
       rand(-1.2,1.2)*lerp(1.0,.55,finishing);
 
     const shotFxKind=
-      variant==="POWER" ? "POWER" : "SHOT";
+      variant==="POWER"||speed>32.5 ? "POWER" : "SHOT";
 
     addKickVisual(owner,shotFxKind,speed,dx,dy);
     playKickSound(shotFxKind,speed);
@@ -15303,6 +15367,7 @@
     ball.shotPower=speed;
     ball.shotAccuracyChance=onTargetChance;
     armShotChance(owner,d,angleQuality,pressureLoad,variant);
+    configureShotPresentation(owner,variant,targetY,onTarget,speed,len);
     ball.flightTime=0;
     ball.looseAge=0;
 
@@ -15378,7 +15443,8 @@
       shotOnTargetChance(receiver,variant,d,angle,pressureLoad,finishing),
       .25,.78
     );
-    targetY=Math.random()<onTargetChance
+    const onTarget=Math.random()<onTargetChance;
+    targetY=onTarget
       ? clamp(targetY,34-3.42,34+3.42)
       : forceShotWide(targetY);
 
@@ -15410,6 +15476,7 @@
     ball.shotPower=speed;
     ball.shotAccuracyChance=onTargetChance;
     armShotChance(receiver,d,angle,pressureLoad,variant);
+    configureShotPresentation(receiver,variant,targetY,onTarget,speed,len);
     ball.flightTime=0;ball.looseAge=0;
     ball.x=receiver.x+dx/len*.55;
     ball.y=receiver.y+dy/len*.55;
@@ -15474,8 +15541,9 @@
       .24,.86
     );
 
+    const onTarget=Math.random()<onTargetChance;
     targetY=
-      Math.random()<onTargetChance
+      onTarget
         ? clamp(targetY,34-3.42,34+3.42)
         : forceShotWide(targetY);
 
@@ -15509,6 +15577,7 @@
     ball.shotPower=speed;
     ball.shotAccuracyChance=onTargetChance;
     armShotChance(receiver,d,angle,pressureLoad,"HEADER");
+    configureShotPresentation(receiver,"HEADER",targetY,onTarget,speed,len);
     ball.flightTime=0;
     ball.looseAge=0;
 
@@ -16644,6 +16713,45 @@
     return bonus;
   }
 
+  function markAttackAdvantage(player,strength=1){
+    if(!player||player.role==="GK"||player.category==="DEF")return;
+    player.attackAdvantageTimer=Math.max(
+      player.attackAdvantageTimer||0,
+      lerp(.72,1.18,clamp(strength,0,1))
+    );
+    player.attackAdvantageStrength=Math.max(
+      player.attackAdvantageStrength||0,
+      clamp(strength,.35,1)
+    );
+  }
+
+  function attackingAdvantageProfile(player){
+    if(
+      !player||
+      (player.attackAdvantageTimer||0)<=0||
+      player.role==="GK"||
+      player.category==="DEF"
+    )return 0;
+
+    const progress=attackProgressFor(player);
+    if(progress<.45)return 0;
+
+    const pressure=nearestOpponentDistance(player);
+    const crowd=dribblePressureCount(player,3.2);
+    const forward=forwardSpace(player);
+    let value=
+      clamp(player.attackAdvantageTimer/1.18,0,1)*
+      clamp(player.attackAdvantageStrength||.5,.35,1)*
+      lerp(.68,1,clamp((progress-.45)/.38,0,1))*
+      lerp(.72,1,clamp((forward-2)/7,0,1));
+
+    // A newly arriving defender can legitimately force the ball carrier to
+    // release or recycle, so the memory never overrides present danger.
+    if(pressure<1.25)value*=.48;
+    if(crowd>=2)value*=crowd>=3?.30:.52;
+    return clamp(value,0,1);
+  }
+
   function passOptionIsViable(owner,option){
     if(!option)return false;
 
@@ -16698,6 +16806,36 @@
     // A visible run is only useful when its receiver can actually arrive.
     // Keep a margin for imperfect anticipation and the ball slowing down.
     if(!option.aerialOutlet&&option.receiverArrivalMargin<-1.15)return false;
+    if(["THROUGH","KILL_PASS"].includes(option.type)){
+      const leadDistance=dist(
+        option.target.x,option.target.y,
+        option.aimX,option.aimY
+      );
+      const reachableLead=
+        Math.min(
+          16,
+          effectiveMaxSpeed(option.target)*
+          ((option.ballArrival||0)+.38)+1.6
+        );
+      const sidelineMargin=Math.min(option.aimY,FIELD_H-option.aimY);
+      const realRun=!!(
+        option.activeRun||
+        option.oneTwoReturn||
+        isActiveFullbackRun(option.target)||
+        isActiveMidfieldRun(option.target)||
+        (
+          (option.plannedAdvance>.9&&option.movingAdvance>-.15)||
+          option.movingAdvance>.75
+        )
+      );
+
+      // Validate the intended runner before execution error is applied. This
+      // still allows a pass into space, but rejects an unreachable empty zone.
+      if(!realRun)return false;
+      if(option.receiverArrivalMargin<-.72)return false;
+      if(leadDistance>reachableLead)return false;
+      if(sidelineMargin<2.8&&Math.abs(option.target.y-34)<27)return false;
+    }
     if(
       match.restartOffsideExemptTeam!==owner.team&&
       isActuallyOffsideAtPass(owner,option.target)&&
@@ -16789,6 +16927,25 @@
       ? (kickImpact(owner)-.5)*clamp((safetyData.distance-17)*.4,0,7)*
         clamp((safetyData.receivingSpace-1.5)/4,0,1) : 0;
     const arrivalPenalty=Math.max(0,-receiverArrivalMargin-.15)*lerp(6,10,intel);
+    const advantage=attackingAdvantageProfile(owner);
+    const attackContextAdjustment=advantage>0
+      ? (
+          safetyData.forward>3
+            ? (["THROUGH","KILL_PASS","CUTBACK","CROSS","EARLY_CROSS"].includes(type)?12:6)*advantage
+            : safetyData.forward<-1
+              ? -clamp(8+Math.abs(safetyData.forward)*.70,8,17)*advantage
+              : -3.5*advantage
+        )
+      : 0;
+    const nonProgressiveCount=teamState[owner.team].nonProgressivePasses||0;
+    const contextualVarietyAdjustment=
+      type==="SHORT"&&nonProgressiveCount>=2
+        ? safetyData.forward>2
+          ? Math.min(5.5,nonProgressiveCount*1.15)
+          : safetyData.forward<=0
+            ? -Math.min(6.5,(nonProgressiveCount-1)*1.25)
+            : 0
+        : 0;
 
     const possessionValue=
       safetyData.receivingSpace*
@@ -16831,7 +16988,8 @@
 
     return {
       type,target,aimX,aimY,speed,
-      safetyData,runWindow,receiverArrivalMargin,
+      safetyData,runWindow,receiverArrivalMargin,ballArrival,activeRun,
+      plannedAdvance,movingAdvance,
       score:
         base+bonus+passerRole+receiverRole+
         movementValue+switchSpace+longSkillValue-arrivalPenalty+
@@ -16850,7 +17008,9 @@
         (passSkill-50)*.15+
         (receiverMove-50)*.055-
         creativeRepeatPenalty(owner.team,type)+
-        progressiveDecisionBonus
+        progressiveDecisionBonus+
+        attackContextAdjustment+
+        contextualVarietyAdjustment
     };
   }
 
@@ -18318,6 +18478,7 @@
       stats[owner.team].dribbleWon++;
       owner.matchStats.dribblesWon++;
       owner.dribbleMarked=false;
+      markAttackAdvantage(owner,gained>7?1:.72);
       bumpLiveImpact(
         owner,
         gained>7?1.8:1.0,
@@ -18385,14 +18546,15 @@
 
     // Inside-forward signature finish: after cutting inside from a wing,
     // high TECH+KICK players can bend the ball toward the far post.
-    if(owner.tacticalRole==="WIDE_FORWARD"){
+    if(insideForwardWindow(owner)){
       const curlScore=curledShotUtility(owner);
 
       if(
-        curlScore>59 ||
-        (
-          curlScore>52 &&
-          Math.random()<clamp((curlScore-46)/38,.16,.58)
+        curlScore>52&&
+        Math.random()<clamp(
+          .14+(curlScore-50)*.018+
+          (owner.tacticalRole==="WIDE_FORWARD"?.08:0),
+          .16,.48
         )
       ){
         attemptShot(owner,"CURLED");
@@ -18695,6 +18857,40 @@
 
     let shootScore=shotUtility(owner) + roleActionBias(owner,"shoot");
     let longShootScore=longShotUtility(owner) + roleActionBias(owner,"shoot")*.55;
+
+    const attackAdvantage=attackingAdvantageProfile(owner);
+    if(attackAdvantage>0){
+      const passForward=passOption
+        ? (passOption.aimX-owner.x)*attackDir(owner.team)
+        : 0;
+      const attackingPass=passOption&&
+        ["THROUGH","KILL_PASS","CUTBACK","CROSS","EARLY_CROSS"].includes(passOption.type)&&
+        passForward>1;
+      const goalDistance=shootingDistance(owner);
+      const angle=shootingAngleQuality(owner);
+
+      if(passOption){
+        if(passForward<-1){
+          passUtility-=attackAdvantage*clamp(14+Math.abs(passForward)*.8,14,25);
+        }else if(attackingPass){
+          passUtility+=attackAdvantage*11;
+        }else if(passForward>2){
+          passUtility+=attackAdvantage*5;
+        }else{
+          passUtility-=attackAdvantage*5;
+        }
+      }
+
+      dribbleUtility+=attackAdvantage*clamp(space*1.25,5,12);
+      sprintUtility+=attackAdvantage*clamp(space*1.45,6,14);
+      shieldUtility-=attackAdvantage*10;
+      orchestrationUtility-=attackAdvantage*9;
+
+      if(goalDistance<27&&angle>.16){
+        shootScore+=attackAdvantage*(9+angle*7);
+        if(goalDistance>=17)longShootScore+=attackAdvantage*7;
+      }
+    }
 
     if(
       owner.category==="MID" &&
@@ -19771,6 +19967,8 @@
       bumpLiveImpact(attacker,1.5,"수비를 벗겨낸 드리블");
     }
 
+    markAttackAdvantage(attacker,1);
+
     showEvent(`${attacker.team.toUpperCase()} · ${playerName(attacker)}, 태클을 벗겨냅니다!`);
   }
 
@@ -19871,6 +20069,8 @@
         stats[attacker.team].dribbleWon++;
         attacker.dribbleMarked=false;
       }
+
+      markAttackAdvantage(attacker,.90);
 
       attacker.actionTimer=Math.min(attacker.actionTimer,.18);
       ownerDecisionTimer=.05;
@@ -20474,9 +20674,27 @@
           p.assignment="RECEIVE";
         }else if(penetrative&&ball.passAimX!==null&&ball.passAimY!==null){
           // Through-ball receivers attack the destination at full pace rather
-          // than following the current ball coordinate from behind.
-          tx=clamp(ball.passAimX,2.8,FIELD_W-2.8);
-          ty=clamp(ball.passAimY,3.0,FIELD_H-3.0);
+          // than following the current ball coordinate from behind. If the
+          // ball is clearly running beyond that point, anticipate its next
+          // reachable position instead of waiting at a stale marker.
+          const movingPlan=bestPassRecoveryPlan(p,2.15);
+          const pace=Math.hypot(ball.vx,ball.vy)||1;
+          const ux=ball.vx/pace,uy=ball.vy/pace;
+          const beyondAim=movingPlan&&(
+            (movingPlan.x-ball.passAimX)*ux+
+            (movingPlan.y-ball.passAimY)*uy
+          )>1.1;
+          const chaseMovingBall=!!(
+            movingPlan&&
+            movingPlan.margin>-.52&&
+            beyondAim&&
+            (
+              ball.flightTime>.42||
+              dist(ball.x,ball.y,ball.passAimX,ball.passAimY)<7
+            )
+          );
+          tx=clamp(chaseMovingBall?movingPlan.x:ball.passAimX,2.8,FIELD_W-2.8);
+          ty=clamp(chaseMovingBall?movingPlan.y:ball.passAimY,3.0,FIELD_H-3.0);
           p.focus=1.20;
           p.assignment="RECEIVE_RUN";
         }else if(ball.passType==="CUTBACK"&&ball.passAimX!==null&&ball.passAimY!==null){
@@ -21012,6 +21230,8 @@
     p.turnoverStun=Math.max(0,p.turnoverStun-dt);
     p.reboundShotWindow=Math.max(0,p.reboundShotWindow-dt);
     p.quickShotWindow=Math.max(0,p.quickShotWindow-dt);
+    p.attackAdvantageTimer=Math.max(0,(p.attackAdvantageTimer||0)-dt);
+    if(p.attackAdvantageTimer<=0)p.attackAdvantageStrength=0;
     p.receiveMomentumTimer=Math.max(0,(p.receiveMomentumTimer||0)-dt);
     p.receivePostureTimer=Math.max(0,(p.receivePostureTimer||0)-dt);
     p.passInterceptCooldown=Math.max(0,(p.passInterceptCooldown||0)-dt);
@@ -21593,7 +21813,7 @@
     if(eventLife>0){
       eventLife-=dt;
       if(eventLife<=0&&eventNote){
-        eventNote.textContent="v2.5.22 · PLAYER CHOICE POLISH";
+        eventNote.textContent="v2.5.23 · MATCH POLISH";
       }
     }
   }
@@ -21921,20 +22141,24 @@
       passType==="LONG"||passType==="SWITCH"?2.05:
       passType==="LONG_CROSS"?1.82:
       cross?1.55:
-      ball.state==="SHOOTING"?1.12:1;
+      ball.state==="SHOOTING"?(ball.shotVisualDuration||1.12):1;
     const progress=clamp((ball.flightTime||0)/duration,0,1);
     const arc=(ball.passLanded||!aerialPass)?0:Math.sin(Math.PI*progress);
+    const shotArc=ball.state==="SHOOTING"?Math.sin(Math.PI*progress):0;
     const heightMetres=
       passType==="LONG_CROSS"?1.75*arc:
       cross?1.48*arc:
       passType==="LONG_GK"?1.55*arc:
       passType==="LONG"||passType==="SWITCH"?1.26*arc:
-      ball.state==="SHOOTING"&&ball.shotVariant==="LONG"?.22*Math.sin(Math.PI*progress):0;
+      ball.state==="SHOOTING"?(ball.shotVisualHeight||0)*shotArc:0;
     const bendAmount=
-      ball.state==="SHOOTING"&&ball.shotVariant==="CURLED"?.22*Math.sin(Math.PI*progress):
+      ball.state==="SHOOTING"&&ball.shotVariant==="CURLED"
+        ? (ball.shotCurveStrength||.42)*shotArc:
       cross?.10*arc:0;
     const len=Math.max(.01,speed);
-    const bendSign=(ball.passTeam||ball.shotTeam)==="red"?-1:1;
+    const bendSign=ball.state==="SHOOTING"
+      ? (ball.shotCurveSign||1)
+      : ball.passTeam==="red"?-1:1;
     return {
       speed,through,aerialPass,cross,heightMetres,
       bendX:-ball.vy/len*bendAmount*bendSign,
@@ -21959,13 +22183,13 @@
 
       const power=
         ball.state==="SHOOTING"
-          ? clamp((speed-18)/20,0,1)
+          ? clamp(((ball.shotPower||speed)-22)/16,0,1)
           : clamp((speed-12)/20,0,1);
 
       const trail=
         r*(
           ball.state==="SHOOTING"
-            ? (ball.shotVariant==="POWER"?3.2:2.0)+power*1.9
+            ? 1.85+power*2.55+(ball.shotVariant==="POWER"?.35:0)
             : 1.55+power*.75
         );
 
@@ -21979,9 +22203,12 @@
         );
         ctx.lineTo(s.x,s.y);
 
+        const warmPower=ball.state==="SHOOTING"&&power>.42;
         ctx.strokeStyle=
           ball.state==="SHOOTING"
-            ? `rgba(255,245,205,${.075+i*.075})`
+            ? warmPower
+              ? `rgba(255,222,105,${.035+power*.045+i*.055})`
+              : `rgba(255,248,225,${.060+i*.065})`
             : `rgba(205,238,255,${.10+i*.055})`;
 
         ctx.lineWidth=
