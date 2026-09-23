@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.23 Match Polish</title>
+  <title>Class Football Simulator - v2.5.24 Decision Polish</title>
   <style>
     :root{
       --bg:#10141b;
@@ -1007,7 +1007,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.23</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.24</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1172,7 +1172,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.23 · Match Polish</p>
+      <p>v2.5.24 · Decision Polish</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -1524,7 +1524,7 @@
   "use strict";
 
   // ============================================================
-  // MATCH ENGINE v2.5.23
+  // MATCH ENGINE v2.5.24
   // Carries every v2.5.17 classroom/network/tactical feature forward, then
   // improves targeted delivery, shared-ball reactions and match reporting.
   // ============================================================
@@ -2981,20 +2981,20 @@
 
   const MAX_STUDENTS=30;
   const REAL_FOOTBALLER_NAMES=[
-    "Alisson","Courtois","Ederson","Donnarumma","Saliba","Rudiger","Araujo","Van Dijk","Ruben Dias","Bastoni",
-    "Davies","Hakimi","Kimmich","Theo Hernandez","Trent","Grimaldo","Rodri","Rice","Tchouameni","Caicedo",
-    "Pedri","Gavi","Modric","Bruno","Odegaard","De Bruyne","Bellingham","Valverde","Musiala","Wirtz",
-    "Mbappe","Salah","Neymar","Saka","Yamal","Foden","Palmer","Son","Vinicius","Kvaratskhelia",
-    "Messi","Ronaldo","Haaland","Kane","Lewandowski","Osimhen","Lautaro","Alvarez"
+    "알리송","쿠르투아","에데르송","돈나룸마","살리바","뤼디거","아라우호","반다이크","후벵 디아스","바스토니",
+    "데이비스","하키미","키미히","테오 에르난데스","트렌트","그리말도","로드리","라이스","추아메니","카이세도",
+    "페드리","가비","모드리치","브루노","외데고르","더브라위너","벨링엄","발베르데","무시알라","비르츠",
+    "음바페","살라","네이마르","사카","야말","포든","팔머","손흥민","비니시우스","크바라츠헬리아",
+    "메시","호날두","홀란","케인","레반도프스키","오시멘","라우타로","알바레스"
   ];
   const FOOTBALLER_NAMES_BY_POSITION={
-    GK:["Alisson","Courtois","Ederson","Donnarumma"],
-    CB:["Saliba","Rudiger","Araujo","Van Dijk","Ruben Dias","Bastoni"],
-    FB:["Davies","Hakimi","Kimmich","Theo Hernandez","Trent","Grimaldo"],
-    DM:["Rodri","Rice","Tchouameni","Caicedo"],
-    CM:["Pedri","Gavi","Modric","Bruno","Odegaard","De Bruyne","Bellingham","Valverde","Musiala","Wirtz"],
-    WING:["Mbappe","Salah","Neymar","Saka","Yamal","Foden","Palmer","Son","Vinicius","Kvaratskhelia"],
-    ST:["Messi","Ronaldo","Haaland","Kane","Lewandowski","Osimhen","Lautaro","Alvarez"]
+    GK:["알리송","쿠르투아","에데르송","돈나룸마"],
+    CB:["살리바","뤼디거","아라우호","반다이크","후벵 디아스","바스토니"],
+    FB:["데이비스","하키미","키미히","테오 에르난데스","트렌트","그리말도"],
+    DM:["로드리","라이스","추아메니","카이세도"],
+    CM:["페드리","가비","모드리치","브루노","외데고르","더브라위너","벨링엄","발베르데","무시알라","비르츠"],
+    WING:["음바페","살라","네이마르","사카","야말","포든","팔머","손흥민","비니시우스","크바라츠헬리아"],
+    ST:["메시","호날두","홀란","케인","레반도프스키","오시멘","라우타로","알바레스"]
   };
   const usedAINames=new Set();
   const aiNameSlots={};
@@ -3013,7 +3013,7 @@
     const preferred=FOOTBALLER_NAMES_BY_POSITION[group]||[];
     const roleCandidates=preferred.filter(name=>!usedAINames.has(name));
     const candidates=roleCandidates.length?roleCandidates:REAL_FOOTBALLER_NAMES.filter(name=>!usedAINames.has(name));
-    const name=candidates[Math.floor(Math.random()*candidates.length)]||`AI-${index+1}`;
+    const name=candidates[Math.floor(Math.random()*candidates.length)]||`인공지능 선수 ${index+1}`;
     usedAINames.add(name);
     aiNameSlots[key]=name;
     return name;
@@ -3118,7 +3118,7 @@
   // Host runs the authoritative match engine; students only join the room.
   // ============================================================
   const DSSOCCER_DEPLOY_URL="https://yeomt.github.io/DSsoccer/";
-  const DSSOCCER_BUILD="2.5.23";
+  const DSSOCCER_BUILD="2.5.24";
   const FIREBASE_CONFIG={
     apiKey:"AIzaSyBtK7NAfw4wDsS4LRacWF78PHT3zls50IQ",
     authDomain:"dsgames-fecef.firebaseapp.com",
@@ -16836,6 +16836,15 @@
       if(leadDistance>reachableLead)return false;
       if(sidelineMargin<2.8&&Math.abs(option.target.y-34)<27)return false;
     }
+    // In the attacking third, a generic long ball with no meaningful forward
+    // gain reads as a hopeful clearance. Switches, crosses and true through
+    // balls already have their own football-specific option types.
+    if(
+      zone==="ATTACK"&&
+      option.type==="LONG"&&
+      !option.aerialOutlet&&
+      s.forward<5
+    )return false;
     if(
       match.restartOffsideExemptTeam!==owner.team&&
       isActuallyOffsideAtPass(owner,option.target)&&
@@ -17540,9 +17549,9 @@
       const calmShorts=options
         .filter(o=>
           o.type==="SHORT"&&
-          dist(owner.x,owner.y,o.target.x,o.target.y)<=19&&
-          o.safetyData.receivingSpace>2.2&&
-          o.safetyData.laneRisk<4.8
+          dist(owner.x,owner.y,o.target.x,o.target.y)<=24&&
+          o.safetyData.receivingSpace>1.7&&
+          o.safetyData.laneRisk<6.1
         )
         .sort((a,b)=>{
           const calmValue=o=>{
@@ -17558,7 +17567,34 @@
           };
           return calmValue(b)-calmValue(a);
         });
-      if(calmShorts[0])return calmShorts[0];
+      // Keep the opening sequence composed. If no short outlet is viable,
+      // retain/carry the ball instead of immediately forcing a vertical pass.
+      return calmShorts[0]||null;
+    }
+
+    const attackAdvantage=attackingAdvantageProfile(owner);
+    if(
+      attackAdvantage>.22&&
+      progress>.62&&
+      nearestOpponentDistance(owner)>2.35
+    ){
+      const forwardContinuation=options
+        .filter(o=>
+          o.type!=="LONG"&&
+          o.safetyData.forward>1.5&&
+          o.safetyData.receivingSpace>2.1&&
+          o.safetyData.safety>2.8
+        )
+        .sort((a,b)=>b.score-a.score)[0];
+
+      if(forwardContinuation&&forwardContinuation.score>=options[0].score-14){
+        // Only remove clearly retreating alternatives when a comparably good
+        // forward continuation exists. Cutbacks remain a valid final-third pass.
+        const kept=options.filter(o=>
+          o.type==="CUTBACK"||o.safetyData.forward>=-1
+        );
+        if(kept.length)options.splice(0,options.length,...kept);
+      }
     }
 
     const wallReturn=options.find(o=>o.oneTwoReturn);
@@ -18751,7 +18787,8 @@
     const stagnation=buildUpStagnation(owner.team);
 
     let passOption=scanPass();
-    if(midfield){
+    const kickoffCalm=(teamState[owner.team].kickoffCalmTimer||0)>0;
+    if(midfield&&!kickoffCalm){
       // Reuse the existing midfield options, but compare them against the
       // general scan and subject them to the same safety gate.
       const penetration=chooseMidfieldPenetrationOption(owner);
@@ -21813,7 +21850,7 @@
     if(eventLife>0){
       eventLife-=dt;
       if(eventLife<=0&&eventNote){
-        eventNote.textContent="v2.5.23 · MATCH POLISH";
+        eventNote.textContent="v2.5.24 · DECISION POLISH";
       }
     }
   }
@@ -21970,7 +22007,7 @@
     ctx.font=`700 ${clamp(v.scale*.78,8,11)}px system-ui`;
     ctx.textAlign="center";
     ctx.textBaseline="middle";
-    const replayName=p.displayName||`AI-${p.team==="blue"?"B":"R"}${p.number}`;
+    const replayName=p.displayName||`인공지능 선수 ${p.number}`;
     ctx.fillText(Array.from(replayName)[0]||"",s.x,s.y+.3);
     ctx.font=`800 ${Math.max(8,v.scale*.64)}px system-ui`;
     ctx.textBaseline="top";
