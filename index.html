@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.25 Reaction Polish</title>
+  <title>Class Football Simulator - v2.5.26 Movement Polish</title>
   <style>
     :root{
       --bg:#10141b;
@@ -1007,7 +1007,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.25</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.26</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1172,7 +1172,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.25 · Reaction Polish</p>
+      <p>v2.5.26 · Movement Polish</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -1524,7 +1524,7 @@
   "use strict";
 
   // ============================================================
-  // MATCH ENGINE v2.5.25
+  // MATCH ENGINE v2.5.26
   // Carries every v2.5.17 classroom/network/tactical feature forward, then
   // improves targeted delivery, shared-ball reactions and match reporting.
   // ============================================================
@@ -15772,14 +15772,20 @@
 
     // Don't let the keeper know perfectly where every bad shot goes.
     const readError=lerp(.72,.075,goalkeeperReflexSkill(gk)/100);
-    gk.gkTargetY=clamp(
-      (predictedY===null?34:predictedY)+rand(-readError,readError),
-      30.0,38.0
-    );
-
     gk.gkTargetX=advancedSet
       ? clamp(gk.x,defendingTeam==="blue"?1:FIELD_W-16.2,defendingTeam==="blue"?16.2:FIELD_W-1)
       : (defendingTeam==="blue" ? goalX+1.0 : goalX-1.0);
+    const contactTime=Math.abs(ball.vx)>.001
+      ? (gk.gkTargetX-ball.x)/ball.vx
+      : -1;
+    const contactY=advancedSet&&contactTime>0
+      ? ball.y+ball.vy*contactTime
+      : predictedY;
+    gk.gkTargetY=clamp(
+      (contactY===null?34:contactY)+rand(-readError,readError),
+      advancedSet?Math.max(14.5,gk.y-3.8):30.0,
+      advancedSet?Math.min(53.5,gk.y+3.8):38.0
+    );
   }
 
   function goalkeeperSetPosition(gk){
@@ -15836,6 +15842,7 @@
   function goalkeeperMovingBallSweepTarget(gk){
     if(
       ball.state!=="PASSING" ||
+      gk.sentOff||gk.turnoverStun>0||gk.beatenTimer>0||
       !ball.passTeam ||
       ball.passTeam===gk.team ||
       !["THROUGH","KILL_PASS","LONG","LONG_GK","SWITCH"].includes(ball.passType)
@@ -15843,14 +15850,20 @@
 
     const sweeper=gk.tacticalRole==="SWEEPER_KEEPER";
     const gx=ownGoalX(gk.team);
+    // A lateral switch is not a reason to leave the goal. Only cover a ball
+    // travelling into the space behind our defence.
+    if(ball.vx*attackDir(gk.team)>-2.0)return null;
     const reading=clamp(
       goalkeeperReflexSkill(gk)/100*.54+
       gk.intelligence/100*.46,
       0,1
     );
-    const opponents=teams[ball.passTeam].players.filter(p=>p.role!=="GK"&&!p.sentOff);
+    const available=p=>p.role!=="GK"&&!p.sentOff&&p.turnoverStun<=0&&p.beatenTimer<=0;
+    const opponents=teams[ball.passTeam].players.filter(available);
+    const defenders=teams[gk.team].players.filter(available);
     const horizon=sweeper?2.65:2.20;
     let best=null;
+    let coveredAt=Infinity;
 
     for(let t=.12;t<=horizon;t+=.10){
       const q=predictMovingBallAt(t);
@@ -15858,27 +15871,35 @@
 
       const goalDistance=Math.abs(q.x-gx);
       const inside=inPenaltyAreaForTeam(q.x,q.y,gk.team);
-      const inSweepLane=
-        Math.abs(q.y-34)<22&&
-        goalDistance>2.0&&
-        (inside||(sweeper&&goalDistance<25.5));
-      if(!inSweepLane)continue;
-
-      const gkEta=estimatedArrivalTime(gk,q.x,q.y);
       const opponentEta=opponents.length
         ? Math.min(...opponents.map(p=>estimatedArrivalTime(p,q.x,q.y)))
         : 99;
+      const defenderEta=defenders.length
+        ? Math.min(...defenders.map(p=>estimatedArrivalTime(p,q.x,q.y)))
+        : 99;
+      if(defenderEta<t+.16&&defenderEta+.16<opponentEta){
+        coveredAt=Math.min(coveredAt,t);
+      }
+      // Do not run past a teammate who can already deal with this pass.
+      if(t>coveredAt+.15)break;
+      const inSweepLane=
+        Math.abs(q.y-34)<18&&
+        goalDistance>2.0&&
+        (inside||(sweeper&&goalDistance<23));
+      if(!inSweepLane)continue;
+
+      const travel=dist(gk.x,gk.y,q.x,q.y);
+      if(travel>(sweeper?16:11.5))continue;
+      const gkEta=estimatedArrivalTime(gk,q.x,q.y);
       const timingAllowance=lerp(.14,sweeper?.42:.30,reading);
-      const raceAllowance=sweeper?.34:.12;
-      if(gkEta>t+timingAllowance||gkEta>opponentEta+raceAllowance)continue;
+      const committed=["CLAIM","SWEEP"].includes(gk.gkState);
+      const raceMargin=(inside?.10:.24)-(committed?.06:0);
+      if(gkEta>t+timingAllowance||gkEta+raceMargin>opponentEta)continue;
+      if(defenderEta+.20<gkEta&&defenderEta<t+.16)continue;
 
       const score=
-        (sweeper&&!inside?3.7:inside?3.0:1.0)+
-        (sweeper&&!inside?(horizon-t)*.25:0)+
-        (opponentEta-gkEta)*3.1-
-        Math.abs(gkEta-t)*1.8+
-        reading*1.4-
-        goalDistance*.025;
+        Math.min(1.5,opponentEta-gkEta)*.6-
+        Math.abs(gkEta-t)*1.2-t*.9-travel*.08;
 
       if(!best||score>best.score){
         best={
@@ -15936,8 +15957,7 @@
 
 
   function goalkeeperLooseClaimTarget(gk){
-    if(ball.state!=="LOOSE")return null;
-    if(!inPenaltyAreaForTeam(ball.x,ball.y,gk.team))return null;
+    if(ball.state!=="LOOSE"||gk.sentOff||gk.turnoverStun>0||gk.beatenTimer>0)return null;
 
     const pace=Math.hypot(ball.vx,ball.vy);
     if(pace>18.0)return null;
@@ -15946,32 +15966,37 @@
       pace<5 ? .10 : pace<10 ? .15 : .21
     );
 
-    if(!inPenaltyAreaForTeam(future.x,future.y,gk.team))return null;
+    const inside=inPenaltyAreaForTeam(future.x,future.y,gk.team);
+    const sweeper=gk.tacticalRole==="SWEEPER_KEEPER";
+    const depth=Math.abs(future.x-ownGoalX(gk.team));
+    if(!inside&&!(sweeper&&depth>6&&depth<23&&Math.abs(future.y-34)<18))return null;
 
     const gkDistance=dist(gk.x,gk.y,future.x,future.y);
-    if(gkDistance>16)return null;
+    if(gkDistance>(sweeper?16:11.5))return null;
 
+    const available=p=>p.role!=="GK"&&!p.sentOff&&p.turnoverStun<=0&&p.beatenTimer<=0;
     const opponents=teams[otherTeam(gk.team)].players
-      .filter(p=>p.role!=="GK"&&p.turnoverStun<=0);
+      .filter(available);
+    const defenders=teams[gk.team].players.filter(available);
     const opponentEta=opponents.length
       ? Math.min(...opponents.map(p=>estimatedArrivalTime(p,future.x,future.y)))
       : 99;
     const gkEta=estimatedArrivalTime(gk,future.x,future.y);
-
-    const handling=goalkeeperHandlingSkill(gk)/100;
-    const reflex=goalkeeperReflexSkill(gk)/100;
-    const safetyMargin=lerp(.48,.98,handling*.55+reflex*.45);
-
-    const claimable=
-      pace<7.5 ||
-      gkDistance<5.0 ||
-      gkEta<opponentEta+safetyMargin;
+    const defenderEta=defenders.length
+      ? Math.min(...defenders.map(p=>estimatedArrivalTime(p,future.x,future.y)))
+      : 99;
+    const committed=["CLAIM","SWEEP"].includes(gk.gkState);
+    // Hands help at close range, not in a race from the other side of the box.
+    const raceMargin=inside&&gkDistance<3.5?-.12:(inside?.10:.24);
+    const claimable=gkEta+raceMargin-(committed?.06:0)<opponentEta&&
+      !(defenderEta+.20<gkEta&&defenderEta+.12<opponentEta);
 
     return claimable
       ? {
           x:clamp(future.x,1.5,FIELD_W-1.5),
           y:clamp(future.y,2,FIELD_H-2),
           pace,
+          inside,
           gkEta,
           opponentEta
         }
@@ -15980,7 +16005,8 @@
 
   function secureGoalkeeperClaim(gk){
     if(!gk||ball.state!=="LOOSE")return false;
-    if(!inPenaltyAreaForTeam(ball.x,ball.y,gk.team))return false;
+    const inside=inPenaltyAreaForTeam(ball.x,ball.y,gk.team);
+    if(!inside&&!(gk.tacticalRole==="SWEEPER_KEEPER"&&gk.gkState==="SWEEP"))return false;
 
     controlBall(gk,"RECOVERY");
     if(ball.ownerId!==gk.id)return false;
@@ -15988,14 +16014,16 @@
     gk.gkState="HOLD";
     gk.assignment="GK_SECURE";
     gk.focus=.42;
-    gk.controlGrace=Math.max(gk.controlGrace,.85);
+    gk.controlGrace=Math.max(gk.controlGrace,inside?.85:.72);
     gk.vx*=.20;
     gk.vy*=.20;
     startGoalkeeperReset(gk.team);
     ownerDecisionTimer=.24;
 
     showEvent(
-      `${gk.team.toUpperCase()} · ${playerName(gk)}, 빠르게 몸을 던져 공을 완전히 품습니다!`,
+      inside
+        ? `${gk.team.toUpperCase()} · ${playerName(gk)}, 빠르게 몸을 던져 공을 완전히 품습니다!`
+        : `${gk.team.toUpperCase()} · ${playerName(gk)}, 박스 밖에서 흐른 공을 발로 먼저 처리합니다!`,
       "major"
     );
     return true;
@@ -16010,8 +16038,10 @@
       !["CLAIM","SWEEP"].includes(gk.gkState)
     )return false;
 
-    const inside=inPenaltyAreaForTeam(gk.x,gk.y,defendingTeam);
-    if(!inside&&!ball.passLanded)return false;
+    const inside=inPenaltyAreaForTeam(gk.x,gk.y,defendingTeam)&&
+      inPenaltyAreaForTeam(ball.x,ball.y,defendingTeam);
+    const aerial=["LONG","LONG_GK","SWITCH","EARLY_CROSS","CROSS","LONG_CROSS"].includes(ball.passType);
+    if(!inside&&aerial&&!ball.passLanded)return false;
 
     const handling=goalkeeperHandlingSkill(gk)/100;
     const reflex=goalkeeperReflexSkill(gk)/100;
@@ -16053,15 +16083,17 @@
     for(const teamName of ["blue","red"]){
       const gk=teams[teamName].players.find(p=>p.role==="GK");
       if(!gk||gk.turnoverStun>0)continue;
-      if(!inPenaltyAreaForTeam(ball.x,ball.y,teamName))continue;
-
+      const inside=inPenaltyAreaForTeam(ball.x,ball.y,teamName)&&
+        inPenaltyAreaForTeam(gk.x,gk.y,teamName);
       const claim=goalkeeperLooseClaimTarget(gk);
+      if(!inside&&!(claim&&gk.tacticalRole==="SWEEPER_KEEPER"&&gk.gkState==="SWEEP"))continue;
       if(!claim&&gk.gkState!=="CLAIM")continue;
 
       const handling=goalkeeperHandlingSkill(gk)/100;
       const reflex=goalkeeperReflexSkill(gk)/100;
-      const radius=lerp(1.38,2.04,handling*.58+reflex*.42)*
-        (gk.gkState==="CLAIM"?1.13:1);
+      const radius=inside
+        ? lerp(1.38,2.04,handling*.58+reflex*.42)*(gk.gkState==="CLAIM"?1.13:1)
+        : lerp(1.02,1.46,firstTouchSkill(gk)/100);
 
       const swept=pointToSegmentDistance(
         gk.x,gk.y,x1,y1,x2,y2
@@ -16096,45 +16128,12 @@
       return {x:passingSweep.x,y:passingSweep.y};
     }
 
-    // Every goalkeeper aggressively claims a slow/loose ball inside his own
-    // penalty area. This is hand possession territory, not a field-player duel.
+    // Claim only a winnable loose ball that a teammate cannot already cover.
+    // The same check gives sweepers a small extra range outside the box.
     const claim=goalkeeperLooseClaimTarget(gk);
     if(claim){
-      gk.gkState="CLAIM";
+      gk.gkState=claim.inside?"CLAIM":"SWEEP";
       return {x:claim.x,y:claim.y};
-    }
-
-    // Sweeper keeper: attack a loose through ball just outside the box when
-    // the keeper is plausibly first to it.
-    if(
-      gk.tacticalRole==="SWEEPER_KEEPER" &&
-      ball.state==="LOOSE"
-    ){
-      const gx=ownGoalX(gk.team);
-      const goalDistance=Math.abs(ball.x-gx);
-      const gkDistance=dist(gk.x,gk.y,ball.x,ball.y);
-
-      const inSweepZone=
-        goalDistance>6 &&
-        goalDistance<26 &&
-        Math.abs(ball.y-34)<22 &&
-        gkDistance<18;
-
-      if(inSweepZone){
-        const opponents=teams[otherTeam(gk.team)].players.filter(p=>p.role!=="GK");
-        const opponentEta=opponents.length
-          ? Math.min(...opponents.map(p=>estimatedArrivalTime(p,ball.x,ball.y)))
-          : 99;
-        const gkEta=estimatedArrivalTime(gk,ball.x,ball.y);
-
-        if(gkEta<opponentEta+.35){
-          gk.gkState="SWEEP";
-          return {
-            x:clamp(ball.x,2,FIELD_W-2),
-            y:clamp(ball.y,3,FIELD_H-3)
-          };
-        }
-      }
     }
 
     // When the last defensive line is genuinely broken, close the angle
@@ -20557,13 +20556,19 @@
         }
       }
 
-      // A cross or long pass is not visible only to its nominated receiver.
+      // A travelling pass is not visible only to its nominated receiver.
       // Nearby teammates who read the flight may attack the same corridor and
       // rescue a slightly overhit or deflected delivery.
+      const penetrative=["THROUGH","KILL_PASS"].includes(incomingType);
+      const pastRunner=!intended||
+        ((ball.x-intended.x)*ball.vx+(ball.y-intended.y)*ball.vy)/
+          Math.max(.1,Math.hypot(ball.vx,ball.vy))>1.5;
+      const rescueAllowed=!penetrative||
+        (pastRunner&&!contacts.some(contact=>contact.type==="RECEIVER"));
       if([
         "LONG","LONG_GK","SWITCH",
-        "EARLY_CROSS","CROSS","LONG_CROSS"
-      ].includes(incomingType)){
+        "EARLY_CROSS","CROSS","LONG_CROSS","THROUGH","KILL_PASS"
+      ].includes(incomingType)&&rescueAllowed){
         for(const p of teams[ball.passTeam].players){
           if(
             p.id===ball.intendedReceiverId||
@@ -21393,29 +21398,38 @@
   }
 
   function applyPairedAttackerSpacing(players,attacking){
+    if(!attacking)return;
     const strikerPair=players.filter(p=>isStriker(p)&&!p.sentOff);
     const advancedMidPair=players.filter(p=>p.role==="AM"&&!p.sentOff);
     const groups=[];
-    if(strikerPair.length===2)groups.push({pair:strikerPair,minGap:attacking?7.6:6.4,strikers:true});
-    if(advancedMidPair.length===2)groups.push({pair:advancedMidPair,minGap:attacking?7.2:6.0,strikers:false});
+    if(strikerPair.length===2)groups.push({pair:strikerPair,minGap:7.6});
+    if(advancedMidPair.length===2)groups.push({pair:advancedMidPair,minGap:7.2});
 
     for(const group of groups){
+      // Preserve natural channel swaps and depth. Only separate targets that
+      // really overlap, without steering the carrier or breaking a one-two.
       const ordered=group.pair.slice().sort((a,b)=>
-        a.homeY-b.homeY||a.number-b.number
+        Math.abs(a.ty-b.ty)>.5?a.ty-b.ty:a.homeY-b.homeY||a.number-b.number
       );
       const lower=ordered[0],upper=ordered[1];
-      if(Math.abs(upper.ty-lower.ty)>=group.minGap)continue;
+      const depthGap=Math.abs(upper.tx-lower.tx);
+      if(depthGap>=group.minGap)continue;
+      const lateralGap=Math.sqrt(group.minGap*group.minGap-depthGap*depthGap);
+      if(Math.abs(upper.ty-lower.ty)>=lateralGap)continue;
 
       const receiver=getPlayer(ball.intendedReceiverId);
-      const lowerLocked=receiver?.id===lower.id;
-      const upperLocked=receiver?.id===upper.id;
+      const locked=p=>p.id===ball.ownerId||receiver?.id===p.id||
+        p.oneTwoTimer>0||p.receiveMomentumTimer>0||p.assignment==="RECEIVE_RUN";
+      const lowerLocked=locked(lower);
+      const upperLocked=locked(upper);
+      if(lowerLocked&&upperLocked)continue;
 
       if(lowerLocked&&!upperLocked){
-        upper.ty=clamp(lower.ty+group.minGap,2.5,FIELD_H-2.5);
+        upper.ty=clamp(lower.ty+lateralGap,2.5,FIELD_H-2.5);
       }else if(upperLocked&&!lowerLocked){
-        lower.ty=clamp(upper.ty-group.minGap,2.5,FIELD_H-2.5);
+        lower.ty=clamp(upper.ty-lateralGap,2.5,FIELD_H-2.5);
       }else{
-        const half=group.minGap/2;
+        const half=lateralGap/2;
         const center=clamp(
           (lower.ty+upper.ty)/2,
           2.5+half,
@@ -21423,23 +21437,6 @@
         );
         lower.ty=center-half;
         upper.ty=center+half;
-      }
-
-      if(group.strikers&&attacking&&!lowerLocked&&!upperLocked){
-        const dir=attackDir(lower.team);
-        const lowerLinks=["FALSE_NINE","TARGET_FORWARD"].includes(lower.tacticalRole);
-        const upperLinks=["FALSE_NINE","TARGET_FORWARD"].includes(upper.tacticalRole);
-        const centerX=(lower.tx+upper.tx)/2;
-
-        if(lowerLinks!==upperLinks){
-          const link=lowerLinks?lower:upper;
-          const runner=lowerLinks?upper:lower;
-          link.tx=centerX-dir*.75;
-          runner.tx=centerX+dir*.75;
-        }else if(Math.abs(lower.tx-upper.tx)<1.4){
-          lower.tx=centerX+dir*.42;
-          upper.tx=centerX-dir*.42;
-        }
       }
 
       lower.tx=clamp(lower.tx,2.5,FIELD_W-2.5);
@@ -21654,7 +21651,8 @@
     if(["GK_CLAIM","GK_RUSH","SK_SWEEP"].includes(p.assignment)&&d>.08){
       const closeFloor=p.assignment==="GK_CLAIM"?.91:p.assignment==="GK_RUSH"?.88:.84;
       const farFloor=p.assignment==="GK_CLAIM"?.82:p.assignment==="GK_RUSH"?.80:.76;
-      speedFactor=Math.max(speedFactor,d<2.5?closeFloor:farFloor);
+      const settle=p.assignment==="GK_RUSH"?clamp(d/2,0,1):clamp(d/.8,0,1);
+      speedFactor=Math.max(speedFactor,(d<2.5?closeFloor:farFloor)*settle);
     }
 
     if(urgentMovingBallMove&&d>.10){
@@ -21745,7 +21743,7 @@
     if(p.beatenTimer>0) focusBoost*=.38;
     if(p.turnoverStun>0) focusBoost*=.16;
     if(p.role==="GK" && p.gkState==="DIVE") focusBoost*=lerp(1.75,2.25,goalkeeperReflexSkill(p)/100);
-    if(p.role==="GK" && p.gkState==="CLAIM") focusBoost*=lerp(1.65,2.12,goalkeeperReflexSkill(p)/100);
+    if(p.role==="GK" && p.gkState==="CLAIM") focusBoost*=lerp(1.04,1.12,goalkeeperReflexSkill(p)/100);
     if(p.role==="GK" && p.gkState==="HOLD") focusBoost*=.22;
 
     const offBallFactor =
@@ -21754,6 +21752,11 @@
         : lerp(.90,1.13,offBallRunSkill(p)/100);
 
     let desiredSpeed=effectiveMaxSpeed(p)*speedFactor*focusBoost*offBallFactor;
+
+    // Closing down and collecting are running actions, not a goalkeeper dive.
+    if(["GK_CLAIM","GK_RUSH","SK_SWEEP"].includes(p.assignment)){
+      desiredSpeed=Math.min(desiredSpeed,effectiveMaxSpeed(p)*(p.assignment==="GK_CLAIM"?1.18:1.12));
+    }
 
     if(urgentMovingBallMove){
       const cap=
@@ -22171,7 +22174,7 @@
     if(eventLife>0){
       eventLife-=dt;
       if(eventLife<=0&&eventNote){
-        eventNote.textContent="v2.5.25 · REACTION POLISH";
+        eventNote.textContent="v2.5.26 · MOVEMENT POLISH";
       }
     }
   }
