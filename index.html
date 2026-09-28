@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Class Football Simulator - v2.5.24 Decision Polish</title>
+  <title>Class Football Simulator - v2.5.25 Reaction Polish</title>
   <style>
     :root{
       --bg:#10141b;
@@ -1007,7 +1007,7 @@
 <div id="lobbyScreen" class="lobby-screen">
   <div class="lobby-shell">
     <div class="lobby-hero">
-      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.24</div>
+      <div class="lobby-kicker">CLASS FOOTBALL · v2.5.25</div>
       <h1>DS Soccer</h1>
       <p>선생님은 경기 방을 열고, 학생은 방번호 또는 QR로 참가하세요.</p>
     </div>
@@ -1172,7 +1172,7 @@
   <header>
     <div class="brand">
       <h1>CLASS FOOTBALL SIMULATOR</h1>
-      <p>v2.5.24 · Decision Polish</p>
+      <p>v2.5.25 · Reaction Polish</p>
     </div>
     <div class="status-pill" id="engineStatus">ENGINE RUNNING</div>
   </header>
@@ -1524,7 +1524,7 @@
   "use strict";
 
   // ============================================================
-  // MATCH ENGINE v2.5.24
+  // MATCH ENGINE v2.5.25
   // Carries every v2.5.17 classroom/network/tactical feature forward, then
   // improves targeted delivery, shared-ball reactions and match reporting.
   // ============================================================
@@ -3118,7 +3118,7 @@
   // Host runs the authoritative match engine; students only join the room.
   // ============================================================
   const DSSOCCER_DEPLOY_URL="https://yeomt.github.io/DSsoccer/";
-  const DSSOCCER_BUILD="2.5.24";
+  const DSSOCCER_BUILD="2.5.25";
   const FIREBASE_CONFIG={
     apiKey:"AIzaSyBtK7NAfw4wDsS4LRacWF78PHT3zls50IQ",
     authDomain:"dsgames-fecef.firebaseapp.com",
@@ -11311,8 +11311,9 @@
 
     // Start the reset clock only once per secure possession.
     if(!s.gkPossessionMode){
+      const gk=teams[teamName]?.players?.find(p=>p.role==="GK");
       s.gkPossessionMode=true;
-      s.gkResetTimer=1.55;
+      s.gkResetTimer=gk?.tacticalRole==="SWEEPER_KEEPER"?.95:1.55;
     }
 
     s.tacticalPhase="GK_RESET";
@@ -11333,7 +11334,8 @@
     if(!relevant.length) return true;
 
     const settled=relevant.filter(p=>dist(p.x,p.y,p.tx,p.ty)<4.0).length;
-    return settled/relevant.length >= .62;
+    const threshold=gk.tacticalRole==="SWEEPER_KEEPER"?.48:.62;
+    return settled/relevant.length >= threshold;
   }
 
   function goalkeeperLongMix(teamName){
@@ -12625,7 +12627,7 @@
       "WB_OVERLAP","WB_BYLINE_RUN","WB_COUNTER_OVERLAP",
       "FB_HIGH_SUPPORT","WB_PROGRESS_OVERLAP","FB_PROGRESS_OVERLAP",
       "WB_BYLINE_OVERLAP","FB_DEEP_OVERLAP","ESCAPE_OVERLAP",
-      "GK_DIVE","GK_SET","GK_CLAIM","GK_SECURE","SK_SWEEP","REBOUND_ATTACK","REBOUND_CLEAR"
+      "GK_DIVE","GK_SET","GK_CLAIM","GK_SECURE","GK_RUSH","SK_SWEEP","REBOUND_ATTACK","REBOUND_CLEAR"
     ].includes(assignment);
   }
 
@@ -12734,7 +12736,11 @@
     const reading=clamp(intel*.58+positioning*.42,0,1);
 
     // Good defenders read a long diagonal ball much earlier.
-    const horizon=maxHorizon ?? lerp(1.30,2.45,reading);
+    const horizon=maxHorizon ?? (
+      ball.state==="LOOSE"
+        ? lerp(1.55,2.80,reading)
+        : lerp(1.30,2.45,reading)
+    );
     const step=.10;
 
     let best=null;
@@ -12808,7 +12814,7 @@
     const ownDanger=inDangerZoneForTeam(cp.x,cp.y,p.team);
     const boxDanger=inPenaltyAreaForTeam(cp.x,cp.y,p.team);
 
-    const alertRange=lerp(7.8,13.5,reading)+(ownDanger?2.2:0);
+    const alertRange=lerp(8.6,14.6,reading)+(ownDanger?2.2:0);
     const closeEnough=cp.d<alertRange;
     const timingOkay=eta<ballTime+lerp(.45,.80,reading);
 
@@ -12908,7 +12914,7 @@
       const q=predictMovingBallAt(t);
       if(q.x<1||q.x>FIELD_W-1||q.y<1||q.y>FIELD_H-1)break;
       const travel=dist(p.x,p.y,q.x,q.y);
-      if(travel>18.5)continue;
+      if(travel>21.5)continue;
       const eta=estimatedArrivalTime(p,q.x,q.y);
       const margin=t+lerp(.20,.48,read)-eta;
       const corridorDistance=pointToSegmentDistance(
@@ -12927,8 +12933,8 @@
         landingDistance*.035-
         travel*.025;
       if(
-        margin>-.82&&
-        corridorDistance<15.5&&
+        margin>-.92&&
+        corridorDistance<17.5&&
         (!best||score>best.score)
       ){
         best={x:q.x,y:q.y,t,eta,margin,corridorDistance,score};
@@ -12958,7 +12964,12 @@
         p.beatenTimer<=0
       )
       .map(p=>{
-        const plan=bestPassRecoveryPlan(p,cross?2.55:penetrative?2.15:2.35);
+        const plan=bestPassRecoveryPlan(
+          p,
+          cross?2.75:
+          penetrative?2.40:
+          2.85
+        );
         const roleFit=cross
           ? (p.category==="ATT"?2.2:p.category==="MID"?1.2:-.4)
           : penetrative
@@ -12973,7 +12984,7 @@
     for(const candidate of candidates){
       if(selected.some(x=>dist(x.plan.x,x.plan.y,candidate.plan.x,candidate.plan.y)<2.2))continue;
       selected.push(candidate);
-      if(selected.length>=(cross?2:1))break;
+      if(selected.length>=(cross||["LONG","LONG_GK","SWITCH"].includes(ball.passType)?2:1))break;
     }
     selected.forEach((candidate,index)=>map.set(candidate.p.id,{
       ...candidate.plan,
@@ -12985,11 +12996,25 @@
   function looseBallActors(teamName){
     const movingPlans=buildMovingBallInterceptions(teamName);
 
+    const pace=Math.hypot(ball.vx,ball.vy);
     const candidates=[...teams[teamName].players]
       .filter(p=>p.role!=="GK" && p.turnoverStun<=0)
       .map(p=>{
-        const plan=movingPlans.get(p.id);
-        const target=plan || {x:ball.x,y:ball.y};
+        const interception=movingPlans.get(p.id);
+        const anticipationTime=clamp(
+          estimatedArrivalTime(p,ball.x,ball.y)*.62,
+          .18,.82
+        );
+        const future=pace>2.5
+          ? predictMovingBallAt(anticipationTime)
+          : {x:ball.x,y:ball.y};
+        const plan=interception||{
+          x:clamp(future.x,2,FIELD_W-2),
+          y:clamp(future.y,2,FIELD_H-2),
+          score:0,
+          anticipatory:true
+        };
+        const target=plan;
         const eta=estimatedArrivalTime(p,target.x,target.y);
 
         return {
@@ -12997,26 +13022,28 @@
           score:
             eta-
             rolePressPriority(p)*.025-
-            (plan?plan.score*.018:0)
+            (interception?plan.score*.018:0)
         };
       })
       .sort((a,b)=>a.score-b.score);
 
-    const chaser=candidates[0]?.p||null;
+    const chaserEntry=candidates[0]||null;
+    const chaser=chaserEntry?.p||null;
 
     // Supporters are chosen separately so they do not duplicate the primary
     // projected interception lane.
     const rest=candidates.filter(x=>!chaser || x.p.id!==chaser.id);
 
-    const challenger=rest[0]?.p||null;
+    const challengerEntry=rest[0]||null;
+    const challenger=challengerEntry?.p||null;
     const support1=rest[1]?.p||null;
     const support2=rest[2]?.p||null;
 
     return {
       chaser,
-      chaserPlan:chaser?movingPlans.get(chaser.id)||null:null,
+      chaserPlan:chaserEntry?.plan||null,
       challenger,
-      challengerPlan:challenger?movingPlans.get(challenger.id)||null:null,
+      challengerPlan:challengerEntry?.plan||null,
       support1,
       support2
     };
@@ -15735,6 +15762,10 @@
     const predictedY=predictShotGoalLineY(defendingTeam);
     const reflex=goalkeeperReflexSkill(gk)/100;
     const reactionBase=lerp(.27,.055,reflex);
+    const goalX=ownGoalX(defendingTeam);
+    const advancedSet=
+      ["RUSH","CLAIM","SWEEP"].includes(gk.gkState)||
+      Math.abs(gk.x-goalX)>4.2;
 
     gk.gkState="REACT";
     gk.gkReaction=reactionBase+rand(.01,.055);
@@ -15746,8 +15777,9 @@
       30.0,38.0
     );
 
-    const goalX=ownGoalX(defendingTeam);
-    gk.gkTargetX=defendingTeam==="blue" ? goalX+1.0 : goalX-1.0;
+    gk.gkTargetX=advancedSet
+      ? clamp(gk.x,defendingTeam==="blue"?1:FIELD_W-16.2,defendingTeam==="blue"?16.2:FIELD_W-1)
+      : (defendingTeam==="blue" ? goalX+1.0 : goalX-1.0);
   }
 
   function goalkeeperSetPosition(gk){
@@ -15798,6 +15830,108 @@
     );
 
     return {x:targetX,y:targetY};
+  }
+
+
+  function goalkeeperMovingBallSweepTarget(gk){
+    if(
+      ball.state!=="PASSING" ||
+      !ball.passTeam ||
+      ball.passTeam===gk.team ||
+      !["THROUGH","KILL_PASS","LONG","LONG_GK","SWITCH"].includes(ball.passType)
+    )return null;
+
+    const sweeper=gk.tacticalRole==="SWEEPER_KEEPER";
+    const gx=ownGoalX(gk.team);
+    const reading=clamp(
+      goalkeeperReflexSkill(gk)/100*.54+
+      gk.intelligence/100*.46,
+      0,1
+    );
+    const opponents=teams[ball.passTeam].players.filter(p=>p.role!=="GK"&&!p.sentOff);
+    const horizon=sweeper?2.65:2.20;
+    let best=null;
+
+    for(let t=.12;t<=horizon;t+=.10){
+      const q=predictMovingBallAt(t);
+      if(q.x<1||q.x>FIELD_W-1||q.y<2||q.y>FIELD_H-2)break;
+
+      const goalDistance=Math.abs(q.x-gx);
+      const inside=inPenaltyAreaForTeam(q.x,q.y,gk.team);
+      const inSweepLane=
+        Math.abs(q.y-34)<22&&
+        goalDistance>2.0&&
+        (inside||(sweeper&&goalDistance<25.5));
+      if(!inSweepLane)continue;
+
+      const gkEta=estimatedArrivalTime(gk,q.x,q.y);
+      const opponentEta=opponents.length
+        ? Math.min(...opponents.map(p=>estimatedArrivalTime(p,q.x,q.y)))
+        : 99;
+      const timingAllowance=lerp(.14,sweeper?.42:.30,reading);
+      const raceAllowance=sweeper?.34:.12;
+      if(gkEta>t+timingAllowance||gkEta>opponentEta+raceAllowance)continue;
+
+      const score=
+        (sweeper&&!inside?3.7:inside?3.0:1.0)+
+        (sweeper&&!inside?(horizon-t)*.25:0)+
+        (opponentEta-gkEta)*3.1-
+        Math.abs(gkEta-t)*1.8+
+        reading*1.4-
+        goalDistance*.025;
+
+      if(!best||score>best.score){
+        best={
+          x:clamp(q.x,1.5,FIELD_W-1.5),
+          y:clamp(q.y,2,FIELD_H-2),
+          inside,
+          t,gkEta,opponentEta,score
+        };
+      }
+    }
+
+    return best;
+  }
+
+
+  function goalkeeperOneOnOneRushTarget(gk){
+    if(
+      gk.beatenTimer>0||
+      ball.state!=="CONTROLLED"||
+      !ball.ownerId||
+      ball.ownerTeam===gk.team
+    )return null;
+    const attacker=getPlayer(ball.ownerId);
+    const profile=oneOnOneProfile(attacker);
+    if(!profile||profile.gk?.id!==gk.id)return null;
+
+    const gx=ownGoalX(gk.team);
+    const dx=attacker.x-gx;
+    const dy=attacker.y-34;
+    const len=Math.hypot(dx,dy)||1;
+    const sweeper=gk.tacticalRole==="SWEEPER_KEEPER";
+    const command=clamp(
+      goalkeeperReflexSkill(gk)/100*.55+
+      gk.intelligence/100*.45,
+      0,1
+    );
+    const desiredAdvance=
+      4.8+
+      Math.max(0,25-profile.distance)*.33+
+      (sweeper?1.25:0)+
+      (command-.5)*1.4;
+    const advance=clamp(
+      Math.min(desiredAdvance,profile.distance-2.25),
+      3.8,
+      sweeper?12.2:10.5
+    );
+
+    return {
+      x:clamp(gx+dx/len*advance,1.5,FIELD_W-1.5),
+      y:clamp(34+dy/len*advance,14.5,53.5),
+      attacker,
+      distance:profile.distance
+    };
   }
 
 
@@ -15867,6 +16001,47 @@
     return true;
   }
 
+  function checkGoalkeeperPassingClaim(defendingTeam,x1,y1,x2,y2){
+    if(ball.state!=="PASSING"||ball.passTeam===defendingTeam)return false;
+    const gk=teams[defendingTeam].players.find(p=>p.role==="GK");
+    if(
+      !gk||
+      gk.turnoverStun>0||
+      !["CLAIM","SWEEP"].includes(gk.gkState)
+    )return false;
+
+    const inside=inPenaltyAreaForTeam(gk.x,gk.y,defendingTeam);
+    if(!inside&&!ball.passLanded)return false;
+
+    const handling=goalkeeperHandlingSkill(gk)/100;
+    const reflex=goalkeeperReflexSkill(gk)/100;
+    const radius=lerp(
+      inside?1.28:1.02,
+      inside?1.86:1.46,
+      handling*.58+reflex*.42
+    );
+    const swept=pointToSegmentDistance(gk.x,gk.y,x1,y1,x2,y2);
+    const direct=dist(gk.x,gk.y,ball.x,ball.y);
+    if(Math.min(swept,direct)>radius)return false;
+
+    const sweptOutside=!inside;
+    controlBall(gk,"INTERCEPT");
+    if(ball.ownerId!==gk.id)return false;
+    gk.gkState="HOLD";
+    gk.assignment="GK_SECURE";
+    gk.controlGrace=Math.max(gk.controlGrace,.72);
+    gk.vx*=.24;
+    gk.vy*=.24;
+    ownerDecisionTimer=.16;
+    showEvent(
+      sweptOutside
+        ? `${gk.team.toUpperCase()} · ${playerName(gk)}, 박스 밖까지 나와 스루패스를 먼저 처리합니다!`
+        : `${gk.team.toUpperCase()} · ${playerName(gk)}, 앞으로 튀어나와 패스를 안전하게 잡습니다!`,
+      "major"
+    );
+    return true;
+  }
+
   function checkGoalkeeperLooseClaim(prevX=null,prevY=null){
     if(ball.state!=="LOOSE")return false;
 
@@ -15912,6 +16087,15 @@
       return {x:gk.gkTargetX,y:gk.gkTargetY};
     }
 
+    // Read a dangerous pass while it is still travelling. Normal keepers
+    // attack reachable balls inside the box; sweeper keepers can win the same
+    // race a few metres beyond it.
+    const passingSweep=goalkeeperMovingBallSweepTarget(gk);
+    if(passingSweep){
+      gk.gkState=passingSweep.inside?"CLAIM":"SWEEP";
+      return {x:passingSweep.x,y:passingSweep.y};
+    }
+
     // Every goalkeeper aggressively claims a slow/loose ball inside his own
     // penalty area. This is hand possession territory, not a field-player duel.
     const claim=goalkeeperLooseClaimTarget(gk);
@@ -15951,6 +16135,14 @@
           };
         }
       }
+    }
+
+    // When the last defensive line is genuinely broken, close the angle
+    // instead of remaining pinned to the goal line.
+    const oneOnOneRush=goalkeeperOneOnOneRushTarget(gk);
+    if(oneOnOneRush){
+      gk.gkState="RUSH";
+      return {x:oneOnOneRush.x,y:oneOnOneRush.y};
     }
 
     gk.gkState="SET";
@@ -20146,6 +20338,66 @@
     }
   }
 
+  function tryGoalkeeperOneOnOneChallenge(owner){
+    if(!owner||ball.state!=="CONTROLLED"||ball.ownerId!==owner.id)return false;
+    const gk=teams[otherTeam(owner.team)].players.find(p=>p.role==="GK");
+    if(
+      !gk||
+      gk.gkState!=="RUSH"||
+      gk.tackleCooldown>0||
+      gk.beatenTimer>0||
+      owner.controlGrace>.10||
+      !inPenaltyAreaForTeam(gk.x,gk.y,gk.team)
+    )return false;
+
+    const d=dist(gk.x,gk.y,owner.x,owner.y);
+    if(d>1.52)return false;
+
+    gk.tackleCooldown=.72;
+    const keeperSkill=weightedSkill(
+      [goalkeeperHandlingSkill(gk),.38],
+      [goalkeeperReflexSkill(gk),.37],
+      [goalkeeperReachSkill(gk),.25]
+    );
+    const attackerSkill=weightedSkill(
+      [dribbleSkill(owner),.58],
+      [owner.technique,.24],
+      [owner.intelligence,.18]
+    );
+    const success=clamp(
+      .49+
+      (keeperSkill-attackerSkill)*.0065+
+      (1.52-d)*.11+
+      (gk.tacticalRole==="SWEEPER_KEEPER"?.035:0),
+      .28,.76
+    );
+
+    if(Math.random()<success){
+      stats[owner.team].turnovers++;
+      owner.matchStats.turnovers=(owner.matchStats.turnovers||0)+1;
+      applyTurnoverStun(owner,.58);
+      controlBall(gk,"TACKLE");
+      gk.matchStats.recoveries++;
+      gk.gkState="HOLD";
+      gk.assignment="GK_SECURE";
+      gk.controlGrace=Math.max(gk.controlGrace,.72);
+      ownerDecisionTimer=.14;
+      bumpLiveImpact(gk,3.1,"1대1에서 각도를 줄인 선제 차단");
+      showEvent(
+        `${gk.team.toUpperCase()} · ${playerName(gk)}, 과감하게 튀어나와 1대1을 막아냅니다!`,
+        "hype"
+      );
+      return true;
+    }
+
+    gk.beatenTimer=Math.max(gk.beatenTimer,.62);
+    gk.turnoverStun=Math.max(gk.turnoverStun,.18);
+    owner.controlGrace=Math.max(owner.controlGrace,.18);
+    markAttackAdvantage(owner,.82);
+    showEvent(`${owner.team.toUpperCase()} · ${playerName(owner)}, 나온 골키퍼를 침착하게 제칩니다!`);
+    return false;
+  }
+
   function updateDefensiveChallenges(){
     if(ball.state!=="CONTROLLED")return;
     const owner=getPlayer(ball.ownerId);
@@ -20154,6 +20406,8 @@
     if(owner.role==="GK" && teamState[owner.team].gkPossessionMode){
       return;
     }
+
+    if(tryGoalkeeperOneOnOneChallenge(owner))return;
 
     const defenders=teams[otherTeam(owner.team)].players
       .filter(p=>p.role!=="GK"&&p.beatenTimer<=0&&p.turnoverStun<=0)
@@ -20240,6 +20494,8 @@
       const flightLanded=!!ball.passLanded;
       const aerialLong=!flightLanded&&["LONG","LONG_GK","SWITCH"].includes(incomingType);
       const aerialCross=!flightLanded&&["EARLY_CROSS","CROSS","LONG_CROSS"].includes(incomingType);
+
+      if(checkGoalkeeperPassingClaim(defendingTeam,x1,y1,x2,y2))return;
 
       const contacts=[];
 
@@ -20628,6 +20884,8 @@
             ? "GK_CLAIM"
             : p.gkState==="HOLD"
               ? "GK_SECURE"
+              : p.gkState==="RUSH"
+                ? "GK_RUSH"
               : p.gkState==="SWEEP"
                 ? "SK_SWEEP"
                 : shooting && ball.shotTeam!==p.team
@@ -20640,6 +20898,7 @@
 
         p.focus=
           p.gkState==="CLAIM"?1.38:
+          p.gkState==="RUSH"?1.28:
           p.gkState==="SWEEP"?1.08:
           p.gkState==="HOLD"?.42:
           (shooting?1:.62);
@@ -20726,8 +20985,8 @@
             movingPlan.margin>-.52&&
             beyondAim&&
             (
-              ball.flightTime>.42||
-              dist(ball.x,ball.y,ball.passAimX,ball.passAimY)<7
+              ball.flightTime>.24||
+              dist(ball.x,ball.y,ball.passAimX,ball.passAimY)<9.5
             )
           );
           tx=clamp(chaseMovingBall?movingPlan.x:ball.passAimX,2.8,FIELD_W-2.8);
@@ -21127,7 +21386,67 @@
       players,
       attacking && !ownGKReset && !loose && !shooting
     );
+    if(ball.state==="CONTROLLED"&&!ownGKReset&&!opponentGKReset){
+      applyPairedAttackerSpacing(players,attacking);
+    }
     applySpacing(players);
+  }
+
+  function applyPairedAttackerSpacing(players,attacking){
+    const strikerPair=players.filter(p=>isStriker(p)&&!p.sentOff);
+    const advancedMidPair=players.filter(p=>p.role==="AM"&&!p.sentOff);
+    const groups=[];
+    if(strikerPair.length===2)groups.push({pair:strikerPair,minGap:attacking?7.6:6.4,strikers:true});
+    if(advancedMidPair.length===2)groups.push({pair:advancedMidPair,minGap:attacking?7.2:6.0,strikers:false});
+
+    for(const group of groups){
+      const ordered=group.pair.slice().sort((a,b)=>
+        a.homeY-b.homeY||a.number-b.number
+      );
+      const lower=ordered[0],upper=ordered[1];
+      if(Math.abs(upper.ty-lower.ty)>=group.minGap)continue;
+
+      const receiver=getPlayer(ball.intendedReceiverId);
+      const lowerLocked=receiver?.id===lower.id;
+      const upperLocked=receiver?.id===upper.id;
+
+      if(lowerLocked&&!upperLocked){
+        upper.ty=clamp(lower.ty+group.minGap,2.5,FIELD_H-2.5);
+      }else if(upperLocked&&!lowerLocked){
+        lower.ty=clamp(upper.ty-group.minGap,2.5,FIELD_H-2.5);
+      }else{
+        const half=group.minGap/2;
+        const center=clamp(
+          (lower.ty+upper.ty)/2,
+          2.5+half,
+          FIELD_H-2.5-half
+        );
+        lower.ty=center-half;
+        upper.ty=center+half;
+      }
+
+      if(group.strikers&&attacking&&!lowerLocked&&!upperLocked){
+        const dir=attackDir(lower.team);
+        const lowerLinks=["FALSE_NINE","TARGET_FORWARD"].includes(lower.tacticalRole);
+        const upperLinks=["FALSE_NINE","TARGET_FORWARD"].includes(upper.tacticalRole);
+        const centerX=(lower.tx+upper.tx)/2;
+
+        if(lowerLinks!==upperLinks){
+          const link=lowerLinks?lower:upper;
+          const runner=lowerLinks?upper:lower;
+          link.tx=centerX-dir*.75;
+          runner.tx=centerX+dir*.75;
+        }else if(Math.abs(lower.tx-upper.tx)<1.4){
+          lower.tx=centerX+dir*.42;
+          upper.tx=centerX-dir*.42;
+        }
+      }
+
+      lower.tx=clamp(lower.tx,2.5,FIELD_W-2.5);
+      lower.ty=clamp(lower.ty,2.5,FIELD_H-2.5);
+      upper.tx=clamp(upper.tx,2.5,FIELD_W-2.5);
+      upper.ty=clamp(upper.ty,2.5,FIELD_H-2.5);
+    }
   }
 
   function applySpacing(players){
@@ -21332,8 +21651,10 @@
       speedFactor=Math.max(speedFactor,d<2.2?.76:.64);
     }
 
-    if(p.assignment==="GK_CLAIM"&&d>.08){
-      speedFactor=Math.max(speedFactor,d<2.5?.91:.82);
+    if(["GK_CLAIM","GK_RUSH","SK_SWEEP"].includes(p.assignment)&&d>.08){
+      const closeFloor=p.assignment==="GK_CLAIM"?.91:p.assignment==="GK_RUSH"?.88:.84;
+      const farFloor=p.assignment==="GK_CLAIM"?.82:p.assignment==="GK_RUSH"?.80:.76;
+      speedFactor=Math.max(speedFactor,d<2.5?closeFloor:farFloor);
     }
 
     if(urgentMovingBallMove&&d>.10){
@@ -21850,7 +22171,7 @@
     if(eventLife>0){
       eventLife-=dt;
       if(eventLife<=0&&eventNote){
-        eventNote.textContent="v2.5.24 · DECISION POLISH";
+        eventNote.textContent="v2.5.25 · REACTION POLISH";
       }
     }
   }
