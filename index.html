@@ -1536,7 +1536,7 @@
   // ============================================================
 
   // One build identity for display, links and the classroom protocol.
-  const DSSOCCER_BUILD="2.5.31";
+  const DSSOCCER_BUILD="2.5.32";
   const simulationRun={owner:null,aiTicks:0,ticks:0,seed:0,rngState:0,nextSeed:null};
   const passLedger={blue:{},red:{}};
   function setNextMatchSeed(seed){simulationRun.nextSeed=Number(seed)>>>0;}
@@ -3595,7 +3595,7 @@
     return student;
   }
   function clientBroadcastPatch(payload={}){
-    const allowed=["version","sessionId","sessionStartedAtMs","phase","syncSerial","quiz","breakKey","lineups","formationResults","tacticResults","quarterReports","match","result","manualStageClose","forcedClose"];
+    const allowed=["version","sessionId","sessionStartedAtMs","phase","syncSerial","participantProgressSerial","quiz","breakKey","lineups","formationResults","tacticResults","quarterReports","match","result","manualStageClose","forcedClose"];
     const next={...(onlineRoomState.clientBroadcastState||{})};
     for(const k of allowed)if(Object.prototype.hasOwnProperty.call(payload,k))next[k]=payload[k];
     onlineRoomState.clientBroadcastState=next;
@@ -3643,8 +3643,10 @@
     if(!onlineRoomState.sessionId)onlineRoomState.sessionId=makeOnlineSessionId();
     if(!onlineRoomState.sessionStartedAtMs)onlineRoomState.sessionStartedAtMs=Date.now();
     const payload={...normalized,version:DSSOCCER_BUILD,sessionId:onlineRoomState.sessionId,sessionStartedAtMs:onlineRoomState.sessionStartedAtMs,syncSerial:serial};
+    if(options.participantRows?.length)payload.participantProgressSerial=serial;
     clientBroadcastPatch(payload);
     if(onlineRoomState.debugMock){
+      for(const [st,patch] of options.participantRows||[])if(st?.remoteId)onlineRoomState.mockParticipantPatches[st.remoteId]={...(onlineRoomState.mockParticipantPatches[st.remoteId]||{}),...patch};
       onlineRoomState.mockRoom={...(onlineRoomState.mockRoom||{}),...payload};
       if(options.mirror===true)return mirrorClientViewToParticipants().then(()=>true);
       return Promise.resolve(true);
@@ -3657,7 +3659,9 @@
       try{
         const stamp=hostWriteStamp(serial);
         const rows=[[firebaseRoomRef(roomCode),{...full,updatedAt:firebaseTimestamp()}]];
-        if(options.mirror===true)for(const st of participationStudents().filter(st=>st.remoteId&&activeRemoteParticipant(st)))rows.push([firebaseParticipants(roomCode).doc(st.remoteId),{clientView:{...full,quarterReports:Object.fromEntries(Object.entries(full.quarterReports||{}).map(([key,r])=>[key,{quarter:r.quarter,breakKey:r.breakKey,[st.team]:r[st.team]||null}]))},updatedAt:firebaseTimestamp()}]);
+        const personal=new Map((options.participantRows||[]).filter(([st])=>st?.remoteId).map(([st,patch])=>[st.remoteId,{...patch}]));
+        if(options.mirror===true)for(const st of participationStudents().filter(st=>st.remoteId&&activeRemoteParticipant(st)))personal.set(st.remoteId,{...(personal.get(st.remoteId)||{}),clientView:{...full,quarterReports:Object.fromEntries(Object.entries(full.quarterReports||{}).map(([key,r])=>[key,{quarter:r.quarter,breakKey:r.breakKey,[st.team]:r[st.team]||null}]))}});
+        for(const [id,patch] of personal)rows.push([firebaseParticipants(roomCode).doc(id),{...patch,updatedAt:firebaseTimestamp()}]);
         const written=await boundedNetwork(writeHostRows(rows,stamp),2000);
         if(!written||epoch!==stageFlow.generation||session!==onlineRoomState.sessionId)return false;
         onlineRoomState.lastRoomSyncError=null;
@@ -4107,7 +4111,11 @@
     const tick=()=>{
       const el=document.getElementById("studentQuizTimer");if(!el)return stopStudentStageTimer();
       const left=Math.max(0,(Number(endsAtMs||0)-Date.now())/1000);el.textContent=Math.ceil(left);el.classList.toggle("urgent",left<=10);
-      if(left<=0)stopStudentStageTimer();
+      const flushKey=`${onlineRoomState.studentSessionId}:${endsAtMs}`;
+      if(left>0&&left<=2&&stageFlow.quizDeadlineFlush!==flushKey&&studentPendingQuizCount(effectiveStudentRoomState().quiz?.key)){
+        stageFlow.quizDeadlineFlush=flushKey;void flushStudentQuizAnswers();
+      }
+      if(left<=0){stopStudentStageTimer();if(studentPendingQuizCount(effectiveStudentRoomState().quiz?.key))void flushStudentQuizAnswers();}
     };tick();onlineRoomState.studentTimerHandle=setInterval(tick,100);
   }
   function studentQuizAnswerValue(data,key,index){
@@ -4162,14 +4170,18 @@
   }
   function mergePendingStudentAllocations(remoteData){
     const merged={...(remoteData||{})};
+    const cv=merged.clientView||{},room=onlineRoomState.studentRoomData||{};
+    const view=cv.sessionId===onlineRoomState.studentSessionId&&Number(cv.syncSerial)>=Number(room.syncSerial||0)?cv:room;
     for(const entry of Object.values(onlineRoomState.studentPendingAllocations||{})){
       if(!entry)continue;
+      if(entry.stamp&&(entry.stamp.sessionId!==onlineRoomState.studentSessionId||
+        view.phase!==entry.stamp.phase||(entry.mode==="BREAK"&&view.breakKey!==entry.key)))continue;
       if(entry.mode==="START"){
         merged.startAllocation=plainGrowth(entry.allocation);
-        merged.buildReady=!!entry.ready;
+        merged.buildReady=false;
       }else{
         merged.breakAllocations={...(merged.breakAllocations||{}),[entry.key]:plainGrowth(entry.allocation)};
-        merged.breakReady={...(merged.breakReady||{}),[entry.key]:!!entry.ready};
+        merged.breakReady={...(merged.breakReady||{}),[entry.key]:false};
       }
       if(entry.growthFocus)merged.growthFocus=entry.growthFocus;
       if(entry.buildPresetVersion===1)merged.buildPresetVersion=1;
@@ -4184,11 +4196,30 @@
       if(!entry)return true;
       const token=entry.token;
       try{
-        if(!(await writeStudentStageInput(entry.patch,entry.stamp,entry.code,entry.id)))return false;
-        if(onlineRoomState.studentPendingAllocations?.[saveKey]?.token===token)delete onlineRoomState.studentPendingAllocations[saveKey];
+        if(!(await writeStudentStageInput(entry.patch,entry.stamp,entry.code,entry.id))){
+          if(onlineRoomState.studentPendingAllocations?.[saveKey]?.token===token&&
+            effectiveStudentRoomState().phase===entry.stamp.phase&&entry.stamp.sessionId===onlineRoomState.studentSessionId){
+            const data=onlineRoomState.studentData||{};
+            if(entry.mode==="START")data.buildReady=false;
+            else {data.breakReady={...(data.breakReady||{}),[entry.key]:false};}
+            setStudentMessage("성장 저장 확인 중 · 배분은 보관하고 다시 전송합니다");renderStudentStage();
+          }
+          scheduleStudentInputRetry();return false;
+        }
+        if(onlineRoomState.studentPendingAllocations?.[saveKey]?.token===token){
+          const data=onlineRoomState.studentData||{},view=effectiveStudentRoomState();
+          if(view.phase===entry.stamp.phase&&view.sessionId===entry.stamp.sessionId){
+            if(entry.mode==="START"){data.startAllocation=plainGrowth(entry.allocation);data.buildReady=!!entry.ready;}
+            else {data.breakAllocations={...(data.breakAllocations||{}),[entry.key]:plainGrowth(entry.allocation)};data.breakReady={...(data.breakReady||{}),[entry.key]:!!entry.ready};}
+            data.inputMeta={...(data.inputMeta||{}),[`${entry.stamp.phase}:${entry.stamp.key||''}`]:entry.stamp};
+          }
+          delete onlineRoomState.studentPendingAllocations[saveKey];
+          setStudentMessage("성장 배분 저장 완료",false);renderStudentStage();
+        }
         return true;
       }catch(e){
         setStudentMessage(`성장 저장 실패: ${e.message}`);
+        scheduleStudentInputRetry();
         return false;
       }
     };
@@ -4208,10 +4239,13 @@
     clearAllStudentAllocationSaveTimers();
     await boundedNetwork(onlineRoomState.studentAllocationWriteChain||Promise.resolve(true),1800).catch(()=>false);
     let saved=true;
+    const view=effectiveStudentRoomState();
     for(const saveKey of Object.keys(onlineRoomState.studentPendingAllocations||{})){
+      const entry=onlineRoomState.studentPendingAllocations[saveKey];
+      if(entry.stamp&&(entry.stamp.sessionId!==view.sessionId||entry.stamp.phase!==view.phase||entry.mode==="BREAK"&&entry.key!==view.breakKey))continue;
       if(!(await persistPendingStudentAllocation(saveKey)))saved=false;
     }
-    return saved&&!Object.keys(onlineRoomState.studentPendingAllocations||{}).length;
+    return saved&&!studentHasPendingInput(view);
   }
   function quizAnswerMapForUpload(data,key){
     const src=data?.quizAnswers?.[key]||{},out={};
@@ -4245,7 +4279,14 @@
     const queued=boundedNetwork(onlineRoomState.studentQuizWriteChain,1800).catch(()=>false).then(run);
     onlineRoomState.studentQuizWriteChain=queued;
     const saved=await queued;
-    if(!saved)return false;
+    if(!saved){setStudentMessage("답안 저장 확인 중 · 답안은 보관하고 다시 전송합니다");scheduleStudentInputRetry();return false;}
+    if(stamp.sessionId===onlineRoomState.studentSessionId){
+      const latest=onlineRoomState.studentData||{},metaKey=`${stamp.phase}:${stamp.key||''}`,prior=latest.inputMeta?.[metaKey];
+      // The listener may have replaced studentData while this write awaited ACK.
+      // Attach the confirmed sequence to the current object, never an older one.
+      if(prior?.sessionId!==stamp.sessionId||Number(prior?.seq||0)<=Number(stamp.seq||0))
+        latest.inputMeta={...(latest.inputMeta||{}),[metaKey]:stamp};
+    }
     for(const [key,row] of Object.entries(pendingSnapshot)){
       const live=onlineRoomState.studentPendingQuizAnswers?.[key];if(!live)continue;
       for(const [index,value] of Object.entries(row))if(Number(live[index])===Number(value))delete live[index];
@@ -4253,6 +4294,31 @@
     }
     renderStudentStage();
     return true;
+  }
+  function studentHasPendingInput(view=effectiveStudentRoomState()){
+    if(["PRE_QUIZ","BREAK25","HALF","BREAK70"].includes(view.phase))return studentPendingQuizCount(view.quiz?.key)>0;
+    if(["BUILD","BREAK_BUILD"].includes(view.phase))return Object.values(onlineRoomState.studentPendingAllocations||{}).some(e=>e.stamp?.sessionId===view.sessionId&&e.stamp.phase===view.phase&&(e.mode==="START"||e.key===view.breakKey));
+    if(view.phase==="ROLE_SELECT")return !!stageFlow.rolePending;
+    if(["FORMATION_VOTE","TACTIC_VOTE"].includes(view.phase))return stageFlow.votePending?.meta?.phase===view.phase;
+    return false;
+  }
+  function scheduleStudentInputRetry(){
+    const view=effectiveStudentRoomState();
+    if(stageFlow.studentRetryTimer||stageFlow.studentRetryBusy||!studentHasPendingInput(view))return;
+    const key=`${view.sessionId}:${view.phase}:${view.breakKey||''}`,epoch=stageFlow.generation;
+    if(stageFlow.studentRetryKey!==key){stageFlow.studentRetryKey=key;stageFlow.studentRetryCount=0;}
+    if((stageFlow.studentRetryCount||0)>=6)return;
+    const delay=Math.min(4000,650*2**(stageFlow.studentRetryCount||0));stageFlow.studentRetryCount++;
+    stageFlow.studentRetryTimer=setTimeout(async()=>{
+      stageFlow.studentRetryTimer=null;
+      const next=effectiveStudentRoomState(),close=activeManualClose(next);
+      if(epoch!==stageFlow.generation||`${next.sessionId}:${next.phase}:${next.breakKey||''}`!==key||
+        (close&&Date.now()>close.collectUntil))return;
+      stageFlow.studentRetryBusy=true;let saved=false;
+      try{saved=await (["BUILD","BREAK_BUILD"].includes(next.phase)?flushPendingStudentAllocations():
+        next.phase==="ROLE_SELECT"?persistStudentRole():["FORMATION_VOTE","TACTIC_VOTE"].includes(next.phase)?persistStudentVote():flushStudentQuizAnswers());}
+      finally{if(epoch===stageFlow.generation){stageFlow.studentRetryBusy=false;if(saved)stageFlow.studentRetryCount=0;else scheduleStudentInputRetry();}}
+    },delay);
   }
   async function handleStudentQuizFlushRequest(room){
     const quiz=room?.quiz||{},token=String(quiz.flushToken||"");
@@ -4432,6 +4498,12 @@
     if(!onlineRoomState.studentSessionEnded)returnBtn?.classList.remove("visible");
     stopStudentStageTimer();
     const phase=room.phase||room.status||"LOBBY";
+    if(["BUILD","BREAK_BUILD"].includes(phase)&&studentProgressPending(room)){
+      studentWaitingText.textContent="퀴즈 성장 결과를 확인하고 있습니다. 저장된 포인트가 도착하면 바로 배분할 수 있습니다.";
+      studentStageArea.innerHTML='<div class="student-result-box"><div class="student-stage-title">성장 포인트 확인 중…</div><div class="student-muted">새 단계와 함께 저장된 내 성장 결과를 불러오고 있습니다.</div></div>';
+      scheduleStudentProgressRefresh(room);return;
+    }
+    if(stageFlow.progressRetryTimer&&!studentProgressPending(room)){clearTimeout(stageFlow.progressRetryTimer);stageFlow.progressRetryTimer=null;}
     if(room.status==="CLOSED"){onlineRoomState.studentSessionEnded=true;studentWaitingText.innerHTML="호스트가 방을 닫았습니다.<br>처음 화면으로 돌아갈 수 있습니다.";studentStageArea.innerHTML="";returnBtn?.classList.add("visible");return;}
     // Never let a stale WAITING status pin the student to the lobby once the
     // host has published a concrete gameplay phase. phase is authoritative.
@@ -4582,11 +4654,12 @@
   }
   async function saveStudentAllocation(mode,key,allocation,ready=false){
     const view=effectiveStudentRoomState();
-    if(manualInputsClosed(view)||(mode==="START"?view.phase!=="BUILD":
+    if(manualInputsClosed(view)||studentProgressPending(view)||(mode==="START"?view.phase!=="BUILD":
       mode!=="BREAK"||view.phase!=="BREAK_BUILD"||view.breakKey!==key))return false;
     const code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId;if(!code||!id)return;
     const data=onlineRoomState.studentData||(onlineRoomState.studentData={});
     if(mode==="START"?data.buildReady:data.breakReady?.[key])return false;
+    stageFlow.studentRetryCount=0;
     const points=mode==="START"?(Number(data.preQuizPoints)||0):(Number(data.breakPoints?.[key])||0);
     const clean=fitStudentAllocation(data,points,allocation,mode);
     if(ready&&!studentAllocationComplete(data,points,clean,mode))return false;
@@ -4613,6 +4686,7 @@
     const data=onlineRoomState.studentData||(onlineRoomState.studentData={});
     if(!onlineRoomState.studentRoomCode||!onlineRoomState.studentParticipantId)return false;
     const allowed=detailedRoleChoices(data.preferredPosition||"FLEX");
+    stageFlow.studentRetryCount=0;
     if(!allowed.includes(role))role=allowed[0]||"AUTO";
     data.preferredRole=role;data.roleReady=!!ready;renderStudentStage();
     const pending=stageFlow.rolePending={role,ready:!!ready,stamp:studentInputStamp("ROLE_SELECT","")};
@@ -4621,20 +4695,22 @@
   async function persistStudentRole(p=stageFlow.rolePending){
     if(!p)return true;
     const saved=await writeStudentStageInput({preferredRole:p.role,roleReady:p.ready},p.stamp);
-    if(saved&&stageFlow.rolePending===p)stageFlow.rolePending=null;
-    if(!saved)setStudentMessage("역할 전송 미확인 · 선택은 보관되어 있습니다");
+    if(saved&&stageFlow.rolePending===p){const data=onlineRoomState.studentData||{};data.inputMeta={...(data.inputMeta||{}),["ROLE_SELECT:"]:p.stamp};stageFlow.rolePending=null;}
+    if(!saved){setStudentMessage("역할 전송 미확인 · 선택은 보관되어 있습니다");scheduleStudentInputRetry();}
     return saved;
   }
   async function saveStudentFormationVote(formation){
     if(manualInputsClosed()||effectiveStudentRoomState().phase!=="FORMATION_VOTE")return false;
     const room=effectiveStudentRoomState(),key=room.breakKey||"Q1",data=onlineRoomState.studentData||(onlineRoomState.studentData={}),code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId;
     if(!key||!code||!id||!FORMATION_VOTE_PRESETS.includes(formation))return;
+    stageFlow.studentRetryCount=0;
     if(!data.formationVotes)data.formationVotes={};data.formationVotes[key]=formation;renderStudentStage();
     return saveStudentVote("FORMATION",key,formation);
   }
   async function saveStudentTacticVote(preset){
     if(manualInputsClosed()||effectiveStudentRoomState().phase!=="TACTIC_VOTE")return false;
     const room=effectiveStudentRoomState(),key=room.breakKey,data=onlineRoomState.studentData||(onlineRoomState.studentData={}),code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId;if(!key||!code||!id||!TACTIC_VOTE_PRESETS.includes(preset))return;
+    stageFlow.studentRetryCount=0;
     if(!data.tacticVotes)data.tacticVotes={};data.tacticVotes[key]=preset;renderStudentStage();
     return saveStudentVote("TACTIC",key,preset);
   }
@@ -4647,8 +4723,7 @@
   function subscribeStudentState(code,id){
     unsubscribeStudentRoom();
     onlineRoomState.studentDocUnsub=firebaseParticipants(code).doc(id).onSnapshot(snap=>{
-      if(!snap.exists)return;onlineRoomState.studentData=mergePendingStudentAllocations(mergePendingStudentQuizAnswers(snap.data()));
-      const cv=onlineRoomState.studentData?.clientView||{};adoptStudentSession(cv.sessionId,cv.sessionStartedAtMs);
+      if(!snap.exists)return;onlineRoomState.studentData=mergeStudentParticipantSnapshot(snap.data());
       renderStudentWaiting(onlineRoomState.studentData);
       if(studentConnectionText){
         const cv=onlineRoomState.studentData?.clientView||{},p=cv.phase||onlineRoomState.studentRoomData?.phase||"LOBBY",ser=Number(cv.syncSerial)||0;
@@ -4671,6 +4746,71 @@
       }
       renderStudentStage();
     },e=>setStudentMessage(`방 상태 수신 실패: ${e.message}`));
+  }
+  function mergeStudentParticipantSnapshot(raw={}){
+    const before=onlineRoomState.studentData||{},cv=raw.clientView||{},version=raw.hostWriteVersion||{};
+    const session=String(cv.sessionId||version.sessionId||""),started=Number(cv.sessionStartedAtMs||version.startedAtMs)||0;
+    const changed=adoptStudentSession(session,started);
+    if(session&&onlineRoomState.studentSessionId&&session!==onlineRoomState.studentSessionId)return before;
+    const old=changed?{}:before,priorVersion=old.hostWriteVersion||{},merged={...raw};
+    const same=(version.sessionId||session)&&(version.sessionId||session)===priorVersion.sessionId;
+    const staleHost=same&&Number(version.serial)<Number(priorVersion.serial);
+    if(staleHost)for(const field of ["clientView","hostWriteVersion","statsBonus","breakScores","breakPoints","preQuizCorrect","preQuizPoints","totalQuizCorrect","totalGrowthEarned","lineupStatus","assignedRole","assignedTacticalRole","shirtNumber","buildBase"]){
+      if(Object.hasOwn(old,field))merged[field]=old[field];
+    }
+    // An acknowledged local input also survives an older listener snapshot.
+    // A newer host finalization may legitimately fill unspent points/READY.
+    const fields=[["BUILD:Q1",["startAllocation","buildReady","growthFocus","buildPresetVersion"]],["ROLE_SELECT:",["preferredRole","roleReady"]]];
+    for(const key of ["PRE_QUIZ","BREAK25","HALF","BREAK70"]){
+      fields.push([`${key}:${key}`,["quizAnswers"]]);
+      if(key!=="PRE_QUIZ")fields.push([`BREAK_BUILD:${key}`,["breakAllocations","breakReady"]]);
+      fields.push([`FORMATION_VOTE:${key==="PRE_QUIZ"?"Q1":key}`,["formationVotes"]],[`TACTIC_VOTE:${key==="PRE_QUIZ"?"Q1":key}`,["tacticVotes"]]);
+    }
+    for(const [key,names] of fields){
+      const prior=old.inputMeta?.[key],next=raw.inputMeta?.[key],phase=key.split(':')[0];
+      const finalized=same&&Number(version.serial)>Number(priorVersion.serial)&&cv.phase&&cv.phase!==phase;
+      const currentView=Number(merged.clientView?.syncSerial)>=Number(onlineRoomState.studentRoomData?.syncSerial||0)?merged.clientView:onlineRoomState.studentRoomData;
+      const staleFinal=staleHost&&currentView?.phase!==phase;
+      if(staleFinal||!finalized&&prior?.sessionId===onlineRoomState.studentSessionId&&(!next||Number(next.seq)<Number(prior.seq))){
+        for(const field of names)if(Object.hasOwn(old,field)){
+          if(["quizAnswers","breakAllocations","breakReady","formationVotes","tacticVotes"].includes(field)){
+            const part=key.split(':')[1];if(Object.hasOwn(old[field]||{},part))merged[field]={...(merged[field]||{}),[part]:old[field][part]};
+          }else merged[field]=old[field];
+        }
+        if(prior)merged.inputMeta={...(merged.inputMeta||{}),[key]:prior};
+      }
+    }
+    const newest=Number(merged.clientView?.syncSerial)>=Number(onlineRoomState.studentRoomData?.syncSerial||0)?merged.clientView:onlineRoomState.studentRoomData;
+    for(const [key,entry] of Object.entries(onlineRoomState.studentPendingAllocations||{})){
+      if(entry.stamp?.sessionId===session&&newest?.phase!==entry.stamp.phase&&version.sessionId===session&&Number(version.serial)>=Number(newest?.participantProgressSerial||Infinity)){
+        delete onlineRoomState.studentPendingAllocations[key];clearStudentAllocationSaveTimer(key);
+      }
+    }
+    const role=stageFlow.rolePending,vote=stageFlow.votePending;
+    if(role?.stamp.sessionId===session&&newest?.phase==='ROLE_SELECT'){merged.preferredRole=role.role;merged.roleReady=false;}
+    if(vote?.meta.sessionId===session&&newest?.phase===vote.meta.phase){
+      const field=vote.kind==='FORMATION'?'formationVotes':'tacticVotes';merged[field]={...(merged[field]||{}),[vote.key]:vote.value};
+    }
+    return mergePendingStudentAllocations(mergePendingStudentQuizAnswers(merged));
+  }
+  function studentProgressPending(view=effectiveStudentRoomState()){
+    const data=onlineRoomState.studentData||{},version=data.hostWriteVersion||{};
+    return !!view.participantProgressSerial&&["BUILD","BREAK_BUILD"].includes(view.phase)&&
+      (version.sessionId!==view.sessionId||Number(version.serial||0)<Number(view.participantProgressSerial));
+  }
+  function scheduleStudentProgressRefresh(view){
+    if(stageFlow.progressRetryTimer||!onlineStudentSession())return;
+    const key=`${view.sessionId}:${view.participantProgressSerial}`,epoch=stageFlow.generation;
+    if(stageFlow.progressRetryKey!==key){stageFlow.progressRetryKey=key;stageFlow.progressRetryCount=0;}
+    if(stageFlow.progressRetryCount>=4)return;
+    const delay=Math.min(4000,800*2**stageFlow.progressRetryCount++);
+    stageFlow.progressRetryTimer=setTimeout(async()=>{
+      stageFlow.progressRetryTimer=null;if(epoch!==stageFlow.generation||!studentProgressPending())return;
+      try{
+        const snap=await boundedNetwork(firebaseParticipants(onlineRoomState.studentRoomCode).doc(onlineRoomState.studentParticipantId).get(),1800);
+        if(epoch===stageFlow.generation&&snap.exists){onlineRoomState.studentData=mergeStudentParticipantSnapshot(snap.data());renderStudentStage();}
+      }catch(e){if(epoch===stageFlow.generation){setStudentMessage("성장 결과 수신 확인 중 · 연결되면 다시 불러옵니다");scheduleStudentProgressRefresh(effectiveStudentRoomState());}}
+    },delay);
   }
   async function joinStudentRoom(){
     const code=onlineRoomState.studentRoomCode;
@@ -4994,7 +5134,7 @@
     // Firebase transactions retry against the current document when a newer
     // forced publication overtakes an already dispatched normal publication.
     return await onlineRoomState.db.runTransaction(async tx=>{
-      const snapshots=[];for(const [ref]of rows)snapshots.push(await tx.get(ref));
+      const snapshots=await Promise.all(rows.map(([ref])=>tx.get(ref)));
       if(!valid())return false;
       for(let i=0;i<rows.length;i++){
         const prior=snapshots[i].data()?.hostWriteVersion;
@@ -5011,7 +5151,7 @@
     if(!stamp||stamp.sessionId!==onlineRoomState.studentSessionId)return false;
     const ref=firebaseParticipants(code).doc(id),field=`${stamp.phase}:${stamp.key||''}`;
     try{return await boundedNetwork(onlineRoomState.db.runTransaction(async tx=>{
-      const roomSnap=await tx.get(firebaseRoomRef(code)),participant=await tx.get(ref);
+      const [roomSnap,participant]=await Promise.all([tx.get(firebaseRoomRef(code)),tx.get(ref)]);
       const data=participant.data()||{},room=roomSnap.data()||{},cv=data.clientView||{};
       const view=(cv.sessionId===room.sessionId&&Number(cv.syncSerial)>Number(room.syncSerial))?cv:room;
       const prior=data.inputMeta?.[field];
@@ -5031,7 +5171,7 @@
   }
   function filterStageInputs(st,raw){
     const d={...raw},phase=gameFlow.phase,key=gameFlow.currentBreak||"Q1",c=manualStageClose;
-    const accepting=!stageFlow.localCommit&&!(c?.drained)&&!(c&&Date.now()>c.collectUntil);
+    const accepting=!stageFlow.localCommit&&!(c?.drained);
     // The host owns finalized results. Participant snapshots are input, never
     // a source for rewinding earned growth, scores, lineup or personal bases.
     for(const k of ["statsBonus","breakScores","breakPoints","preQuizCorrect","preQuizPoints","totalQuizCorrect","totalGrowthEarned","lineupStatus","assignedRole","assignedTacticalRole","shirtNumber","buildBase"])delete d[k];
@@ -5045,7 +5185,7 @@
     for(const [kind,field]of [["FORMATION","formationVotes"],["TACTIC","tacticVotes"]]){
       if(!(accepting&&phase===kind+"_VOTE")){delete d[field];continue;}
       const meta=raw.voteMeta?.[key]?.[kind],prior=st.voteMeta?.[key]?.[kind];
-      if((!meta&&prior?.sessionId===onlineRoomState.sessionId)||
+      if((!meta&&(prior?.sessionId===onlineRoomState.sessionId||(c&&Date.now()>c.collectUntil)))||
         (meta&&((meta.sessionId&&meta.sessionId!==onlineRoomState.sessionId)||(c&&meta.at>=c.endsAtMs)||(prior&&meta.seq<prior.seq)))){delete d[field];continue;}
       if(d[field])d[field]={...(st[field]||{}),[key]:d[field][key]||st[field]?.[key]};
       if(meta){st.voteMeta=st.voteMeta||{};st.voteMeta[key]={...st.voteMeta[key],[kind]:meta};}
@@ -5053,7 +5193,7 @@
     for(const [inputPhase,inputKey,fields]of [[quizSystem.current?.key,quizSystem.current?.key,["quizAnswers"]],["BUILD","Q1",["startAllocation","buildReady","growthFocus"]],["BREAK_BUILD",key,["breakAllocations","breakReady"]],["ROLE_SELECT","",["preferredRole","roleReady"]]]){
       const meta=raw.inputMeta?.[`${inputPhase}:${inputKey||''}`];
       const prior=st.inputMeta?.[`${inputPhase}:${inputKey||''}`];
-      if((!meta&&prior?.sessionId===onlineRoomState.sessionId)||
+      if((!meta&&(prior?.sessionId===onlineRoomState.sessionId||(c&&Date.now()>c.collectUntil)))||
         (meta&&(meta.sessionId!==onlineRoomState.sessionId||(c&&meta.phase===c.phase&&meta.at>=c.endsAtMs)||(prior?.sessionId===meta.sessionId&&prior.seq>meta.seq))))for(const field of fields)delete d[field];
       else if(meta&&fields.some(field=>Object.hasOwn(d,field))){st.inputMeta={...(st.inputMeta||{}),[`${inputPhase}:${inputKey||''}`]:meta};}
     }
@@ -5079,6 +5219,9 @@
   function manualInputsClosed(room=null){const c=activeManualClose(room);return !!c&&Date.now()>=c.endsAtMs;}
   function studentQuizDeadline(room){return activeManualClose(room)?.endsAtMs||Number(room?.quiz?.endsAtMs||0);}
   function resetManualStageClose(){
+    if(stageFlow.studentRetryTimer)clearTimeout(stageFlow.studentRetryTimer);stageFlow.studentRetryTimer=null;stageFlow.studentRetryKey=null;stageFlow.studentRetryCount=0;stageFlow.studentRetryBusy=false;
+    if(stageFlow.progressRetryTimer)clearTimeout(stageFlow.progressRetryTimer);stageFlow.progressRetryTimer=null;stageFlow.progressRetryKey=null;stageFlow.progressRetryCount=0;
+    stageFlow.quizDeadlineFlush=null;studentCloseSync.prepared=null;
     if(stageFlow.retryTimer)clearTimeout(stageFlow.retryTimer);stageFlow.retryTimer=null;stageFlow.rolePending=null;
     stageFlow.generation++;stageFlow.control++;stageFlow.pending=null;stageFlow.studentView=null;stageFlow.votePending=null;stageFlow.quizInputStamp={};stageFlow.forceSerial++;stageFlow.forceBusy=false;gameFlow.transitionBusy=false;
     manualStageClose=null;if(manualCloseDisplayTimer)clearInterval(manualCloseDisplayTimer);manualCloseDisplayTimer=null;
@@ -5093,6 +5236,11 @@
     if(!c){if(el){const pending=!student&&stageFlow.pending;el.hidden=!pending;el.textContent=pending?"확정 결과 보존됨 · 동기화 대기 · 다음 단계 진행 가능":"";}if(manualCloseDisplayTimer)clearInterval(manualCloseDisplayTimer);manualCloseDisplayTimer=null;return;}
     const left=Math.max(0,Math.ceil((c.endsAtMs-Date.now())/1000));
     if(el){el.hidden=false;el.textContent=left?`잠시 후 다음 단계로 이동합니다 · ${left}`:c.status==="ERROR"?`입력 마감 · 수신 ${student?c.received:closeReceived(c)}/${student?c.total:c.targets.length} · 미확인 응답이 있습니다`:"입력 마감 · 마지막 응답 확인 중 (최대 2초)";}
+    if(student&&left&&studentCloseSync.prepared!==c.id){
+      studentCloseSync.prepared=c.id;
+      if(c.kind==="QUIZ")void flushStudentQuizAnswers();
+      else if(c.kind==="BUILD")void flushPendingStudentAllocations();
+    }
     if(!left){(student?studentStageArea:participationContent)?.querySelectorAll("[data-student-quiz-answer],[data-student-build-stat],[data-student-build-reset],[data-student-build-ready],[data-student-growth-focus],[data-build-stat],[data-build-reset],[data-focus-student],[data-student-formation-vote],[data-student-tactic-vote],[data-student-role],[data-student-role-ready],[data-role-student],[data-live-answer]").forEach(b=>b.disabled=true);if(student)void flushStudentManualClose(c);}
   }
   function refreshManualCloseDisplay(){updateManualCloseDisplay();if(activeManualClose()&&!manualCloseDisplayTimer)manualCloseDisplayTimer=setInterval(updateManualCloseDisplay,100);}
@@ -5106,8 +5254,9 @@
     const field=p.kind==="FORMATION"?"formationVotes":"tacticVotes",ref=firebaseParticipants(code).doc(id);
     try{
       const saved=await writeStudentStageInput({[`${field}.${p.key}`]:p.value,[`voteMeta.${p.key}.${p.kind}`]:p.meta},p.meta,code,id);
-      if(saved&&stageFlow.votePending===p)stageFlow.votePending=null;return saved;
-    }catch(e){setStudentMessage("투표 전송 확인 중 · 선택은 보관되어 있습니다");return false;}
+      if(saved&&stageFlow.votePending===p){const data=onlineRoomState.studentData||{};data.inputMeta={...(data.inputMeta||{}),[`${p.meta.phase}:${p.meta.key||''}`]:p.meta};stageFlow.votePending=null;}
+      if(!saved){setStudentMessage("투표 저장 확인 중 · 선택은 보관하고 다시 전송합니다");scheduleStudentInputRetry();}return saved;
+    }catch(e){setStudentMessage("투표 전송 확인 중 · 선택은 보관되어 있습니다");scheduleStudentInputRetry();return false;}
   }
   async function flushStudentManualClose(c){
     if(!c||studentCloseSync.done===c.id||studentCloseSync.busy||Date.now()<studentCloseSync.retryAt||Date.now()<c.endsAtMs)return;
@@ -5116,7 +5265,7 @@
     try{
       const work=c.kind==="QUIZ"?flushStudentQuizAnswers(c.id):c.kind==="BUILD"?flushPendingStudentAllocations():c.kind==="ROLE"?persistStudentRole():persistStudentVote();
       if(!(await boundedNetwork(work,1800))||!current())return;
-      if(c.kind==="QUIZ"&&studentPendingQuizCount(c.key)||c.kind==="BUILD"&&Object.keys(onlineRoomState.studentPendingAllocations||{}).length)return;
+      if(c.kind==="QUIZ"&&studentPendingQuizCount(c.key)||c.kind==="BUILD"&&studentHasPendingInput())return;
       await boundedNetwork(firebaseParticipants(code).doc(id).set({stageCloseAck:c.id,updatedAt:firebaseTimestamp()},{merge:true}),1800);
       if(current()){studentCloseSync.done=c.id;setStudentMessage("마지막 입력 저장 완료",false);}
     }catch(e){if(current())setStudentMessage("마지막 입력 전송 미확인 · 호스트 수신분으로 진행됩니다");}
@@ -5137,17 +5286,33 @@
     const valid=()=>manualStageClose===c&&c.generation===stageFlow.generation&&c.serial===gameFlow.sessionSerial;
     const publish=()=>!onlineHostSession()?Promise.resolve(true):syncRoomState({manualStageClose:manualClosePublic(c),...(kind==="QUIZ"?{quiz:publicQuizState(quizSystem.current,"RUNNING")}: {})},{mirror:true,independent:true});
     try{
+      if(c.status==="ERROR"){
+        c.collectUntil=Math.max(c.collectUntil,Date.now()+2500);c.status="CLOSING";
+      }
       refreshManualCloseDisplay();void publish();
       while(valid()&&Date.now()<c.endsAtMs)await new Promise(r=>setTimeout(r,Math.min(100,c.endsAtMs-Date.now())));
       if(!valid())return false;c.status="CLOSING";refreshManualCloseDisplay();void publish();
       // The cache is authoritative at this fixed deadline. A missing ACK or
       // disconnected student never blocks the rest of the class.
-      const finalRead=onlineHostSession()?refreshRemoteProgressBeforeGrade():Promise.resolve(true);
       while(valid()&&Date.now()<c.collectUntil&&closeReceived(c)<c.targets.length)await new Promise(r=>setTimeout(r,50));
       if(!valid())return false;
-      await boundedNetwork(finalRead,Math.max(1,c.collectUntil-Date.now())).catch(()=>false);
+      // Read after the final writes/ACKs, not a snapshot taken at 0 seconds.
+      // This remains bounded; valid inputs carry their pre-deadline timestamp.
+      const readOk=!onlineHostSession()||await boundedNetwork(refreshRemoteProgressBeforeGrade(),2000).catch(()=>false);
       if(!valid())return false;
       c.missing=c.targets.length-closeReceived(c);
+      if(!readOk&&c.missing>0){
+        // Never turn an unconfirmed quiz/allocation into a finalized zero or
+        // auto-build. Retry the same closed input window; force remains explicit.
+        c.status="ERROR";refreshManualCloseDisplay();
+        setLobbyError("마지막 학생 입력을 확인하지 못했습니다. 입력은 보관하고 다시 확인합니다. 연결이 끊긴 학생을 제외하려면 기존 강제 진행을 사용할 수 있습니다.");
+        participationPrimaryBtn.textContent="마지막 입력 다시 확인";
+        if(!stageFlow.retryTimer&&(c.readRetries||0)<3){
+          const delay=1000*2**(c.readRetries||0);c.readRetries=(c.readRetries||0)+1;
+          stageFlow.retryTimer=setTimeout(()=>{stageFlow.retryTimer=null;if(valid())void runHostTransition(()=>requestManualStageClose(c.kind));},delay);
+        }
+        return false;
+      }
       c.drained=true;return await commitHostStage(c,false);
     }finally{c.running=false;}
   }
@@ -5201,9 +5366,9 @@
       if(!onlineHostSession()){stageFlow.pending=null;refreshManualCloseDisplay();return true;}
       const epoch=stageFlow.generation;
       const rows=[...rec.rows].map(([id,patch])=>[lobbyState.students.find(st=>st.remoteId===id)||{remoteId:id},patch]);
-      const ok=await batchParticipantPatches(rows);
-      if(rec!==stageFlow.pending||epoch!==stageFlow.generation)return false;
-      const roomOk=ok&&await syncRoomState(rec.snapshot,{mirror:true,independent:true});
+      // Phase, points, finalized allocations and each personal fallback view
+      // belong to one publication/version. There is no intermediate old budget.
+      const roomOk=await syncRoomState(rec.snapshot,{mirror:true,independent:true,participantRows:rows});
       if(rec!==stageFlow.pending||epoch!==stageFlow.generation)return false;
       if(roomOk){stageFlow.pending=null;refreshManualCloseDisplay();return true;}
       if(hostRoomStatus){hostRoomStatus.textContent="● 동기화 대기 · 확정 결과 보존";hostRoomStatus.className="online-status error";}
@@ -6252,7 +6417,7 @@
     participationTitle.textContent=`${voteRoundTitle(key)} · 팀 포메이션 투표`;
     participationDesc.textContent="학생은 자기 팀의 다음 쿼터 포메이션을 1표씩 선택합니다. 동률이면 현재 포메이션을 유지하며, 그 외에는 최다 득표 포메이션이 적용됩니다.";
     participationPhaseChip.textContent="FORMATION VOTE";participationRoadmap.innerHTML=phaseRoadmapHtml(key==="Q1"?"Q1":key);participationBackBtn.style.display="none";participationAutoBtn.style.display="none";participationPrimaryBtn.textContent="포메이션 마감 → 전술 투표";renderFormationVote();
-    if(remoteParticipationActive())syncRoomState({status:"LIVE",phase:"FORMATION_VOTE",breakKey:key,quiz:null,quarterReports:{...(gameFlow.quarterReports||{})}});
+    if(remoteParticipationActive())syncRoomState({status:"LIVE",phase:"FORMATION_VOTE",breakKey:key,quiz:null,quarterReports:{...(gameFlow.quarterReports||{})}},{mirror:true});
   }
   function winningFormationFor(teamName,key){
     const counts=formationVoteCounts(teamName,key),max=Math.max(...Object.values(counts));
@@ -6287,7 +6452,7 @@
   }
   function showTacticVote(key){
     gameFlow.phase="TACTIC_VOTE";gameFlow.currentBreak=key;showParticipationOverlay();participationKicker.textContent="TACTICAL VOTE · STUDENT DEVICES";participationTitle.textContent=`${voteRoundTitle(key)} · 팀 전술 투표`;participationDesc.textContent="확정된 포메이션 안에서 학생들이 다음 쿼터 전술을 1표씩 선택합니다. 팀별 최다 득표 프리셋이 실제 경기 엔진에 적용됩니다.";participationPhaseChip.textContent="TACTIC VOTE";participationRoadmap.innerHTML=phaseRoadmapHtml(key==="Q1"?"Q1":key);participationBackBtn.style.display="none";participationAutoBtn.style.display="none";participationPrimaryBtn.textContent=key==="Q1"?"전술 마감 → 선발 라인업":"전술 마감 → 팀 관리";renderTacticVote();
-    if(remoteParticipationActive())syncRoomState({status:"LIVE",phase:"TACTIC_VOTE",breakKey:key,quiz:null,quarterReports:{...(gameFlow.quarterReports||{})}});
+    if(remoteParticipationActive())syncRoomState({status:"LIVE",phase:"TACTIC_VOTE",breakKey:key,quiz:null,quarterReports:{...(gameFlow.quarterReports||{})}},{mirror:true});
   }
   function winningTacticFor(teamName,key){const counts=tacticVoteCounts(teamName,key),max=Math.max(...Object.values(counts));if(max<=0)return teamTactics[teamName]?.preset in TACTIC_VOTE_LABELS?teamTactics[teamName].preset:"BALANCED";const tied=TACTIC_VOTE_PRESETS.filter(v=>counts[v]===max);const current=teamTactics[teamName]?.preset;return tied.includes(current)?current:tied[0];}
   async function finalizeTacticVote(){
@@ -17892,7 +18057,10 @@
     const dir=attackDir(owner.team),side=owner.y<34?-1:1;
     const straight=forwardSpace(owner),inside=owner.tacticalRole==="INSIDE_FORWARD"
       ? forwardSpace(owner,dir*.70,-side*.714) : straight;
-    const space=Math.max(straight,inside),tech=techniqueImpact(owner),intel=decisionIntelligence(owner);
+    // A single marker can shut the straight line while a normal diagonal
+    // carry remains open. Read the same lanes used by dribbleDirection.
+    const space=Math.max(straight,inside,forwardSpace(owner,dir*.92,-.38),forwardSpace(owner,dir*.92,.38));
+    const tech=techniqueImpact(owner),intel=decisionIntelligence(owner);
     const open=clamp((space-3.5)/5.5,0,1)*clamp((pressure-2.3)/3.7,0,1)*(crowd>=2?0:1);
     return {pressure,crowd,straight,space,tech,intel,open,goal:shootingDistance(owner),
       angle:shootingAngleQuality(owner),counter:teamState[owner.team].tacticalPhase==="COUNTER_ATTACK"};
@@ -18169,6 +18337,21 @@
             : 0
         : 0;
 
+    const lateralTransfer=type==="SWITCH"||(type==="LONG"&&
+      sideSignFromY(owner.y)*sideSignFromY(target.y)<0&&Math.abs(aimY-owner.y)>22);
+    const carrierSpace=lateralTransfer?forwardSpace(owner):0;
+    const switchUseful=!lateralTransfer||
+      (safetyData.receivingSpace>3.8&&
+        (pressure<3.4||carrierSpace<4.8||
+          (countOpponentsNear(owner.x,owner.y,10,owner.team)>=2&&carrierSpace<7)||
+          safetyData.forward>8));
+    const transferAdjustment=lateralTransfer&&!switchUseful
+      ? -(8+clamp(carrierSpace-4,0,5)) : 0;
+    const cleanForwardAdjustment=owner.role!=="GK"&&
+      ["SHORT","THROUGH","KILL_PASS"].includes(type)&&safetyData.forward>2.5&&
+      safetyData.receivingSpace>2.8&&risk<4.2&&receiverArrivalMargin>-.45
+        ? lerp(2.0,4.0,intel)*clamp(safetyData.forward/8,0,1) : 0;
+
     const possessionValue=
       safetyData.receivingSpace*
         (zone==="BUILDUP"?1.34:zone==="PROGRESSION"?1.05:.60)+
@@ -18210,7 +18393,7 @@
 
     return {
       type,target,aimX,aimY,speed,
-      safetyData,runWindow,receiverArrivalMargin,ballArrival,activeRun,
+      safetyData,runWindow,receiverArrivalMargin,ballArrival,activeRun,lateralTransfer,switchUseful,
       plannedAdvance,movingAdvance,
       score:
         base+bonus+passerRole+receiverRole+
@@ -18232,7 +18415,7 @@
         creativeRepeatPenalty(owner.team,type)+
         progressiveDecisionBonus+
         attackContextAdjustment+
-        contextualVarietyAdjustment
+        contextualVarietyAdjustment+transferAdjustment+cleanForwardAdjustment
     };
   }
 
@@ -18778,7 +18961,10 @@
       if(o.safetyData.forward<1.5&&!passKeepsAttackingValue(owner,o))o.score-=10+Math.min(5,Math.max(0,-o.safetyData.forward)*.4);
     }
     options.sort((a,b)=>b.score-a.score);
-    const contextOutletAllowed=o=>(!attackChoice||o.attackReview?.adjustment>-12||o.score>=options[0].score-3)&&
+    const contextOutletAllowed=o=>(o.switchUseful!==false||!options.some(q=>
+      ["SHORT","THROUGH","KILL_PASS"].includes(q.type)&&q.safetyData.forward>2&&
+      q.safetyData.receivingSpace>3&&q.safetyData.laneRisk<4&&q.score>=o.score-12))&&
+      (!attackChoice||o.attackReview?.adjustment>-12||o.score>=options[0].score-3)&&
       (!attackWindow||passKeepsAttackingValue(owner,o)||o.safetyData.forward>2||o.score>=options[0].score-4);
 
 
@@ -18852,6 +19038,16 @@
       wallReturn.score>=options[0].score-18
     )return wallReturn;
 
+    if(nearestOpponentDistance(owner)<2.8&&options[0]?.lateralTransfer&&!options[0].attackReview?.decisive){
+      const relief=options.filter(o=>o.type==="SHORT"&&o.safetyData.distance<18&&
+        o.safetyData.receivingSpace>3.0&&o.safetyData.laneRisk<3.55&&
+        o.receiverArrivalMargin>-.35).sort((a,b)=>
+          (b.safetyData.safety+b.score*.18)-(a.safetyData.safety+a.score*.18))[0];
+      // Escape a close press through a real nearby outlet before attempting a
+      // long cross-field release. A final chance/one-two was checked above.
+      if(relief)return relief;
+    }
+
     const directAerial=options
       .filter(o=>o.aerialOutlet)
       .sort((a,b)=>b.score-a.score);
@@ -18893,7 +19089,7 @@
         o.safetyData.forward>(zone==="ATTACK"?-1.5:-3.5)&&
         (
           o.type==="SHORT"||o.type==="THROUGH"||o.type==="KILL_PASS"||
-          (o.type==="SWITCH"&&o.safetyData.receivingSpace>6)
+        (o.type==="SWITCH"&&o.switchUseful!==false&&o.safetyData.receivingSpace>6)
         )
       )
       .sort((a,b)=>
@@ -18914,7 +19110,7 @@
           o.safetyData.forward>2.2 &&
           o.safetyData.receivingSpace>2.8 &&
           o.safetyData.laneRisk<4.4 &&
-          ["SHORT","THROUGH","LONG","SWITCH"].includes(o.type) &&
+          ["SHORT","THROUGH","LONG","SWITCH"].includes(o.type) &&contextOutletAllowed(o)&&
           (o.target.category==="MID"||o.target.category==="ATT"||isWinger(o.target)||isFullback(o.target))
         )
         .sort((a,b)=>{
@@ -18943,7 +19139,7 @@
           (
             o.type==="SHORT" ||
             (o.type==="THROUGH"&&o.safetyData.safety>8.5) ||
-            (o.type==="SWITCH"&&o.safetyData.safety>9.5)
+            (o.type==="SWITCH"&&o.switchUseful!==false&&o.safetyData.safety>9.5)
           )
         )
         .sort((a,b)=>
@@ -18991,7 +19187,7 @@
 
       const directOptions=options
         .filter(o=>
-          ["LONG","SWITCH"].includes(o.type) &&
+          ["LONG","SWITCH"].includes(o.type) &&contextOutletAllowed(o)&&
           o.safetyData.safety>4.2 &&
           o.safetyData.receivingSpace>3.0 &&
           (o.target.category==="ATT"||isWinger(o.target))
@@ -19162,7 +19358,7 @@
     ){
       const midfieldHubs=options
         .filter(o=>
-          o.target.category==="MID" &&
+          o.target.category==="MID" &&contextOutletAllowed(o)&&
           o.safetyData.receivingSpace>3.0 &&
           o.safetyData.laneRisk<4.2 &&
           o.safetyData.forward>-4
@@ -19204,7 +19400,7 @@
     }
 
     const switchOptions=options
-      .filter(o=>o.type==="SWITCH")
+      .filter(o=>o.type==="SWITCH"&&o.switchUseful!==false&&contextOutletAllowed(o))
       .sort((a,b)=>b.score-a.score);
 
     if(switchOptions.length){
@@ -20574,6 +20770,27 @@
         attackChoice.crowd<2&&!attackReview.decisive&&orchestrationUtility>-900){
         orchestrationUtility+=attackChoice.tech*4+attackChoice.intel*3;
       }
+    }
+    // Modest shared intent: use genuinely free forward grass in any tactic.
+    // CB carries keep their existing BPD gate and own-box risk management.
+    if(!kickoffCalm&&progress>.24&&progress<.86&&
+      (owner.category!=="DEF"||isFullback(owner))){
+      const freeCarry=clamp(((attackChoice?.space||space)-4.2)/5,0,1)*clamp((pressure-2.8)/3.2,0,1);
+      const carryWeight=["DM","LDM","RDM"].includes(owner.role)?.55:1;
+      dribbleUtility+=freeCarry*(5+techniqueImpact(owner)*3)*carryWeight;
+      if(sprintUtility>-900)sprintUtility+=freeCarry*3*carryWeight;
+      if(safeRelease&&passOption.safetyData.forward>2.5&&passOption.safetyData.laneRisk<4.2){
+        passUtility+=2+intelligence*2;
+      }
+      if(pressure<2.5&&closePressureCount<2&&!inOpponentPenaltyArea(owner))shieldUtility+=clamp((physicalImpact(owner)-.35)*7,0,4);
+    }
+    // A tactical short-pass preference cannot cancel an obvious breakthrough.
+    // Genuine layoffs, cutbacks, one-twos and better forward receivers survive.
+    if(attackChoice?.open>.45&&attackChoice.pressure>3.8&&
+      attackChoice.space>5.5&&passOption&&passOption.safetyData.forward<1.5&&
+      !attackReview.improvesShape&&!passKeepsAttackingValue(owner,passOption)&&
+      !(owner.receivePostureTimer>0&&owner.receivePosture==="BACK_TO_GOAL")){
+      passUtility=Math.min(passUtility,Math.max(dribbleUtility,sprintUtility)-2);
     }
     const best=Math.max(
       passUtility,dribbleUtility,sprintUtility,
@@ -23014,27 +23231,9 @@
         if(owner.dribbleTouchTimer<=0){
           owner.dribbleTouchTimer=rand(.16,.29);
 
-          const pressure=clamp(3.2-nearestOpponentDistance(owner),0,3.2);
-          const sprintPenalty=owner.onBallAction==="SPRINT_DRIBBLE"?.035:0;
-          const heavyChance=
-            clamp((58-dribbleSkill(owner))*.0018,0,.075) +
-            pressure*.006 +
-            sprintPenalty*.62;
-
-          if(matchRandom()<heavyChance){
-            captureOffsidePlay(owner);
-            const push=lerp(2.6,1.45,control)+(owner.onBallAction==="SPRINT_DRIBBLE"?.75:0);
-            makeLooseBall(
-              owner.x+nx*push,
-              owner.y+ny*push,
-              nx*rand(4.2,6.5),
-              ny*rand(3.8,5.8),
-              false
-            );
-            applyTurnoverStun(owner,.22);
-            showEvent(`${owner.team.toUpperCase()} · ${playerName(owner)}, 드리블 터치가 길어집니다!`);
-            return;
-          }
+          // A carry is still controlled until a real challenge takes the ball.
+          // Keep the longer sprint touch above; do not release possession or
+          // stun the carrier through an independent per-touch error lottery.
         }
       }
 
