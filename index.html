@@ -1036,6 +1036,7 @@
         </div>
         <button id="landingJoinBtn" class="landing-main-btn">⚽ 로비 참가하기</button>
         <div id="landingJoinMessage" class="landing-join-message"></div>
+        <button id="studentResumeBtn" class="landing-main-btn" hidden>↩ 이전 방에 재참여</button>
       </section>
     </div>
 
@@ -1124,7 +1125,7 @@
       <div id="studentJoinForm" class="student-join-form">
         <div class="student-field"><label>이름 · 최대 8글자</label><input id="studentNameInput" maxlength="8" autocomplete="off" placeholder="이름을 입력하세요"></div>
         <div class="student-field"><label>희망 포지션</label><select id="studentPositionSelect"></select></div>
-        <button id="studentJoinBtn" class="primary student-primary">로비 참가하기</button>
+        <button id="studentJoinBtn" class="primary student-primary">로비 참가 / 재참여</button>
         <button id="studentHomeBtn" class="student-secondary">← 돌아가기</button>
         <div id="studentJoinMessage" class="student-message"></div>
       </div>
@@ -1536,7 +1537,7 @@
   // ============================================================
 
   // One build identity for display, links and the classroom protocol.
-  const DSSOCCER_BUILD="2.5.32";
+  const DSSOCCER_BUILD="2.5.33";
   const simulationRun={owner:null,aiTicks:0,ticks:0,seed:0,rngState:0,nextSeed:null};
   const passLedger={blue:{},red:{}};
   function setNextMatchSeed(seed){simulationRun.nextSeed=Number(seed)>>>0;}
@@ -1765,6 +1766,7 @@
   const landingPositionSelect = document.getElementById("landingPositionSelect");
   const landingJoinBtn = document.getElementById("landingJoinBtn");
   const landingJoinMessage = document.getElementById("landingJoinMessage");
+  const studentResumeBtn = document.getElementById("studentResumeBtn");
   const hostRoomPanel = document.getElementById("hostRoomPanel");
   const hostLobbyRoster = document.getElementById("hostLobbyRoster");
   const quizBankPanel = document.getElementById("quizBankPanel");
@@ -3438,6 +3440,7 @@
   const FIREBASE_APP_ID="default-app-id";
   const ROOM_COLLECTION="dssoccer_rooms_v1";
   const HOST_ROOM_STORAGE_KEY="dssoccer_host_room_v1";
+  const STUDENT_RESUME_STORAGE_KEY="dssoccer_student_resume_v1";
   const PENDING_ROOM_CLEANUP_KEY="dssoccer_pending_room_cleanup_v1";
   // Students watch the shared host screen during live play. Their devices only
   // need an occasional snapshot; critical phase changes and results still sync
@@ -4065,6 +4068,71 @@
     if(onlineRoomState.ready)await joinStudentRoom();
   }
 
+  // This local record remembers a room and unsent input, never a credential.
+  // Only the restored Firebase UID can reopen its existing participant document.
+  function studentResumeRecord(){
+    try{const r=JSON.parse(localStorage.getItem(STUDENT_RESUME_STORAGE_KEY)||"null");return r&&/^\d{4}$/.test(r.code)&&typeof r.id==="string"?r:null;}catch{return null;}
+  }
+  function forgetStudentResume(code=null){
+    const r=studentResumeRecord();if(code&&r?.code!==String(code))return;
+    try{localStorage.removeItem(STUDENT_RESUME_STORAGE_KEY);}catch{}
+    if(studentResumeBtn)studentResumeBtn.hidden=true;
+  }
+  function persistStudentResume(){
+    const code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId,data=onlineRoomState.studentData;
+    if(!code||!id||id!==onlineRoomState.user?.uid||data?.status!=="joined")return;
+    const view=effectiveStudentRoomState(),quizKey=view.quiz?.key;
+    const allocations=Object.fromEntries(Object.entries(onlineRoomState.studentPendingAllocations||{}).filter(([key,e])=>e.stamp?.sessionId===view.sessionId&&e.stamp.phase===view.phase));
+    const r={code,id,name:data.name||"",preferredPosition:data.preferredPosition||"FLEX",sessionId:view.sessionId||null,phase:view.phase,breakKey:view.breakKey||null,
+      quizPending:quizKey?{[quizKey]:onlineRoomState.studentPendingQuizAnswers?.[quizKey]||{}}:{},quizStamp:quizKey?stageFlow.quizInputStamp?.[quizKey]||null:null,
+      allocations,rolePending:view.phase==="ROLE_SELECT"?stageFlow.rolePending:null,votePending:["FORMATION_VOTE","TACTIC_VOTE"].includes(view.phase)?stageFlow.votePending:null};
+    try{localStorage.setItem(STUDENT_RESUME_STORAGE_KEY,JSON.stringify(r));}catch{}
+  }
+  function restoreStudentInputs(record){
+    const view=effectiveStudentRoomState();if(!record||record.code!==onlineRoomState.studentRoomCode||record.id!==onlineRoomState.user?.uid||record.sessionId!==view.sessionId||record.phase!==view.phase||record.breakKey!==(view.breakKey||null))return;
+    const data=onlineRoomState.studentData,quiz=view.quiz||{},stamp=record.quizStamp,close=activeManualClose(view);
+    const recoverable=input=>{
+      if(!input||input.sessionId!==view.sessionId||input.phase!==view.phase||!Number.isFinite(Number(input.at))||!Number.isFinite(Number(input.seq))||Number(input.seq)<=0||Number(input.at)>Date.now())return false;
+      // Closing blocks new interaction, but the existing collection window may
+      // still accept a durable input made before its fixed host deadline.
+      if(close)return Number(input.at)<Number(close.endsAtMs)&&Date.now()<=Number(close.collectUntil);
+      if(["PRE_QUIZ","BREAK25","HALF","BREAK70"].includes(view.phase))return Number(input.at)<studentQuizDeadline(view)&&Date.now()<studentQuizDeadline(view);
+      return true;
+    };
+    if((quiz.stage==="RUNNING"||close&&quiz.stage==="CLOSING")&&stamp?.phase===quiz.key&&stamp.key===quiz.key&&recoverable(stamp)){
+      const prior=data.inputMeta?.[`${quiz.key}:${quiz.key}`];
+      if(!prior||Number(prior.seq)<Number(stamp.seq)){
+        const row={};for(const [index,value]of Object.entries(record.quizPending?.[quiz.key]||{})){
+          const n=Number(index),answer=normalizeQuizAnswer(value,quiz.questions?.[n]?.options?.length||0);
+          if(Number.isInteger(n)&&n>=0&&n<(quiz.questions?.length||0)&&answer!==null&&!Number.isInteger(studentQuizAnswerValue(data,quiz.key,n)))row[n]=answer;
+        }
+        if(Object.keys(row).length){onlineRoomState.studentPendingQuizAnswers[quiz.key]=row;stageFlow.quizInputStamp[quiz.key]=stamp;stageFlow.inputSerial=Math.max(stageFlow.inputSerial,Number(stamp.seq)||0);}
+      }
+    }
+    for(const [key,e]of Object.entries(record.allocations||{})){
+      if(e.id!==onlineRoomState.studentParticipantId||e.code!==onlineRoomState.studentRoomCode||!recoverable(e.stamp)||(e.mode==="START"?e.stamp.key!=="Q1":e.mode!=="BREAK"||e.key!==view.breakKey||e.stamp.key!==e.key))continue;
+      const prior=data.inputMeta?.[`${e.stamp.phase}:${e.stamp.key||''}`];if(prior&&Number(prior.seq)>=Number(e.stamp.seq))continue;
+      const points=e.mode==="START"?Number(data.preQuizPoints)||0:Number(data.breakPoints?.[e.key])||0;
+      if(studentProgressPending(view)||growthTotal(e.allocation)>points)continue;
+      const clean=fitStudentAllocation(data,points,e.allocation,e.mode);
+      const preset=e.mode==="START"?{growthFocus:e.growthFocus in GROWTH_FOCUS_LABELS?e.growthFocus:data.growthFocus||"BALANCED",...(e.buildPresetVersion===1?{buildPresetVersion:1}:{})}:{};
+      e.allocation=clean;e.patch=e.mode==="START"?{...preset,startAllocation:clean,buildReady:!!e.ready}:{[`breakAllocations.${e.key}`]:clean,[`breakReady.${e.key}`]:!!e.ready};
+      onlineRoomState.studentPendingAllocations[key]=e;stageFlow.inputSerial=Math.max(stageFlow.inputSerial,Number(e.stamp.seq)||0);
+    }
+    const role=record.rolePending;if(recoverable(role?.stamp)&&role.stamp.key===""&&detailedRoleChoices(data.preferredPosition||"FLEX").includes(role.role)&&!(Number(data.inputMeta?.["ROLE_SELECT:"]?.seq)>=Number(role.stamp.seq)))stageFlow.rolePending=role;
+    const vote=record.votePending;if(recoverable(vote?.meta)&&vote.meta.key===vote.key&&(vote.kind==="FORMATION"?FORMATION_VOTE_PRESETS:TACTIC_VOTE_PRESETS).includes(vote.value)&&vote.key===(view.breakKey||"Q1")&&!(Number(data.voteMeta?.[vote.key]?.[vote.kind]?.seq)>=Number(vote.meta.seq)))stageFlow.votePending=vote;
+    onlineRoomState.studentData=mergeStudentParticipantSnapshot(data);persistStudentResume();
+    if(studentHasPendingInput(view)){if(close&&Date.now()>=close.endsAtMs)void flushStudentManualClose(close);else scheduleStudentInputRetry();}
+  }
+  function updateStudentResumeButton(){
+    const r=studentResumeRecord(),show=!!r&&r.id===onlineRoomState.user?.uid&&!onlineRoomState.hostRoomCode;
+    if(studentResumeBtn){studentResumeBtn.hidden=!show;if(show)studentResumeBtn.textContent=`↩ ${r.name||"내 선수"} · ${r.code} 방 재참여`;}
+  }
+  async function resumePreviousStudentRoom(){
+    const r=studentResumeRecord();if(!r||r.id!==onlineRoomState.user?.uid){forgetStudentResume();setLandingJoinMessage("이 기기에 저장된 참가 정보를 확인할 수 없습니다.");return false;}
+    showStudentRoute(r.code);if(studentNameInput)studentNameInput.value=r.name;if(studentPositionSelect)studentPositionSelect.value=r.preferredPosition;
+    return await restoreStudentParticipant();
+  }
   function parseStudentRoute(){
     const p=new URLSearchParams(location.search);
     const room=String(p.get("room")||"").replace(/\D/g,"").slice(0,4);
@@ -4072,6 +4140,7 @@
   }
   function showStudentRoute(code){
     stopStudentQuizAdvance();
+    unsubscribeStudentRoom();onlineRoomState.studentParticipantId=null;onlineRoomState.studentData=null;
     onlineRoomState.mode="student";onlineRoomState.studentRoomCode=code;onlineRoomState.studentLastSyncSerial=0;onlineRoomState.studentSessionId=null;onlineRoomState.studentSessionStartedAtMs=0;onlineRoomState.studentSessionEnded=false;onlineRoomState.studentRoomData=null;
     onlineRoomState.studentQuizCursor={};onlineRoomState.studentQuizFeedback={};onlineRoomState.studentPendingQuizAnswers={};onlineRoomState.studentQuizWriteChain=Promise.resolve();onlineRoomState.studentQuizFlushInFlightToken=null;onlineRoomState.studentLastQuizFlushToken=null;onlineRoomState.studentQuizFlushRetries={};clearAllStudentAllocationSaveTimers();onlineRoomState.studentPendingAllocations={};onlineRoomState.studentAllocationWriteChain=Promise.resolve();
     document.body.classList.remove("lobby-open","participation-open");document.body.classList.add("student-open");
@@ -4079,6 +4148,8 @@
     if(studentRoomCodeEl)studentRoomCodeEl.textContent=code;
     if(studentPositionSelect)studentPositionSelect.innerHTML=positionPrefOptions("FLEX");
     if(studentJoinMessage)studentJoinMessage.textContent="Firebase 연결 중...";
+    // Keep the student route across refreshes after a room-number entry as well.
+    try{const url=new URL(location.href);url.searchParams.set("join","1");url.searchParams.set("room",String(code));history.replaceState(null,"",url.pathname+url.search+url.hash);}catch{}
   }
   function setStudentMessage(text="",error=true){
     if(!studentJoinMessage)return;
@@ -4213,7 +4284,7 @@
             else {data.breakAllocations={...(data.breakAllocations||{}),[entry.key]:plainGrowth(entry.allocation)};data.breakReady={...(data.breakReady||{}),[entry.key]:!!entry.ready};}
             data.inputMeta={...(data.inputMeta||{}),[`${entry.stamp.phase}:${entry.stamp.key||''}`]:entry.stamp};
           }
-          delete onlineRoomState.studentPendingAllocations[saveKey];
+          delete onlineRoomState.studentPendingAllocations[saveKey];persistStudentResume();
           setStudentMessage("성장 배분 저장 완료",false);renderStudentStage();
         }
         return true;
@@ -4292,7 +4363,7 @@
       for(const [index,value] of Object.entries(row))if(Number(live[index])===Number(value))delete live[index];
       if(!Object.keys(live).length)delete onlineRoomState.studentPendingQuizAnswers[key];
     }
-    renderStudentStage();
+    persistStudentResume();renderStudentStage();
     return true;
   }
   function studentHasPendingInput(view=effectiveStudentRoomState()){
@@ -4628,7 +4699,7 @@
     const data=onlineRoomState.studentData||(onlineRoomState.studentData={});
     if(Number.isInteger(studentQuizAnswerValue(data,key,index)))return;
     if(!data.quizAnswers)data.quizAnswers={};if(!data.quizAnswers[key])data.quizAnswers[key]={};data.quizAnswers[key][String(index)]=selected;
-    queueStudentQuizAnswer(key,index,selected);
+    queueStudentQuizAnswer(key,index,selected);persistStudentResume();
     const feedbackToken=`${quiz.session||0}:${key}:${index}:${Date.now()}`;
     onlineRoomState.studentQuizFeedback[cursorKey]={index,selected,correctIndex,token:feedbackToken};
     onlineRoomState.studentQuizCursor[cursorKey]=index;
@@ -4670,6 +4741,7 @@
     const preset=mode==="START"?{growthFocus:data.growthFocus||"BALANCED",...(data.buildPresetVersion===1?{buildPresetVersion:1}:{})}:{};
     const patch=mode==="START"?{...preset,startAllocation:clean,buildReady:!!ready}:{[`breakAllocations.${key}`]:clean,[`breakReady.${key}`]:!!ready};
     onlineRoomState.studentPendingAllocations[saveKey]={...preset,mode,key,allocation:clean,ready:!!ready,patch,code,id,stamp:studentInputStamp(mode==="START"?"BUILD":"BREAK_BUILD",mode==="START"?"Q1":key),token:`${Date.now()}:${Math.random()}`};
+    persistStudentResume();
     if(ready)return await persistPendingStudentAllocation(saveKey);
     scheduleStudentAllocationSave(mode,key);
     return true;
@@ -4689,7 +4761,7 @@
     stageFlow.studentRetryCount=0;
     if(!allowed.includes(role))role=allowed[0]||"AUTO";
     data.preferredRole=role;data.roleReady=!!ready;renderStudentStage();
-    const pending=stageFlow.rolePending={role,ready:!!ready,stamp:studentInputStamp("ROLE_SELECT","")};
+    const pending=stageFlow.rolePending={role,ready:!!ready,stamp:studentInputStamp("ROLE_SELECT","")};persistStudentResume();
     return persistStudentRole(pending);
   }
   async function persistStudentRole(p=stageFlow.rolePending){
@@ -4697,7 +4769,7 @@
     const saved=await writeStudentStageInput({preferredRole:p.role,roleReady:p.ready},p.stamp);
     if(saved&&stageFlow.rolePending===p){const data=onlineRoomState.studentData||{};data.inputMeta={...(data.inputMeta||{}),["ROLE_SELECT:"]:p.stamp};stageFlow.rolePending=null;}
     if(!saved){setStudentMessage("역할 전송 미확인 · 선택은 보관되어 있습니다");scheduleStudentInputRetry();}
-    return saved;
+    persistStudentResume();return saved;
   }
   async function saveStudentFormationVote(formation){
     if(manualInputsClosed()||effectiveStudentRoomState().phase!=="FORMATION_VOTE")return false;
@@ -4723,22 +4795,25 @@
   function subscribeStudentState(code,id){
     unsubscribeStudentRoom();
     onlineRoomState.studentDocUnsub=firebaseParticipants(code).doc(id).onSnapshot(snap=>{
-      if(!snap.exists)return;onlineRoomState.studentData=mergeStudentParticipantSnapshot(snap.data());
-      renderStudentWaiting(onlineRoomState.studentData);
+      if(!snap.exists){endStudentConnection("참가 정보가 삭제되었습니다. 호스트에게 확인해주세요.");return;}
+      if(snap.data()?.status!=="joined"){endStudentConnection(snap.data()?.status==="kicked"?"호스트가 참가를 취소했습니다.":"현재 참가 상태가 종료되었습니다.");return;}
+      onlineRoomState.studentData=mergeStudentParticipantSnapshot(snap.data());
+      renderStudentWaiting(onlineRoomState.studentData);persistStudentResume();
       if(studentConnectionText){
         const cv=onlineRoomState.studentData?.clientView||{},p=cv.phase||onlineRoomState.studentRoomData?.phase||"LOBBY",ser=Number(cv.syncSerial)||0;
         studentConnectionText.textContent="● 온라인 연결됨";
       }
     },e=>setStudentMessage(`참가자 상태 수신 실패: ${e.message}`));
     onlineRoomState.studentRoomUnsub=firebaseRoomRef(code).onSnapshot(snap=>{
-      if(!snap.exists){if(studentWaitingText)studentWaitingText.innerHTML="방을 찾을 수 없습니다.";return;}
+      if(!snap.exists){endStudentConnection("방이 삭제되었거나 종료되었습니다.");return;}
       const next=snap.data()||{},serial=Number(next.syncSerial)||0;
+      if(next.status==="CLOSED"){endStudentConnection("호스트가 방을 종료했습니다. 새 방번호로 참가해주세요.");return;}
       const sessionChanged=adoptStudentSession(next.sessionId,next.sessionStartedAtMs);
       if(next.sessionId&&onlineRoomState.studentSessionId&&String(next.sessionId)!==onlineRoomState.studentSessionId)return;
       if(!sessionChanged&&serial&&serial<onlineRoomState.studentLastSyncSerial)return;
       if(serial)onlineRoomState.studentLastSyncSerial=serial;
       onlineRoomState.studentRoomData=next;
-      handleStudentQuizFlushRequest(next);
+      handleStudentQuizFlushRequest(next);persistStudentResume();
       if(studentConnectionText){
         const cv=onlineRoomState.studentData?.clientView||{},cvSerial=Number(cv.syncSerial)||0;
         const effective=cvSerial>serial?cv:next,p=effective.phase||effective.status||"LOBBY",effectiveSerial=Math.max(serial,cvSerial);
@@ -4812,23 +4887,49 @@
       }catch(e){if(epoch===stageFlow.generation){setStudentMessage("성장 결과 수신 확인 중 · 연결되면 다시 불러옵니다");scheduleStudentProgressRefresh(effectiveStudentRoomState());}}
     },delay);
   }
+  function validateStudentReentry(roomData,data,id){
+    if(data?.status!=="joined")throw new Error(data?.status==="kicked"?"호스트가 참가를 취소한 사용자입니다.":"이 방의 현재 참가자가 아닙니다.");
+    if(data.uid&&data.uid!==id)throw new Error("기존 참가 정보의 소유자를 확인할 수 없습니다.");
+    if(roomData.status==="CLOSED")throw new Error("종료된 방입니다. 새 방번호로 참가해주세요.");
+    const session=data.clientView?.sessionId||data.hostWriteVersion?.sessionId;
+    if(roomData.phase&&roomData.phase!=="LOBBY"&&roomData.sessionId&&session!==roomData.sessionId)throw new Error("지난 경기의 참가 정보입니다. 호스트에게 참가 상태를 확인해주세요.");
+  }
+  async function attachStudentParticipant(code,id,roomData,data){
+    const record=studentResumeRecord();
+    onlineRoomState.studentParticipantId=id;onlineRoomState.studentRoomData=roomData;adoptStudentSession(roomData.sessionId,roomData.sessionStartedAtMs);
+    onlineRoomState.studentData=mergeStudentParticipantSnapshot(data);
+    subscribeStudentState(code,id);restoreStudentInputs(record);renderStudentWaiting(onlineRoomState.studentData);persistStudentResume();
+    onlineRoomState.pendingQuickJoin=null;setStudentMessage("기존 선수로 다시 연결되었습니다.",false);
+    // A refreshed client must not remain reported as the previous HTML version.
+    // Only client metadata changes; never rewrite progress or match ownership.
+    if(data.version!==DSSOCCER_BUILD){
+      try{await boundedNetwork(onlineRoomState.db.runTransaction(async tx=>{
+        const ref=firebaseParticipants(code).doc(id),[roomSnap,member]=await Promise.all([tx.get(firebaseRoomRef(code)),tx.get(ref)]);
+        if(!roomSnap.exists||!member.exists||id!==onlineRoomState.user?.uid||member.data()?.status!=="joined"||roomSnap.data()?.status==="CLOSED")return false;
+        validateStudentReentry(roomSnap.data(),member.data(),id);tx.update(ref,{version:DSSOCCER_BUILD,updatedAt:firebaseTimestamp()});return true;
+      }),1800);}catch(e){console.warn("reconnected client version refresh deferred",e);}
+    }
+    return true;
+  }
   async function joinStudentRoom(){
     const code=onlineRoomState.studentRoomCode;
-    if(!onlineRoomState.ready){setStudentMessage(onlineRoomState.error?`Firebase 연결 실패: ${onlineRoomState.error}`:"Firebase 연결 중입니다.");return;}
-    const name=normalizeStudentName(studentNameInput?.value);
-    const pref=studentPositionSelect?.value in POSITION_PREFS?studentPositionSelect.value:"FLEX";
-    if(!name){setStudentMessage("이름을 입력해주세요.");studentNameInput?.focus();return;}
-    const priorText=studentJoinBtn?.textContent;if(studentJoinBtn){studentJoinBtn.disabled=true;studentJoinBtn.textContent="⏳ 참가 중...";}
+    if(!onlineRoomState.ready){setStudentMessage(onlineRoomState.error?`Firebase 연결 실패: ${onlineRoomState.error}`:"Firebase 연결 중입니다.");return false;}
+    const id=onlineRoomState.user?.uid;if(!id){setStudentMessage("참가 인증을 확인하지 못했습니다. 다시 연결해주세요.");return false;}
+    const priorText=studentJoinBtn?.textContent;if(studentJoinBtn){studentJoinBtn.disabled=true;studentJoinBtn.textContent="⏳ 참가 확인 중...";}
     try{
-      const roomSnap=await firebaseRoomRef(code).get();
-      if(!roomSnap.exists)throw new Error("존재하지 않는 방번호입니다.");
-      const roomData=roomSnap.data()||{};
-      if(roomData.status==="CLOSED"||roomData.acceptingPlayers===false||(roomData.phase&&roomData.phase!=="LOBBY"))throw new Error("이미 시작되었거나 종료된 방입니다.");
-      const id=onlineRoomState.user.uid;
-      const priorParticipant=await firebaseParticipants(code).doc(id).get();
-      if(priorParticipant.exists&&priorParticipant.data()?.status==="kicked")throw new Error("호스트가 참가를 취소한 사용자입니다.");
+      const [roomSnap,priorParticipant]=await Promise.all([firebaseRoomRef(code).get(),firebaseParticipants(code).doc(id).get()]);
+      if(!roomSnap.exists){forgetStudentResume(code);throw new Error("존재하지 않는 방번호입니다.");}
+      const roomData=roomSnap.data()||{},prior=priorParticipant.exists?priorParticipant.data():null;
+      if(roomData.status==="CLOSED"){forgetStudentResume(code);throw new Error("종료된 방입니다. 새 방번호로 참가해주세요.");}
+      // Existing students reattach without resetting names, team, growth or input.
+      if(prior?.status==="joined"){validateStudentReentry(roomData,prior,id);return attachStudentParticipant(code,id,roomData,prior);}
+      if(prior?.status==="kicked"){forgetStudentResume(code);throw new Error("호스트가 참가를 취소한 사용자입니다.");}
+      if(roomData.status==="CLOSED"){forgetStudentResume(code);throw new Error("종료된 방입니다. 새 방번호로 참가해주세요.");}
+      if(roomData.acceptingPlayers===false||(roomData.phase&&roomData.phase!=="LOBBY"))throw new Error("경기 중에는 새 참가자를 받을 수 없습니다. 기존 참가자는 같은 브라우저에서 재참여해주세요.");
+      const name=normalizeStudentName(studentNameInput?.value),pref=studentPositionSelect?.value in POSITION_PREFS?studentPositionSelect.value:"FLEX";
+      if(!name){studentNameInput?.focus();throw new Error("이름을 입력해주세요.");}
       const activeSnap=await firebaseParticipants(code).where("status","==","joined").get();
-      if(activeSnap.size>=MAX_STUDENTS && !activeSnap.docs.some(d=>d.id===id))throw new Error(`이 방은 최대 ${MAX_STUDENTS}명까지 참가할 수 있습니다.`);
+      if(activeSnap.size>=MAX_STUDENTS&&!activeSnap.docs.some(d=>d.id===id))throw new Error(`이 방은 최대 ${MAX_STUDENTS}명까지 참가할 수 있습니다.`);
       await firebaseParticipants(code).doc(id).set({
         name,preferredPosition:pref,status:"joined",team:null,source:"student",uid:id,
         quizAnswers:{PRE_QUIZ:{},BREAK25:{},HALF:{},BREAK70:{}},startAllocation:{speed:0,technique:0,kick:0,physical:0,intelligence:0},
@@ -4836,15 +4937,12 @@
         breakScores:{},breakPoints:{},preQuizCorrect:0,preQuizPoints:0,totalQuizCorrect:0,totalGrowthEarned:0,
         growthFocus:"BALANCED",preferredRole:"AUTO",roleReady:false,formationVotes:{},tacticVotes:{},quizFlushAck:null,lineupStatus:"UNSET",assignedRole:null,assignedTacticalRole:null,shirtNumber:null,clientView:{sessionId:roomData.sessionId||null,sessionStartedAtMs:Number(roomData.sessionStartedAtMs)||0,phase:"LOBBY",syncSerial:Number(roomData.syncSerial)||0,quiz:null},joinedAt:firebaseTimestamp(),updatedAt:firebaseTimestamp(),version:DSSOCCER_BUILD
       },{merge:true});
-      const verifySnap=await firebaseParticipants(code).where("status","==","joined").get();
-      const accepted=verifySnap.docs.slice().sort(remoteDocOrder).slice(0,MAX_STUDENTS);
+      const verifySnap=await firebaseParticipants(code).where("status","==","joined").get(),accepted=verifySnap.docs.slice().sort(remoteDocOrder).slice(0,MAX_STUDENTS);
       if(!accepted.some(doc=>doc.id===id)){
-        await firebaseParticipants(code).doc(id).set({status:"full",rejectedAt:firebaseTimestamp(),updatedAt:firebaseTimestamp()},{merge:true});
-        throw new Error(`이 방은 최대 ${MAX_STUDENTS}명까지 참가할 수 있습니다.`);
+        await firebaseParticipants(code).doc(id).set({status:"full",rejectedAt:firebaseTimestamp(),updatedAt:firebaseTimestamp()},{merge:true});throw new Error(`이 방은 최대 ${MAX_STUDENTS}명까지 참가할 수 있습니다.`);
       }
-      onlineRoomState.studentParticipantId=id;onlineRoomState.studentRoomData=roomData;adoptStudentSession(roomData.sessionId,roomData.sessionStartedAtMs);
-      subscribeStudentState(code,id);onlineRoomState.pendingQuickJoin=null;setStudentMessage("",false);
-    }catch(e){onlineRoomState.studentParticipantId=null;setStudentMessage(e.message||String(e));}finally{if(studentJoinBtn){studentJoinBtn.disabled=false;studentJoinBtn.textContent=priorText||"로비 참가하기";}}
+      const own=accepted.find(doc=>doc.id===id).data();return attachStudentParticipant(code,id,roomData,own);
+    }catch(e){onlineRoomState.studentParticipantId=null;setStudentMessage(e.message||String(e));return false;}finally{if(studentJoinBtn){studentJoinBtn.disabled=false;studentJoinBtn.textContent=priorText||"로비 참가 / 재참여";}}
   }
   async function leaveStudentRoom(){
     const code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId;
@@ -4853,30 +4951,47 @@
       if(studentPendingQuizCount())await flushStudentQuizAnswers();
       await flushPendingStudentAllocations();
       if(code&&id&&onlineRoomState.ready)await firebaseParticipants(code).doc(id).set({status:"left",leftAt:firebaseTimestamp(),updatedAt:firebaseTimestamp()},{merge:true});
-      unsubscribeStudentRoom();onlineRoomState.studentLastSyncSerial=0;onlineRoomState.studentSessionId=null;onlineRoomState.studentSessionStartedAtMs=0;location.href=DSSOCCER_DEPLOY_URL;
+      forgetStudentResume(code);unsubscribeStudentRoom();onlineRoomState.studentLastSyncSerial=0;onlineRoomState.studentSessionId=null;onlineRoomState.studentSessionStartedAtMs=0;location.href=DSSOCCER_DEPLOY_URL;
     }catch(e){
-      if(effectiveStudentRoomState().status==="CLOSED"){unsubscribeStudentRoom();location.href=DSSOCCER_DEPLOY_URL;return;}
+      if(effectiveStudentRoomState().status==="CLOSED"){forgetStudentResume(code);unsubscribeStudentRoom();location.href=DSSOCCER_DEPLOY_URL;return;}
       setStudentMessage(`퇴장 상태를 저장하지 못했습니다. 연결을 확인한 뒤 다시 눌러주세요: ${e.message}`);
       if(btn){btn.disabled=false;btn.textContent=priorText||"← 처음으로 돌아가기";}
     }
   }
+  function endStudentConnection(message){
+    forgetStudentResume(onlineRoomState.studentRoomCode);unsubscribeStudentRoom();onlineRoomState.studentParticipantId=null;onlineRoomState.studentData=null;onlineRoomState.studentRoomData=null;onlineRoomState.studentSessionEnded=true;
+    studentJoinForm?.classList.remove("hidden");studentWaiting?.classList.remove("active");studentScreen?.classList.remove("session-active");if(studentStageArea)studentStageArea.innerHTML="";setStudentMessage(message);
+  }
   async function restoreStudentParticipant(){
-    const code=onlineRoomState.studentRoomCode;if(!code||!onlineRoomState.ready)return;
+    const code=onlineRoomState.studentRoomCode,id=onlineRoomState.user?.uid;if(!code||!id||!onlineRoomState.ready)return false;
     try{
-      const snap=await firebaseParticipants(code).doc(onlineRoomState.user.uid).get();
-      if(snap.exists&&snap.data()?.status==="joined"){
-        onlineRoomState.studentParticipantId=onlineRoomState.user.uid;renderStudentWaiting(snap.data());subscribeStudentState(code,onlineRoomState.user.uid);return;
-      }
-      setStudentMessage("이름과 희망 포지션을 입력해주세요.",false);
-    }catch(e){setStudentMessage(`방 연결 실패: ${e.message}`);}
+      const [roomSnap,snap]=await Promise.all([firebaseRoomRef(code).get(),firebaseParticipants(code).doc(id).get()]);
+      if(!roomSnap.exists){forgetStudentResume(code);throw new Error("방이 삭제되었거나 종료되었습니다.");}
+      if(roomSnap.data()?.status==="CLOSED"){forgetStudentResume(code);throw new Error("종료된 방입니다. 새 방번호로 참가해주세요.");}
+      if(snap.exists&&snap.data()?.status==="joined"){validateStudentReentry(roomSnap.data(),snap.data(),id);return attachStudentParticipant(code,id,roomSnap.data(),snap.data());}
+      if(snap.exists&&["kicked","full","late","left"].includes(snap.data()?.status)){forgetStudentResume(code);throw new Error(snap.data().status==="kicked"?"호스트가 참가를 취소한 사용자입니다.":"이 방의 현재 참가자가 아닙니다.");}
+      setStudentMessage("이름과 희망 포지션을 입력해주세요.",false);return false;
+    }catch(e){setStudentMessage(`재참여 확인: ${e.message}`);return false;}
+  }
+  async function restoredFirebaseUser(auth){
+    // Wait for the persisted anonymous account before deciding to create one.
+    // Calling signInAnonymously during auth initialization can lose its UID.
+    if(typeof auth.setPersistence==="function"&&firebase.auth.Auth?.Persistence?.LOCAL){
+      try{await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);}catch(e){console.warn("device auth persistence unavailable",e);}
+    }
+    let user=auth.currentUser;
+    if(typeof auth.onAuthStateChanged==="function")user=await boundedNetwork(new Promise((resolve,reject)=>{
+      let unsub=null,settled=false;unsub=auth.onAuthStateChanged(u=>{settled=true;resolve(u);if(unsub)unsub();},e=>{settled=true;reject(e);if(unsub)unsub();});if(settled)unsub?.();
+    }),6000);
+    if(user)return user;
+    const cred=await auth.signInAnonymously();return cred.user||auth.currentUser;
   }
   async function initFirebaseOnline(){
     try{
       if(!window.firebase)throw new Error("Firebase 라이브러리를 불러오지 못했습니다.");
       if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
       onlineRoomState.auth=firebase.auth();onlineRoomState.db=firebase.firestore();
-      const cred=await onlineRoomState.auth.signInAnonymously();
-      onlineRoomState.user=cred.user||onlineRoomState.auth.currentUser;
+      onlineRoomState.user=await restoredFirebaseUser(onlineRoomState.auth);
       onlineRoomState.ready=!!onlineRoomState.user;
       setFirebaseBadge("● Firebase 온라인","live");
       if(studentConnectionText)studentConnectionText.textContent="● 온라인 연결됨";
@@ -4887,7 +5002,7 @@
         // Finish a cleanup that may have been interrupted by a closed tab or a
         // temporary quota/network error, then restore only a genuinely open room.
         await retryPendingRoomCleanups();
-        await restoreHostRoom();
+        await restoreHostRoom();updateStudentResumeButton();
       }
     }catch(e){
       onlineRoomState.error=e?.message||String(e);onlineRoomState.ready=false;
@@ -5153,6 +5268,7 @@
     try{return await boundedNetwork(onlineRoomState.db.runTransaction(async tx=>{
       const [roomSnap,participant]=await Promise.all([tx.get(firebaseRoomRef(code)),tx.get(ref)]);
       const data=participant.data()||{},room=roomSnap.data()||{},cv=data.clientView||{};
+      if(!participant.exists||data.status!=="joined"||(data.uid&&data.uid!==id)||room.status==="CLOSED")return false;
       const view=(cv.sessionId===room.sessionId&&Number(cv.syncSerial)>Number(room.syncSerial))?cv:room;
       const prior=data.inputMeta?.[field];
       if(stamp.sessionId!==onlineRoomState.studentSessionId||view.sessionId!==stamp.sessionId||view.phase!==stamp.phase)return false;
@@ -5246,7 +5362,7 @@
   function refreshManualCloseDisplay(){updateManualCloseDisplay();if(activeManualClose()&&!manualCloseDisplayTimer)manualCloseDisplayTimer=setInterval(updateManualCloseDisplay,100);}
   async function saveStudentVote(kind,key,value){
     const room=effectiveStudentRoomState(),pending={kind,key,value,meta:studentInputStamp(kind+"_VOTE",key)};
-    stageFlow.votePending=pending;return persistStudentVote(pending);
+    stageFlow.votePending=pending;persistStudentResume();return persistStudentVote(pending);
   }
   async function persistStudentVote(p=stageFlow.votePending){
     if(!p)return true;
@@ -5255,7 +5371,7 @@
     try{
       const saved=await writeStudentStageInput({[`${field}.${p.key}`]:p.value,[`voteMeta.${p.key}.${p.kind}`]:p.meta},p.meta,code,id);
       if(saved&&stageFlow.votePending===p){const data=onlineRoomState.studentData||{};data.inputMeta={...(data.inputMeta||{}),[`${p.meta.phase}:${p.meta.key||''}`]:p.meta};stageFlow.votePending=null;}
-      if(!saved){setStudentMessage("투표 저장 확인 중 · 선택은 보관하고 다시 전송합니다");scheduleStudentInputRetry();}return saved;
+      if(!saved){setStudentMessage("투표 저장 확인 중 · 선택은 보관하고 다시 전송합니다");scheduleStudentInputRetry();}persistStudentResume();return saved;
     }catch(e){setStudentMessage("투표 전송 확인 중 · 선택은 보관되어 있습니다");scheduleStudentInputRetry();return false;}
   }
   async function flushStudentManualClose(c){
@@ -11133,7 +11249,7 @@
     const positionalBonus=
       p.category==="MID"||p.role==="AM" ? 4.2 :
       p.category==="DEF" ? 1.6 : 0;
-    return clamp(raw+positionalBonus,1,99);
+    return clamp((raw+positionalBonus)*fatigueExecutionFactor(p),1,99);
   }
 
   function offBallRunSkill(p){
@@ -11186,7 +11302,7 @@
       result=clamp(result+bonus,1,99);
     }
 
-    return result;
+    return clamp(result*fatigueExecutionFactor(p),1,99);
   }
 
   function generalPassSkill(p,type="SHORT"){
@@ -11216,26 +11332,26 @@
     const result=amplifyDerived(weightedSkill(
       [p.technique,.58],[p.speed,.32],[p.intelligence,.10]
     ),1.26);
-    return clamp(result+(isMidfieldController(p)?4.0:0),1,99);
+    return clamp((result+(isMidfieldController(p)?4.0:0))*fatigueExecutionFactor(p),1,99);
   }
 
   function tackleSkill(p){
     return amplifyDerived(weightedSkill(
       [p.technique,.44],[p.intelligence,.31],[p.physical,.25]
-    ),1.22);
+    ),1.22)*fatigueExecutionFactor(p,.65);
   }
 
   function strengthDuelSkill(p){
     const value=amplifyDerived(weightedSkill(
       [p.physical,.72],[p.technique,.18],[p.speed,.10]
     ),1.24);
-    return clamp(value+(p.role==="GK"?0:Math.max(0,p.physical-50)*.10),1,99);
+    return clamp((value+(p.role==="GK"?0:Math.max(0,p.physical-50)*.10))*fatigueExecutionFactor(p,.65),1,99);
   }
 
   function shootingSkill(p){
     return amplifyDerived(weightedSkill(
       [p.kick,.68],[p.technique,.22],[p.intelligence,.10]
-    ),1.30);
+    ),1.30)*fatigueExecutionFactor(p);
   }
 
   function defensivePositionSkill(p){
@@ -13689,6 +13805,7 @@
   let trajectoryCache={key:"",samples:[]};
   function resetBallFlight(){
     ballResponseState.cache.clear();ballResponseState.memory.blue=ballResponseState.memory.red=null;
+    ballResponseState.pending=false;ballResponseState.receiverPassed=false;
     Object.assign(ball,{z:0,vz:0,curveRate:0,curveUntil:0,previousZ:0,contactZ:null,shooterUid:null,trajectoryBoundary:false,justLanded:false});
   }
   function flightDurationForDistance(distance,speed,friction){
@@ -13700,6 +13817,7 @@
     const incomingHeight=Math.max(0,ball.contactZ??ball.z??0);
     resetBallFlight();
     const aerial=kind==="PASSING"&&AIR_PASS_TYPES.includes(ball.passType);
+    if(kind==="PASSING")ballResponseState.pending=true;
     const shot=kind==="SHOOTING";
     if(shot)ball.shooterUid=getPlayer(ball.shooterId)?.playerUid||null;
     const speed=Math.hypot(ball.vx,ball.vy);
@@ -13857,7 +13975,7 @@
 
   // One reachable-flight plan feeds reception, interceptions and second balls.
   // It samples the existing physical integrator (including height/landing/curl).
-  const ballResponseState={cache:new Map(),memory:{blue:null,red:null}};
+  const ballResponseState={cache:new Map(),memory:{blue:null,red:null},pending:false,receiverPassed:false};
   function movingBallHorizon(){return ball.state==="PASSING"&&AIR_PASS_TYPES.includes(ball.passType)?3.84:2.88;}
   function bestPassRecoveryPlan(p,maxHorizon=movingBallHorizon()){
     if(!p||p.sentOff||p.turnoverStun>0||p.beatenTimer>0||!["PASSING","LOOSE"].includes(ball.state))return null;
@@ -13919,6 +14037,49 @@
   function responseSupportTarget(p,plan,index=0){
     const dir=attackDir(p.team),side=p.homeY<34?-1:1;
     return {x:clamp(plan.x-dir*(index?6.5:4.2),2.5,FIELD_W-2.5),y:clamp(plan.y+side*(index?6.5:4.3),2.5,FIELD_H-2.5)};
+  }
+  function movingBallPrimaryTarget(p,response,other=null){
+    const plan=response?.plan;
+    if(!plan||response?.primary?.id!==p.id||p.role==="GK")return null;
+    const loose=ball.state==="LOOSE",enemy=!loose&&ball.passTeam!==p.team;
+    const beatenToBall=enemy&&other?.plan&&!other.plan.anticipatory&&other.plan.t+.36<Math.max(plan.t,plan.eta);
+    if(beatenToBall)return {...responseSupportTarget(p,other.plan,0),assignment:"INTERCEPT_COVER",focus:1.02,plan:null};
+    return {x:plan.approachX??plan.x,y:plan.approachY??plan.y,
+      assignment:loose?"LOOSE_INTERCEPT":enemy?"INTERCEPT_RUN":p.id===ball.intendedReceiverId?"RECEIVE_RUN":"PASS_SUPPORT_RUN",
+      focus:loose?(ball.looseAge>.85?1.40:1.34):enemy?1.14:1.10,plan:{...plan,tick:simulationRun.physicsTicks}};
+  }
+  function refreshImmediateBallResponse(){
+    if(!["PASSING","LOOSE"].includes(ball.state)){ballResponseState.pending=false;return;}
+    const receiver=ball.state==="PASSING"?getPlayer(ball.intendedReceiverId):null;
+    const pace=Math.hypot(ball.vx,ball.vy);
+    const passed=!!receiver&&pace>.1&&((ball.x-receiver.x)*ball.vx+(ball.y-receiver.y)*ball.vy)/pace>1.5;
+    if(passed&&!ballResponseState.receiverPassed)ballResponseState.pending=true;
+    ballResponseState.receiverPassed=passed;
+    if(!ballResponseState.pending)return;
+    ballResponseState.pending=false;
+    const responses={blue:movingBallTeamResponse("blue"),red:movingBallTeamResponse("red")};
+    for(const teamName of ["blue","red"]){
+      const response=responses[teamName];if(!response?.primary)continue;
+      for(const p of teams[teamName].players){
+        if(p.role==="GK")continue;
+        if(p.ballResponsePlan&&p.id!==response.primary.id){
+          p.ballResponsePlan=null;
+          const fallback=ball.state==="LOOSE"?contestedFormationTarget(p):{x:p.offBallX,y:p.offBallY};
+          p.tx=fallback.x;p.ty=fallback.y;p.assignment=ball.state==="LOOSE"?"SECOND_BALL_SHAPE":p.offBallIntent;p.focus=.38;
+        }
+        const target=movingBallPrimaryTarget(p,response,responses[otherTeam(teamName)]);
+        if(target){
+          p.assignment=target.assignment;p.focus=target.focus;p.ballResponsePlan=target.plan;
+          const responseFactor=ball.state==="LOOSE"?.97:.86,margin=target.plan?.boundaryApproach?1.5:2.5;
+          p.tx=clamp(lerp(p.tx,target.x,responseFactor),margin,FIELD_W-margin);
+          p.ty=clamp(lerp(p.ty,target.y,responseFactor),margin,FIELD_H-margin);
+        }else if(response.support.some(e=>e.p.id===p.id)){
+          // A supporting player reuses the existing off-ball scan on the next
+          // 10Hz tick; only the one actual racer gets an immediate chase target.
+          p.offBallRefresh=0;p.microTimer=0;
+        }
+      }
+    }
   }
   function buildMovingBallInterceptions(teamName){
     const map=new Map();if(ball.state==="PASSING"&&ball.passTeam===teamName)return map;
@@ -15599,7 +15760,7 @@
           ? DEF_MID_DECISION_TEMPO_BONUS
           : 1;
     const tikiTempo=teamTactic(player.team).preset==="TIKI_TAKA"?.86:1;
-    return rand(min,max)*scale*tikiTempo/(tempoFactor(player.team)*AI_DECISION_TEMPO_MULTIPLIER*positionalTempo);
+    return rand(min,max)*scale*tikiTempo*(1+fatigueLoad(player)*.24)/(tempoFactor(player.team)*AI_DECISION_TEMPO_MULTIPLIER*positionalTempo);
   }
 
   function pointToSegmentDistance(px,py,x1,y1,x2,y2){
@@ -15622,13 +15783,13 @@
   function quickShotSkill(p){
     return amplifyDerived(weightedSkill(
       [p.kick,.46],[p.technique,.44],[p.intelligence,.10]
-    ),1.28);
+    ),1.28)*fatigueExecutionFactor(p);
   }
 
   function longShotSkill(p){
     return amplifyDerived(weightedSkill(
       [p.kick,.76],[p.technique,.18],[p.intelligence,.06]
-    ),1.30);
+    ),1.30)*fatigueExecutionFactor(p);
   }
 
 
@@ -15637,7 +15798,7 @@
       [p.technique,.44],
       [p.kick,.42],
       [p.intelligence,.14]
-    ),1.30);
+    ),1.30)*fatigueExecutionFactor(p);
   }
 
   function insideForwardWindow(p){
@@ -15699,19 +15860,19 @@
   function placedShotSkill(p){
     return amplifyDerived(weightedSkill(
       [p.technique,.42],[p.kick,.35],[p.intelligence,.23]
-    ),1.28);
+    ),1.28)*fatigueExecutionFactor(p);
   }
 
   function lowDrivenShotSkill(p){
     return amplifyDerived(weightedSkill(
       [p.kick,.48],[p.technique,.37],[p.intelligence,.15]
-    ),1.27);
+    ),1.27)*fatigueExecutionFactor(p);
   }
 
   function powerShotSkill(p){
     return amplifyDerived(weightedSkill(
       [p.kick,.78],[p.technique,.14],[p.intelligence,.08]
-    ),1.31);
+    ),1.31)*fatigueExecutionFactor(p);
   }
 
   function chooseOpenPlayShotVariant(owner,forcedQuick=false,longContext=false){
@@ -15769,7 +15930,7 @@
   function headerFinishSkill(p){
     return amplifyDerived(weightedSkill(
       [p.physical,.45],[p.technique,.35],[p.intelligence,.15],[p.kick,.05]
-    ),1.22);
+    ),1.22)*fatigueExecutionFactor(p);
   }
 
   function aerialDuelSkill(p){
@@ -15782,7 +15943,7 @@
       ["DM","LDM","RDM"].includes(p.role)?6:
       p.tacticalRole==="TARGET_FORWARD"?8:
       isStriker(p)?3:0;
-    return clamp(raw+roleBonus+(p.role==="GK"?0:Math.max(0,p.physical-50)*.08),1,99);
+    return clamp((raw+roleBonus+(p.role==="GK"?0:Math.max(0,p.physical-50)*.08))*fatigueExecutionFactor(p,.65),1,99);
   }
 
   function longShotUtility(owner){
@@ -21305,6 +21466,8 @@
   }
 
   function makeLooseBall(x,y,vx=0,vy=0,announce=true){
+    ballResponseState.cache.clear();ballResponseState.memory.blue=ballResponseState.memory.red=null;
+    ballResponseState.pending=true;ballResponseState.receiverPassed=false;
     ball.curveRate=0;ball.curveUntil=0;ball.trajectoryBoundary=false;
     finishPassEvent(null,"makeLooseBall");
     ball.state="LOOSE";ball.ownerId=null;ball.ownerTeam=null;
@@ -21951,7 +22114,8 @@
       const pastRunner=!intended||
         ((ball.x-intended.x)*ball.vx+(ball.y-intended.y)*ball.vy)/
           Math.max(.1,Math.hypot(ball.vx,ball.vy))>1.5;
-      const rescueAllowed=movingBallTeamResponse(ball.passTeam)?.primary?.id!==ball.intendedReceiverId||!penetrative||
+      const passResponse=movingBallTeamResponse(ball.passTeam);
+      const rescueAllowed=passResponse?.primary?.id!==ball.intendedReceiverId||!penetrative||
         (pastRunner&&!contacts.some(contact=>contact.type==="RECEIVER"));
       if(rescueAllowed){
         for(const p of teams[ball.passTeam].players){
@@ -21960,7 +22124,8 @@
             p.id===ball.passerId||
             p.role==="GK"||
             p.turnoverStun>0||p.beatenTimer>0||
-            !["PASS_SUPPORT_RUN","PASS_SECOND_BALL_RUN"].includes(p.assignment)
+            !(["PASS_SUPPORT_RUN","PASS_SECOND_BALL_RUN"].includes(p.assignment)||
+              passResponse?.support.some(e=>e.p.id===p.id))
           )continue;
           if(!canContactBall(p,x1,y1,x2,y2))continue;
         const d=pointToSegmentDistance(p.x,p.y,x1,y1,x2,y2);
@@ -22064,6 +22229,7 @@
           settleBallContact(interceptor,x1,y1,x2,y2);
           ball.vx*=.84;
           ball.vy*=.84;
+          ballResponseState.pending=true;
 
           if(first.d<.42){
             makeLooseBall(
@@ -22193,6 +22359,11 @@
         ? buildPassRecoveryAssignments(teamName)
         : new Map();
 
+    const localSupportIds=attacking&&ball.state==="CONTROLLED"&&owner&&owner.role!=="GK"&&!ownGKReset
+      ? new Set(players.filter(p=>p.id!==owner.id&&p.role!=="GK"&&!isCentralDefender(p)&&!p.sentOff&&p.turnoverStun<=0&&p.beatenTimer<=0&&dist(p.x,p.y,owner.x,owner.y)<18)
+          .sort((a,b)=>dist(a.x,a.y,owner.x,owner.y)-dist(b.x,b.y,owner.x,owner.y)).slice(0,3).map(p=>p.id))
+      : null;
+
     const defensiveAssignments =
       defending && owner
         ? buildDefensiveAssignments(teamName,owner)
@@ -22204,6 +22375,7 @@
 
       // Off-ball decision never stops. In a loose-ball state, use contested structure
       // instead of incorrectly treating both teams as normal defenders.
+      if(localSupportIds?.has(p.id))p.offBallRefresh=Math.min(p.offBallRefresh,lerp(.25,.17,decisionIntelligence(p)));
       p.offBallRefresh-=AI_DT;
       if(p.offBallRefresh<=0){
         if(loose){
@@ -22365,12 +22537,9 @@
       if(ball.state==="PASSING"&&p.role!=="GK"){
         const response=movingBallTeamResponse(teamName),plan=response?.plan;
         if(response?.primary?.id===p.id&&plan){
-          tx=plan.approachX??plan.x;ty=plan.approachY??plan.y;
-          const enemy=ball.passTeam!==teamName;
           const other=movingBallTeamResponse(otherTeam(teamName));
-          const beatenToBall=enemy&&other?.plan&&!other.plan.anticipatory&&other.plan.t+.36<Math.max(plan.t,plan.eta);
-          if(beatenToBall){const cover=responseSupportTarget(p,other.plan,0);tx=cover.x;ty=cover.y;p.assignment="INTERCEPT_COVER";p.focus=1.02;}
-          else {p.assignment=enemy?"INTERCEPT_RUN":p.id===receiver?.id?"RECEIVE_RUN":"PASS_SUPPORT_RUN";p.focus=enemy?1.14:1.10;p.ballResponsePlan={...plan,tick:simulationRun.physicsTicks};}
+          const target=movingBallPrimaryTarget(p,response,other);
+          tx=target.x;ty=target.y;p.assignment=target.assignment;p.focus=target.focus;p.ballResponsePlan=target.plan;
         }else if(plan&&response?.support.some(e=>e.p.id===p.id)){
           const index=response.support.findIndex(e=>e.p.id===p.id),support=responseSupportTarget(p,plan,index);
           tx=support.x;ty=support.y;p.assignment="SECOND_BALL_SUPPORT";p.focus=.78;
@@ -22542,10 +22711,8 @@
           const plan=looseActors.chaserPlan;
 
           if(plan){
-            tx=plan.approachX??plan.x;
-            ty=plan.approachY??plan.y;
-            p.assignment="LOOSE_INTERCEPT";
-            p.ballResponsePlan={...plan,tick:simulationRun.physicsTicks};
+            const target=movingBallPrimaryTarget(p,movingBallTeamResponse(teamName));
+            tx=target.x;ty=target.y;p.assignment=target.assignment;p.ballResponsePlan=target.plan;
           }else{
             const future=predictMovingBallAt(.18);
             tx=future.x;
@@ -22830,15 +22997,24 @@
     return p.maxSpeed*lerp(.72,1.34,speedImpact(p))*(1+comeback*.12);
   }
 
+  const STAMINA_MIN=4;
+  function fatigueLoad(p,onset=70){
+    const value=Number(p?.stamina??100),stamina=Number.isFinite(value)?value:100;
+    return Math.pow(clamp((onset-stamina)/(onset-10),0,1),1.30);
+  }
+  function fatigueExecutionFactor(p,weight=1){
+    // One adjustment at each terminal execution skill, never the five stored
+    // abilities or the shared decision/stat primitives used inside them.
+    return 1-.16*fatigueLoad(p)*weight;
+  }
   function fatigueFactor(p){
-    const usable=clamp((p.stamina-22)/78,0,1);
-    const floor=isFullback(p)||p.tacticalRole==="WINGBACK"?.74:.80;
-    return lerp(floor,1.0,usable);
+    const floor=isFullback(p)||p.tacticalRole==="WINGBACK"?.67:.70;
+    return lerp(1.0,floor,fatigueLoad(p,80));
   }
 
   function updatePlayerFatigue(p,dt){
     const currentSpeed=Math.hypot(p.vx,p.vy);
-    const max=Math.max(1,effectiveMaxSpeedNoFatigue(p));
+    const max=Math.max(1,effectiveMaxSpeed(p));
     const intensity=clamp(currentSpeed/max,0,1);
 
     const highMileage=
@@ -22854,23 +23030,34 @@
         "IF_FAR_POST_RUN","AM_CHANNEL_RUN"
       ].includes(p.assignment);
 
+    const sprinting=ball.state==="CONTROLLED"&&ball.ownerId===p.id&&p.onBallAction==="SPRINT_DRIBBLE";
     const hardAction=
-      p.onBallAction==="SPRINT_DRIBBLE" ? 1.46 :
+      sprinting ? 1.46 :
       highMileage ? (isFullback(p)?1.48:1.34) :
-      ["PRESS_PRIMARY","TACKLE_PRESS","DOUBLE_TEAM","INTERCEPT_RUN","LOOSE_INTERCEPT"].includes(p.assignment)
+      ["PRESS_PRIMARY","TACKLE_PRESS","DOUBLE_TEAM","INTERCEPT_RUN","LOOSE_INTERCEPT","LOOSE_CHALLENGE"].includes(p.assignment)
         ? 1.24 : 1;
 
     const resistance=lerp(1.18,.70,p.physical/100);
-    const movingDrain=.043*intensity*hardAction*resistance;
+    const tactic=teamTactic(p.team),clockSeconds=dt*10;
+    const tacticalWork=(tactic.pressing==="HIGH"?1.07:tactic.pressing==="LOW"?.96:1)*
+      (tactic.tempo==="FAST"?1.03:tactic.tempo==="SLOW"?.98:1);
+    const stopped=ball.state==="DEAD"||!!match.setPiece||!!match.pendingSetPiece||match.goalPause>0;
+    // The existing clock advances ten match seconds per physics second. Charge
+    // workload in that clock, keep actual distance in physical metres below.
+    const duty=p.role==="GK"?.30:1;
+    const baseDrain=.0113*duty*lerp(1.04,.96,p.physical/100)*(stopped?.55:1)*tacticalWork;
+    const movingDrain=.0052*Math.pow(intensity,1.18)*hardAction*resistance*tacticalWork*
+      (p.role==="GK"?.65:1);
+    const sprintDrain=sprinting?.0032*intensity*resistance:0;
 
     const resting=
       intensity<.20 &&
-      p.onBallAction!=="SPRINT_DRIBBLE" &&
+      !sprinting &&
       !activeMovementAssignment(p.assignment);
 
-    const recovery=resting?.012*lerp(.85,1.18,p.physical/100):0;
+    const recovery=resting?.0008*lerp(.85,1.18,p.physical/100):0;
 
-    p.stamina=clamp(p.stamina-movingDrain*dt+recovery*dt,22,100);
+    p.stamina=clamp(p.stamina-(baseDrain+movingDrain+sprintDrain-recovery)*clockSeconds,STAMINA_MIN,100);
     p.distanceRun+=currentSpeed*dt;
   }
 
@@ -23284,6 +23471,7 @@
 
     if(ball.trajectoryBoundary){handleBallOut();return;}
     if(ball.justLanded){
+      ballResponseState.pending=true;
       ball.passAimX=null;ball.passAimY=null;
       for(const p of allPlayers())p.offBallRefresh=0;
     }
@@ -23382,6 +23570,7 @@
 
     enforceRestartGoalkeeperInvariant();
 
+    refreshImmediateBallResponse();
     for(const p of allPlayers())updatePlayerPhysics(p,dt);
     resolvePlayerDiscSpacing();
 
@@ -24042,6 +24231,7 @@
     syncHostAudioScene(true,document.visibilityState==="hidden");
   });
   window.addEventListener("pagehide",()=>{
+    if(onlineStudentSession())persistStudentResume();
     if(onlineStudentSession()&&studentPendingQuizCount())flushStudentQuizAnswers();
     if(onlineStudentSession())flushPendingStudentAllocations();
   });
@@ -24153,7 +24343,7 @@
   });
   participationPrimaryBtn.addEventListener("click",()=>runHostTransition(hostAdvance,participationPrimaryBtn,"⏳ 진행 중..."));
   document.getElementById("hostForceAdvanceBtn")?.addEventListener("click",()=>forceHostAdvance());
-  window.addEventListener("online",()=>{if(stageFlow.pending)void publishCommittedStage(stageFlow.pending);});
+  window.addEventListener("online",()=>{if(stageFlow.pending)void publishCommittedStage(stageFlow.pending);if(onlineStudentSession()&&onlineRoomState.studentParticipantId){stageFlow.studentRetryCount=0;scheduleStudentInputRetry();}});
 
   quizBankApplyBtn?.addEventListener("click",()=>applyQuizBankFromEditor(true));
   quizBankImportBtn?.addEventListener("click",()=>{
@@ -24176,6 +24366,7 @@
 
   document.getElementById("createRoomBtn")?.addEventListener("click",createOnlineRoom);
   landingJoinBtn?.addEventListener("click",quickJoinFromLanding);
+  studentResumeBtn?.addEventListener("click",resumePreviousStudentRoom);
   [landingRoomCodeInput,landingNameInput].forEach(el=>el?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();quickJoinFromLanding();}}));
   document.getElementById("copyJoinLinkBtn")?.addEventListener("click",()=>{
     if(onlineRoomState.hostRoomCode)copyText(studentJoinUrl(onlineRoomState.hostRoomCode),"학생 접속 링크를 복사했습니다.");
@@ -26795,7 +26986,7 @@
       handleBallOut();
     },
     drainStamina(teamName="blue",amount=35){
-      teams[teamName].players.forEach(p=>p.stamina=clamp(p.stamina-amount,22,100));
+      teams[teamName].players.forEach(p=>p.stamina=clamp(p.stamina-amount,STAMINA_MIN,100));
     },
     speedFor(playerId){
       const p=getPlayer(playerId);
