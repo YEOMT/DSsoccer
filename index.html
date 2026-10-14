@@ -1537,7 +1537,7 @@
   // ============================================================
 
   // One build identity for display, links and the classroom protocol.
-  const DSSOCCER_BUILD="2.5.33";
+  const DSSOCCER_BUILD="2.5.34";
   const simulationRun={owner:null,aiTicks:0,ticks:0,seed:0,rngState:0,nextSeed:null};
   const passLedger={blue:{},red:{}};
   function setNextMatchSeed(seed){simulationRun.nextSeed=Number(seed)>>>0;}
@@ -3451,7 +3451,7 @@
   const onlineRoomState={
     ready:false,error:null,db:null,auth:null,user:null,mode:"host",
     hostRoomCode:null,roomUnsub:null,participantsUnsub:null,pendingQuickJoin:null,
-    studentRoomCode:null,studentParticipantId:null,studentDocUnsub:null,studentRoomUnsub:null,
+    studentRoomCode:null,studentParticipantId:null,studentDocUnsub:null,studentRoomUnsub:null,studentConnectionEpoch:0,studentConnectionRetryTimer:null,studentConnectionRetryCount:0,studentConnectionHealthTimer:null,studentLastSnapshotAt:0,studentConnectionErrors:{},studentConnectionRefresh:null,studentLastConnectionRefreshAt:0,
     studentData:null,studentRoomData:null,studentTimerHandle:null,studentQuizAdvanceHandle:null,studentQuizCursor:{},studentQuizFeedback:{},
     studentPendingQuizAnswers:{},studentQuizWriteChain:Promise.resolve(),studentQuizFlushInFlightToken:null,studentLastQuizFlushToken:null,studentQuizFlushRetries:{},
     studentAllocationSaveTimers:{},studentPendingAllocations:{},studentAllocationWriteChain:Promise.resolve(),
@@ -3605,12 +3605,16 @@
     if(stageFlow.pending?.localDone&&!stageFlow.localCommit&&stageFlow.pending.sessionId===onlineRoomState.sessionId)stageFlow.pending.snapshot=JSON.parse(JSON.stringify(next));
     return next;
   }
+  function studentFallbackView(common,team){
+    const key=common.breakKey,report=key?common.quarterReports?.[key]:null;
+    return {...common,quarterReports:report?{[key]:{quarter:report.quarter,breakKey:report.breakKey,[team||"blue"]:report[team||"blue"]||null}}:{}};
+  }
   async function mirrorClientViewToParticipants(extraByParticipant=null){
     if(!onlineHostSession())return false;
     const students=lobbyState.students.filter(st=>st.remote&&st.remoteId&&!['kicked','left','full'].includes(st.status));
     if(!students.length)return true;
     const common={...(onlineRoomState.clientBroadcastState||{})};
-    const personalView=st=>({...common,quarterReports:Object.fromEntries(Object.entries(common.quarterReports||{}).map(([key,r])=>[key,{quarter:r.quarter,breakKey:r.breakKey,[st.team||"blue"]:r[st.team||"blue"]||null}]))});
+    const personalView=st=>studentFallbackView(common,st.team);
     if(onlineRoomState.debugMock){
       for(const st of students){
         const extra=extraByParticipant?.[st.remoteId]||{};
@@ -3663,7 +3667,7 @@
         const stamp=hostWriteStamp(serial);
         const rows=[[firebaseRoomRef(roomCode),{...full,updatedAt:firebaseTimestamp()}]];
         const personal=new Map((options.participantRows||[]).filter(([st])=>st?.remoteId).map(([st,patch])=>[st.remoteId,{...patch}]));
-        if(options.mirror===true)for(const st of participationStudents().filter(st=>st.remoteId&&activeRemoteParticipant(st)))personal.set(st.remoteId,{...(personal.get(st.remoteId)||{}),clientView:{...full,quarterReports:Object.fromEntries(Object.entries(full.quarterReports||{}).map(([key,r])=>[key,{quarter:r.quarter,breakKey:r.breakKey,[st.team]:r[st.team]||null}]))}});
+        if(options.mirror===true)for(const st of participationStudents().filter(st=>st.remoteId&&activeRemoteParticipant(st)))personal.set(st.remoteId,{...(personal.get(st.remoteId)||{}),clientView:studentFallbackView(full,st.team)});
         for(const [id,patch] of personal)rows.push([firebaseParticipants(roomCode).doc(id),{...patch,updatedAt:firebaseTimestamp()}]);
         const written=await boundedNetwork(writeHostRows(rows,stamp),2000);
         if(!written||epoch!==stageFlow.generation||session!==onlineRoomState.sessionId)return false;
@@ -4378,13 +4382,13 @@
     if(stageFlow.studentRetryTimer||stageFlow.studentRetryBusy||!studentHasPendingInput(view))return;
     const key=`${view.sessionId}:${view.phase}:${view.breakKey||''}`,epoch=stageFlow.generation;
     if(stageFlow.studentRetryKey!==key){stageFlow.studentRetryKey=key;stageFlow.studentRetryCount=0;}
-    if((stageFlow.studentRetryCount||0)>=6)return;
-    const delay=Math.min(4000,650*2**(stageFlow.studentRetryCount||0));stageFlow.studentRetryCount++;
+    if((stageFlow.studentRetryCount||0)>=6&&(navigator.onLine===false||document.hidden))return;
+    const delay=(stageFlow.studentRetryCount||0)>=6?15000:Math.min(4000,650*2**(stageFlow.studentRetryCount||0));stageFlow.studentRetryCount++;
     stageFlow.studentRetryTimer=setTimeout(async()=>{
       stageFlow.studentRetryTimer=null;
       const next=effectiveStudentRoomState(),close=activeManualClose(next);
       if(epoch!==stageFlow.generation||`${next.sessionId}:${next.phase}:${next.breakKey||''}`!==key||
-        (close&&Date.now()>close.collectUntil))return;
+        (close&&Date.now()>close.collectUntil)||(stageFlow.studentRetryCount>6&&(navigator.onLine===false||document.hidden)))return;
       stageFlow.studentRetryBusy=true;let saved=false;
       try{saved=await (["BUILD","BREAK_BUILD"].includes(next.phase)?flushPendingStudentAllocations():
         next.phase==="ROLE_SELECT"?persistStudentRole():["FORMATION_VOTE","TACTIC_VOTE"].includes(next.phase)?persistStudentVote():flushStudentQuizAnswers());}
@@ -4553,11 +4557,11 @@
     return retainStudentView(base);
   }
   function renderStudentStage(){
-    const phase=effectiveStudentRoomState()?.phase;
-    const scroll=document.scrollingElement,top=scroll?.scrollTop||0;
-    const preserve=["FORMATION_VOTE","TACTIC_VOTE","RESULT"].includes(phase)&&reportViewState.get("lastPhase")===phase;
+    const room=effectiveStudentRoomState(),phase=room?.phase,stageKey=`${room.sessionId||''}:${phase}:${room.breakKey||''}`;
+    const scroll=document.scrollingElement,top=scroll?.scrollTop||0,prior=reportViewState.get("lastStudentStage");
+    const preserve=["FORMATION_VOTE","TACTIC_VOTE","RESULT"].includes(phase)&&prior===stageKey;
     try{return renderStudentStageContent();}
-    finally{reportViewState.set("lastPhase",phase);if(preserve&&scroll)scroll.scrollTop=top;refreshManualCloseDisplay();}
+    finally{reportViewState.set("lastPhase",phase);reportViewState.set("lastStudentStage",stageKey);if(scroll){if(preserve)scroll.scrollTop=top;else if(prior!==stageKey)scroll.scrollTop=0;}refreshManualCloseDisplay();}
   }
   function renderStudentStageContent(){
     const room=effectiveStudentRoomState(),data=onlineRoomState.studentData||{};
@@ -4791,36 +4795,98 @@
     resetManualStageClose();
     stopStudentStageTimer();stopStudentQuizAdvance();onlineRoomState.studentDocUnsub?.();onlineRoomState.studentDocUnsub=null;
     onlineRoomState.studentRoomUnsub?.();onlineRoomState.studentRoomUnsub=null;
+    if(onlineRoomState.studentConnectionRetryTimer)clearTimeout(onlineRoomState.studentConnectionRetryTimer);
+    onlineRoomState.studentConnectionRetryTimer=null;onlineRoomState.studentConnectionRetryCount=0;onlineRoomState.studentConnectionErrors={};
+    if(onlineRoomState.studentConnectionHealthTimer)clearInterval(onlineRoomState.studentConnectionHealthTimer);
+    onlineRoomState.studentConnectionHealthTimer=null;onlineRoomState.studentLastSnapshotAt=0;
+    onlineRoomState.studentConnectionRefresh=null;onlineRoomState.studentLastConnectionRefreshAt=0;onlineRoomState.studentConnectionEpoch++;
   }
-  function subscribeStudentState(code,id){
-    unsubscribeStudentRoom();
-    onlineRoomState.studentDocUnsub=firebaseParticipants(code).doc(id).onSnapshot(snap=>{
-      if(!snap.exists){endStudentConnection("참가 정보가 삭제되었습니다. 호스트에게 확인해주세요.");return;}
-      if(snap.data()?.status!=="joined"){endStudentConnection(snap.data()?.status==="kicked"?"호스트가 참가를 취소했습니다.":"현재 참가 상태가 종료되었습니다.");return;}
-      onlineRoomState.studentData=mergeStudentParticipantSnapshot(snap.data());
-      renderStudentWaiting(onlineRoomState.studentData);persistStudentResume();
-      if(studentConnectionText){
-        const cv=onlineRoomState.studentData?.clientView||{},p=cv.phase||onlineRoomState.studentRoomData?.phase||"LOBBY",ser=Number(cv.syncSerial)||0;
-        studentConnectionText.textContent="● 온라인 연결됨";
+  function receiveStudentParticipantSnapshot(snap){
+    if(!snap.exists){endStudentConnection("참가 정보가 삭제되었습니다. 호스트에게 확인해주세요.");return;}
+    if(snap.data()?.status!=="joined"){endStudentConnection(snap.data()?.status==="kicked"?"호스트가 참가를 취소했습니다.":"현재 참가 상태가 종료되었습니다.");return;}
+    onlineRoomState.studentData=mergeStudentParticipantSnapshot(snap.data());
+    renderStudentWaiting(onlineRoomState.studentData);void handleStudentQuizFlushRequest(effectiveStudentRoomState());persistStudentResume();
+    if(studentConnectionText)studentConnectionText.textContent="● 온라인 연결됨";
+  }
+  function receiveStudentRoomSnapshot(snap){
+    if(!snap.exists){endStudentConnection("방이 삭제되었거나 종료되었습니다.");return;}
+    const next=snap.data()||{},serial=Number(next.syncSerial)||0;
+    if(next.status==="CLOSED"){endStudentConnection("호스트가 방을 종료했습니다. 새 방번호로 참가해주세요.");return;}
+    const sessionChanged=adoptStudentSession(next.sessionId,next.sessionStartedAtMs);
+    if(next.sessionId&&onlineRoomState.studentSessionId&&String(next.sessionId)!==onlineRoomState.studentSessionId)return;
+    if(!sessionChanged&&serial&&serial<onlineRoomState.studentLastSyncSerial)return;
+    if(serial)onlineRoomState.studentLastSyncSerial=serial;
+    onlineRoomState.studentRoomData=next;
+    void handleStudentQuizFlushRequest(next);persistStudentResume();
+    if(studentConnectionText)studentConnectionText.textContent="● 온라인 연결됨";
+    renderStudentStage();
+  }
+  function scheduleStudentConnectionRecovery(){
+    if(!onlineStudentSession()||!onlineRoomState.studentParticipantId||onlineRoomState.studentConnectionRetryTimer||navigator.onLine===false||document.hidden)return;
+    const epoch=onlineRoomState.studentConnectionEpoch,count=onlineRoomState.studentConnectionRetryCount||0,delay=count>=6?30000:Math.min(15000,800*2**count);
+    onlineRoomState.studentConnectionRetryCount++;
+    onlineRoomState.studentConnectionRetryTimer=setTimeout(()=>{
+      onlineRoomState.studentConnectionRetryTimer=null;if(epoch!==onlineRoomState.studentConnectionEpoch)return;
+      void refreshStudentConnection(true);
+    },delay);
+  }
+  function subscribeStudentState(code,id,recover=false){
+    if(recover){
+      onlineRoomState.studentDocUnsub?.();onlineRoomState.studentRoomUnsub?.();onlineRoomState.studentConnectionEpoch++;
+    }else unsubscribeStudentRoom();
+    const epoch=onlineRoomState.studentConnectionEpoch,valid=()=>epoch===onlineRoomState.studentConnectionEpoch&&code===onlineRoomState.studentRoomCode&&id===onlineRoomState.studentParticipantId;
+    const listen=(kind,ref,receive)=>ref.onSnapshot(snap=>{
+      if(!valid())return;delete onlineRoomState.studentConnectionErrors[kind];onlineRoomState.studentLastSnapshotAt=Date.now();
+      receive(snap);
+      if(!Object.keys(onlineRoomState.studentConnectionErrors).length){
+        onlineRoomState.studentConnectionRetryCount=0;
+        if(onlineRoomState.studentConnectionRetryTimer)clearTimeout(onlineRoomState.studentConnectionRetryTimer);
+        onlineRoomState.studentConnectionRetryTimer=null;
       }
-    },e=>setStudentMessage(`참가자 상태 수신 실패: ${e.message}`));
-    onlineRoomState.studentRoomUnsub=firebaseRoomRef(code).onSnapshot(snap=>{
-      if(!snap.exists){endStudentConnection("방이 삭제되었거나 종료되었습니다.");return;}
-      const next=snap.data()||{},serial=Number(next.syncSerial)||0;
-      if(next.status==="CLOSED"){endStudentConnection("호스트가 방을 종료했습니다. 새 방번호로 참가해주세요.");return;}
-      const sessionChanged=adoptStudentSession(next.sessionId,next.sessionStartedAtMs);
-      if(next.sessionId&&onlineRoomState.studentSessionId&&String(next.sessionId)!==onlineRoomState.studentSessionId)return;
-      if(!sessionChanged&&serial&&serial<onlineRoomState.studentLastSyncSerial)return;
-      if(serial)onlineRoomState.studentLastSyncSerial=serial;
-      onlineRoomState.studentRoomData=next;
-      handleStudentQuizFlushRequest(next);persistStudentResume();
-      if(studentConnectionText){
-        const cv=onlineRoomState.studentData?.clientView||{},cvSerial=Number(cv.syncSerial)||0;
-        const effective=cvSerial>serial?cv:next,p=effective.phase||effective.status||"LOBBY",effectiveSerial=Math.max(serial,cvSerial);
-        studentConnectionText.textContent="● 온라인 연결됨";
-      }
-      renderStudentStage();
-    },e=>setStudentMessage(`방 상태 수신 실패: ${e.message}`));
+    },e=>{
+      if(!valid())return;onlineRoomState.studentConnectionErrors[kind]=true;
+      setStudentMessage(`${kind==="participant"?"참가자":"방"} 상태 수신 확인 중 · 연결되면 다시 불러옵니다`);
+      scheduleStudentConnectionRecovery();
+    });
+    onlineRoomState.studentDocUnsub=listen("participant",firebaseParticipants(code).doc(id),receiveStudentParticipantSnapshot);
+    onlineRoomState.studentRoomUnsub=listen("room",firebaseRoomRef(code),receiveStudentRoomSnapshot);
+    if(onlineRoomState.studentConnectionHealthTimer)clearInterval(onlineRoomState.studentConnectionHealthTimer);
+    onlineRoomState.studentLastSnapshotAt=Date.now();
+    onlineRoomState.studentConnectionHealthTimer=setInterval(()=>{
+      if(!valid()||document.hidden||navigator.onLine===false||onlineRoomState.studentConnectionRefresh||onlineRoomState.studentConnectionRetryTimer)return;
+      const phase=effectiveStudentRoomState().phase;
+      // Normal LIVE snapshots already arrive every 20s. Read only when both
+      // existing listeners have been silent for a full 75s during participation.
+      if(!["LOBBY","CLOSED","RESULT","SYNCING"].includes(phase)&&Date.now()-onlineRoomState.studentLastSnapshotAt>=75000)void refreshStudentConnection(true);
+    },15000);
+  }
+  async function refreshStudentConnection(recover=false){
+    if(!onlineStudentSession()||!onlineRoomState.studentParticipantId||navigator.onLine===false||document.hidden)return false;
+    if(onlineRoomState.studentConnectionRefresh)return onlineRoomState.studentConnectionRefresh;
+    if(!recover&&Date.now()-onlineRoomState.studentLastConnectionRefreshAt<2000)return false;
+    onlineRoomState.studentLastConnectionRefreshAt=Date.now();
+    const code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId;
+    if(recover&&(Object.keys(onlineRoomState.studentConnectionErrors).length||Date.now()-onlineRoomState.studentLastSnapshotAt>=75000))subscribeStudentState(code,id,true);
+    const epoch=onlineRoomState.studentConnectionEpoch,valid=()=>epoch===onlineRoomState.studentConnectionEpoch&&code===onlineRoomState.studentRoomCode&&id===onlineRoomState.studentParticipantId;
+    let task;task=(async()=>{
+      try{
+        const [roomSnap,participant]=await boundedNetwork(Promise.all([firebaseRoomRef(code).get({source:"server"}),firebaseParticipants(code).doc(id).get({source:"server"})]),1800);
+        if(!valid())return false;
+        // Apply the shared session first; an old personal mirror cannot rewind it.
+        receiveStudentRoomSnapshot(roomSnap);if(!valid())return false;
+        receiveStudentParticipantSnapshot(participant);if(!valid())return false;
+        onlineRoomState.studentLastSnapshotAt=Date.now();onlineRoomState.studentConnectionRetryCount=0;
+        if(onlineRoomState.studentConnectionRetryTimer)clearTimeout(onlineRoomState.studentConnectionRetryTimer);
+        onlineRoomState.studentConnectionRetryTimer=null;
+        if(studentProgressPending())scheduleStudentProgressRefresh(effectiveStudentRoomState());
+        stageFlow.studentRetryCount=0;scheduleStudentInputRetry();
+        return true;
+      }catch(e){
+        if(valid()){setStudentMessage("연결 확인 중 · 내 답안과 배분은 보관되어 있습니다");scheduleStudentConnectionRecovery();}
+        return false;
+      }finally{if(onlineRoomState.studentConnectionRefresh===task)onlineRoomState.studentConnectionRefresh=null;}
+    })();
+    onlineRoomState.studentConnectionRefresh=task;return task;
   }
   function mergeStudentParticipantSnapshot(raw={}){
     const before=onlineRoomState.studentData||{},cv=raw.clientView||{},version=raw.hostWriteVersion||{};
@@ -4877,13 +4943,15 @@
     if(stageFlow.progressRetryTimer||!onlineStudentSession())return;
     const key=`${view.sessionId}:${view.participantProgressSerial}`,epoch=stageFlow.generation;
     if(stageFlow.progressRetryKey!==key){stageFlow.progressRetryKey=key;stageFlow.progressRetryCount=0;}
-    if(stageFlow.progressRetryCount>=4)return;
-    const delay=Math.min(4000,800*2**stageFlow.progressRetryCount++);
+    if(stageFlow.progressRetryCount>=4&&(navigator.onLine===false||document.hidden))return;
+    const delay=stageFlow.progressRetryCount>=4?15000:Math.min(4000,800*2**stageFlow.progressRetryCount);
+    stageFlow.progressRetryCount++;
     stageFlow.progressRetryTimer=setTimeout(async()=>{
-      stageFlow.progressRetryTimer=null;if(epoch!==stageFlow.generation||!studentProgressPending())return;
+      stageFlow.progressRetryTimer=null;if(epoch!==stageFlow.generation||!studentProgressPending()||document.hidden||(stageFlow.progressRetryCount>4&&navigator.onLine===false))return;
       try{
-        const snap=await boundedNetwork(firebaseParticipants(onlineRoomState.studentRoomCode).doc(onlineRoomState.studentParticipantId).get(),1800);
+        const snap=await boundedNetwork(firebaseParticipants(onlineRoomState.studentRoomCode).doc(onlineRoomState.studentParticipantId).get({source:"server"}),1800);
         if(epoch===stageFlow.generation&&snap.exists){onlineRoomState.studentData=mergeStudentParticipantSnapshot(snap.data());renderStudentStage();}
+        if(epoch===stageFlow.generation&&studentProgressPending())scheduleStudentProgressRefresh(effectiveStudentRoomState());
       }catch(e){if(epoch===stageFlow.generation){setStudentMessage("성장 결과 수신 확인 중 · 연결되면 다시 불러옵니다");scheduleStudentProgressRefresh(effectiveStudentRoomState());}}
     },delay);
   }
@@ -5255,7 +5323,22 @@
         const prior=snapshots[i].data()?.hostWriteVersion;
         if(prior&&(Number(prior.startedAtMs)>Number(stamp.startedAtMs)||(prior.sessionId===stamp.sessionId&&Number(prior.serial)>stamp.serial)))return false;
       }
-      for(const [ref,patch]of rows)tx.set(ref,{...patch,hostWriteVersion:{sessionId:stamp.sessionId,startedAtMs:stamp.startedAtMs,serial:stamp.serial}},{merge:true});
+      for(const [ref,patch]of rows){
+        const write={...patch,hostWriteVersion:{sessionId:stamp.sessionId,startedAtMs:stamp.startedAtMs,serial:stamp.serial}};
+        if(Object.hasOwn(patch,"clientView")){
+          // Replace only the personal fallback map. Other fields retain the
+          // existing recursive merge behavior, including student-owned inputs.
+          const fields=[];
+          const leaves=(path,value)=>{
+            const proto=value&&typeof value==="object"?Object.getPrototypeOf(value):null;
+            if(path!=="clientView"&&value&&Object.prototype.toString.call(value)==="[object Object]"&&(proto===null||proto.constructor?.name==="Object")&&Object.keys(value).length){
+              for(const [key,item]of Object.entries(value))leaves(path+"."+key,item);
+            }else fields.push(path);
+          };
+          for(const [key,value]of Object.entries(write))leaves(key,value);
+          tx.set(ref,write,{mergeFields:fields});
+        }else tx.set(ref,write,{merge:true});
+      }
       return true;
     });
   }
@@ -13090,7 +13173,13 @@
     const s=teamState[p.team];
 
     if(s.tacticalPhase==="COUNTER_ATTACK"){
-      return counterAttackTarget(p);
+      const carrier=wideFinalThirdCarrier(p.team);
+      // When the counter reaches the byline, retain the existing two late
+      // runners instead of sending every CM down a generic counter lane.
+      const lateDelivery=carrier&&attackProgressFor(carrier)>.80&&
+        isMidfieldBoxRunner(p)&&p.tacticalRole!=="ANCHOR"&&midfieldBoxRunRank(p)<2&&
+        (s.phase==="FINAL_THIRD"||s.phase==="SUSTAINED_PRESSURE");
+      if(!lateDelivery)return counterAttackTarget(p);
     }
 
     const dir=attackDir(p.team);
@@ -13279,7 +13368,8 @@
       const movement=individualMovementAggression(p,true);
 
       if(isFullback(p)){
-        const staminaFactor=clamp((p.stamina-28)/72,.45,1);
+        // Fatigue reduces the run modestly without removing the wide role.
+        const staminaFactor=lerp(1,.90,fatigueLoad(p,80));
         const run=
           p.tacticalRole==="WINGBACK"
             ? 7.0*staminaFactor
@@ -14635,7 +14725,7 @@
     const candidateX=clamp(owner.x+dir*runAhead,6,FIELD_W-6);
     const room=nearestOpponentDistanceAt(p.team,candidateX,wideY);
     const lane=passLaneRiskFromPoint(p.team,owner.x,owner.y,candidateX,wideY);
-    const safe=cover>=(backThree?2:2)&&ownerReady&&p.stamina>30;
+    const safe=cover>=(backThree?2:2)&&ownerReady&&p.stamina>16;
     // IQ changes which borderline run is seen, not its movement speed/success.
     const laneOpen=room>lerp(4.0,2.7,read)&&lane<lerp(4.8,6.6,read);
     const centralRelease=ownerSide===0&&(backThree||narrow);
@@ -15760,7 +15850,7 @@
           ? DEF_MID_DECISION_TEMPO_BONUS
           : 1;
     const tikiTempo=teamTactic(player.team).preset==="TIKI_TAKA"?.86:1;
-    return rand(min,max)*scale*tikiTempo*(1+fatigueLoad(player)*.24)/(tempoFactor(player.team)*AI_DECISION_TEMPO_MULTIPLIER*positionalTempo);
+    return rand(min,max)*scale*tikiTempo*(1+fatigueLoad(player)*.08)/(tempoFactor(player.team)*AI_DECISION_TEMPO_MULTIPLIER*positionalTempo);
   }
 
   function pointToSegmentDistance(px,py,x1,y1,x2,y2){
@@ -18204,15 +18294,17 @@
     if(owner.oneTwoTimer>0&&owner.oneTwoPartnerId===target.id)return true;
     if(owner.tacticalRole==="TARGET_FORWARD"&&owner.receivePosture==="BACK_TO_GOAL"&&s.distance<17)return true;
     if(nearestOpponentDistance(owner)<3.2&&s.receivingSpace>4&&s.distance<21)return true;
-    if(type==="SWITCH"&&s.receivingSpace>6&&Math.abs(target.y-owner.y)>22&&
+    if(type==="SWITCH"&&s.receivingSpace>6&&Math.abs(target.y-owner.y)>22&&s.forward>-5&&
       (!(isWinger(owner)||isStriker(owner)||owner.role==="AM")||
-        nearestOpponentDistance(owner)<3.6||forwardSpace(owner)<4.5||
-        (s.forward>5&&shootingDistance(target)<shootingDistance(owner)+2)))return true;
+        nearestOpponentDistance(owner)<2.5||forwardSpace(owner)<4.5||
+        (s.forward>8&&shootingDistance(target)<shootingDistance(owner)-3&&
+          s.receivingSpace>nearestOpponentDistance(owner)+1.5)))return true;
     return shootingDistance(target)<20&&shootingAngleQuality(target)>.40&&
       (shootingDistance(target)+3<shootingDistance(owner)||shootingAngleQuality(target)>shootingAngleQuality(owner)+.20)&&s.receivingSpace>2.8;
   }
   function attackingChoiceContext(owner){
-    if(!owner||!(isWinger(owner)||isStriker(owner)||owner.role==="AM")||
+    if(!owner||!(isWinger(owner)||isStriker(owner)||owner.role==="AM"||
+      (isFullback(owner)&&attackProgressFor(owner)>.60&&Math.abs(owner.y-34)>15))||
       attackProgressFor(owner)<.48||(teamState[owner.team].kickoffCalmTimer||0)>0)return null;
     const pressure=nearestOpponentDistance(owner),crowd=dribblePressureCount(owner,3.25);
     const dir=attackDir(owner.team),side=owner.y<34?-1:1;
@@ -18222,8 +18314,13 @@
     // carry remains open. Read the same lanes used by dribbleDirection.
     const space=Math.max(straight,inside,forwardSpace(owner,dir*.92,-.38),forwardSpace(owner,dir*.92,.38));
     const tech=techniqueImpact(owner),intel=decisionIntelligence(owner);
-    const open=clamp((space-3.5)/5.5,0,1)*clamp((pressure-2.3)/3.7,0,1)*(crowd>=2?0:1);
-    return {pressure,crowd,straight,space,tech,intel,open,goal:shootingDistance(owner),
+    const marker=nearestOpponent(owner).player;
+    // A defender beaten behind the carrier still threatens a close touch,
+    // but is not the same obstruction as a fresh defender in the next lane.
+    const beatenBehind=marker&&pressure>1.8&&(marker.x-owner.x)*dir<-1.2&&space>5.5;
+    const carryPressure=pressure+(beatenBehind?1.4:0);
+    const open=clamp((space-3.5)/5.5,0,1)*clamp((carryPressure-2.3)/3.7,0,1)*(crowd>=2?0:1);
+    return {pressure,carryPressure,crowd,straight,space,tech,intel,open,goal:shootingDistance(owner),
       angle:shootingAngleQuality(owner),counter:teamState[owner.team].tacticalPhase==="COUNTER_ATTACK"};
   }
   function attackingPassReview(owner,option,context=attackingChoiceContext(owner)){
@@ -18234,15 +18331,19 @@
     const improved=(context.goal-goal)>4||(angle>context.angle+.18&&goal<24);
     const usefulRun=(option.runWindow||0)>.28&&s.forward>3&&(option.receiverArrivalMargin??0)>-.35;
     const boxDelivery=["CUTBACK","CROSS","EARLY_CROSS","LONG_CROSS"].includes(option.type)&&
-      goal<23&&Math.abs(point.y-34)<18&&improved;
+      goal<23&&Math.abs(point.y-34)<18&&
+      (improved||(option.type==="CUTBACK"&&angle>context.angle+.12&&angle>.50));
     const combination=option.oneTwoReturn||(owner.oneTwoTimer>0&&owner.oneTwoPartnerId===target.id);
     const decisive=s.laneRisk<5.4&&s.receivingSpace>2.2&&
       (combination||boxDelivery||usefulRun||(improved&&goal<22));
     const escape=context.pressure<3.5&&s.receivingSpace>context.pressure+1.3&&s.distance<23&&s.laneRisk<4.8;
     const layoff=owner.tacticalRole==="TARGET_FORWARD"&&owner.receivePosture==="BACK_TO_GOAL"&&s.distance<19&&s.laneRisk<4.8;
+    const longTransfer=option.lateralTransfer||option.type==="SWITCH";
+    const forwardConnection=!longTransfer||
+      (s.forward>8&&goal<context.goal-3&&s.receivingSpace>context.pressure+1.5);
     const improvesShape=escape||layoff||decisive||
-      (s.forward>4&&goal<context.goal+1&&s.receivingSpace>2.8)||
-      (option.type==="SWITCH"&&context.straight<4.5&&s.receivingSpace>6&&s.forward>-4);
+      (forwardConnection&&s.forward>4&&goal<context.goal+1&&s.receivingSpace>2.8)||
+      (longTransfer&&context.straight<4.5&&s.receivingSpace>6&&s.forward>-4);
     // A safe receiver is not automatically a better attack. Retain genuine
     // pressure escapes, layoffs and weak-side switches when the near lane shuts.
     const lostOpportunity=!improvesShape?context.open*clamp(8+(goal-context.goal)*.65,4,19):0;
@@ -18502,10 +18603,13 @@
       sideSignFromY(owner.y)*sideSignFromY(target.y)<0&&Math.abs(aimY-owner.y)>22);
     const carrierSpace=lateralTransfer?forwardSpace(owner):0;
     const switchUseful=!lateralTransfer||
-      (safetyData.receivingSpace>3.8&&
-        (pressure<3.4||carrierSpace<4.8||
+      (safetyData.receivingSpace>3.8&&safetyData.forward>-5&&
+        (pressure<2.5||carrierSpace<4.8||
           (countOpponentsNear(owner.x,owner.y,10,owner.team)>=2&&carrierSpace<7)||
-          safetyData.forward>8));
+          (safetyData.forward>8&&safetyData.receivingSpace>pressure+1.5&&
+            shootingDistance({...target,x:aimX,y:aimY})<shootingDistance(owner)-3)));
+    // A wide lane in front of the carrier is valuable in its own right.
+    // Do not reward a long cross-field transfer solely because its x is ahead.
     const transferAdjustment=lateralTransfer&&!switchUseful
       ? -(8+clamp(carrierSpace-4,0,5)) : 0;
     const cleanForwardAdjustment=owner.role!=="GK"&&
@@ -18720,7 +18824,7 @@
     const width=Math.abs(owner.y-34);
     return possessionZoneFor(owner.team,owner.x)==="ATTACK"&&
       attackProgressFor(owner)>.78&&
-      (width>19||(depth<15&&width>13.5));
+      (width>19||(depth<22&&width>15)||(depth<15&&width>13.5));
   }
 
   function cutbackPassOptions(owner,teammates,intel=decisionIntelligence(owner)){
@@ -19680,7 +19784,7 @@
     if(preset==="TIKI_TAKA"){
       const tiki=options
         .filter(o=>
-          o.type==="SHORT" &&
+          o.type==="SHORT" &&contextOutletAllowed(o)&&
           dist(owner.x,owner.y,o.target.x,o.target.y)<15.8 &&
           o.safetyData.receivingSpace>2.9 &&
           o.safetyData.laneRisk<4.0
@@ -19712,7 +19816,7 @@
 
     if(preset==="DIRECT_WIDE"){
       const direct=options
-        .filter(o=>["SWITCH","LONG","EARLY_CROSS","LONG_CROSS","CROSS"].includes(o.type))
+        .filter(o=>["SWITCH","LONG","EARLY_CROSS","LONG_CROSS","CROSS","CUTBACK"].includes(o.type)&&contextOutletAllowed(o))
         .sort((a,b)=>b.score-a.score)[0];
 
       if(direct&&direct.score>12&&direct.score>=options[0].score-12&&matchRandom()<.90){
@@ -19722,7 +19826,7 @@
 
     if(preset==="COUNTER"&&teamState[owner.team].tacticalPhase==="COUNTER_ATTACK"){
       const counter=options
-        .filter(o=>["THROUGH","SWITCH","LONG","EARLY_CROSS"].includes(o.type))
+        .filter(o=>["THROUGH","SWITCH","LONG","EARLY_CROSS","CUTBACK"].includes(o.type)&&contextOutletAllowed(o))
         .sort((a,b)=>b.score-a.score)[0];
 
       if(counter&&counter.score>16&&counter.score>=options[0].score-12&&matchRandom()<.80){
@@ -19924,7 +20028,7 @@
       if(
         isFullback(owner) &&
         teamAttackProgress(owner.team)>.48 &&
-        owner.stamina>42
+        owner.stamina>18
       ){
         choices.push(
           {x:dir*.99,y:side*.12,label:"롱 오버랩 캐리"}
@@ -20052,7 +20156,7 @@
     const eligible=!release&&progress>.16&&progress<.54&&!inOwnPenaltyArea(p)&&
       (teamState[p.team].kickoffCalmTimer||0)<=0&&cover.length>=2&&pressureLine&&
       pressure>lerp(6.5,4.6,tech)&&space>lerp(8.2,6.8,intel)&&
-      tech*.58+intel*.42>.43&&p.stamina>30;
+      tech*.58+intel*.42>.43&&p.stamina>12;
     const value=eligible?clamp(6+(space-6)*7+tech*10+intel*6,0,62):0;
     return {eligible,release,gained,value,pressure,space,tech,intel,cover:cover.length};
   }
@@ -20489,7 +20593,7 @@
     const context=matchContextProfile(owner.team);
     const conductor=midfield?midfieldOrchestrationBias(owner):0;
     let orchestrationUtility=midfield&&owner.orchestrateCooldown<=0&&
-      pressure>2.7&&progress<.84&&owner.stamina>32
+      pressure>2.7&&progress<.84&&owner.stamina>14
       ? 59+conductor*15+techniqueImpact(owner)*6+physicalImpact(owner)*3+
         (space<4.5?12:0)+(!passOption?10:0)+Math.max(0,context.safety)*.5-
         (counter?14:0)-(owner.orchestratedWindow>0?15:0)
@@ -20903,8 +21007,9 @@
       sprintUtility-=6;
     }
     if(owner.stamina<32){
-      sprintUtility-=10;
-      dribbleUtility-=3;
+      const tiredCarry=clamp((32-owner.stamina)/24,0,1);
+      sprintUtility-=4*tiredCarry;
+      dribbleUtility-=tiredCarry;
     }
     // A fullback may use an open flank; centre backs retain their restrained
     // carry role. Ineligible sprint choices must not silently turn into a pass.
@@ -20947,8 +21052,9 @@
     }
     // A tactical short-pass preference cannot cancel an obvious breakthrough.
     // Genuine layoffs, cutbacks, one-twos and better forward receivers survive.
-    if(attackChoice?.open>.45&&attackChoice.pressure>3.8&&
-      attackChoice.space>5.5&&passOption&&passOption.safetyData.forward<1.5&&
+    if(attackChoice?.open>.32&&attackChoice.carryPressure>3.2&&
+      attackChoice.space>5.5&&passOption&&
+      (passOption.safetyData.forward<1.5||passOption.lateralTransfer)&&
       !attackReview.improvesShape&&!passKeepsAttackingValue(owner,passOption)&&
       !(owner.receivePostureTimer>0&&owner.receivePosture==="BACK_TO_GOAL")){
       passUtility=Math.min(passUtility,Math.max(dribbleUtility,sprintUtility)-2);
@@ -23005,10 +23111,10 @@
   function fatigueExecutionFactor(p,weight=1){
     // One adjustment at each terminal execution skill, never the five stored
     // abilities or the shared decision/stat primitives used inside them.
-    return 1-.16*fatigueLoad(p)*weight;
+    return 1-.055*fatigueLoad(p)*weight;
   }
   function fatigueFactor(p){
-    const floor=isFullback(p)||p.tacticalRole==="WINGBACK"?.67:.70;
+    const floor=isFullback(p)||p.tacticalRole==="WINGBACK"?.90:.92;
     return lerp(1.0,floor,fatigueLoad(p,80));
   }
 
@@ -24343,7 +24449,9 @@
   });
   participationPrimaryBtn.addEventListener("click",()=>runHostTransition(hostAdvance,participationPrimaryBtn,"⏳ 진행 중..."));
   document.getElementById("hostForceAdvanceBtn")?.addEventListener("click",()=>forceHostAdvance());
-  window.addEventListener("online",()=>{if(stageFlow.pending)void publishCommittedStage(stageFlow.pending);if(onlineStudentSession()&&onlineRoomState.studentParticipantId){stageFlow.studentRetryCount=0;scheduleStudentInputRetry();}});
+  window.addEventListener("online",()=>{if(stageFlow.pending)void publishCommittedStage(stageFlow.pending);if(onlineStudentSession()&&onlineRoomState.studentParticipantId){stageFlow.studentRetryCount=0;onlineRoomState.studentConnectionRetryCount=0;void refreshStudentConnection(true);scheduleStudentInputRetry();}});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&onlineStudentSession()&&onlineRoomState.studentParticipantId){onlineRoomState.studentConnectionRetryCount=0;void refreshStudentConnection(true);}});
+  window.addEventListener("pageshow",()=>{if(onlineStudentSession()&&onlineRoomState.studentParticipantId)void refreshStudentConnection(true);});
 
   quizBankApplyBtn?.addEventListener("click",()=>applyQuizBankFromEditor(true));
   quizBankImportBtn?.addEventListener("click",()=>{
