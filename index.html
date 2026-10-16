@@ -1537,7 +1537,7 @@
   // ============================================================
 
   // One build identity for display, links and the classroom protocol.
-  const DSSOCCER_BUILD="2.5.35";
+  const DSSOCCER_BUILD="2.5.36";
   const simulationRun={owner:null,aiTicks:0,ticks:0,seed:0,rngState:0,nextSeed:null};
   const passLedger={blue:{},red:{}};
   function setNextMatchSeed(seed){simulationRun.nextSeed=Number(seed)>>>0;}
@@ -14346,7 +14346,11 @@
   // One reachable-flight plan feeds reception, interceptions and second balls.
   // It samples the existing physical integrator (including height/landing/curl).
   const ballResponseState={cache:new Map(),memory:{blue:null,red:null},pending:false,receiverPassed:false};
-  function movingBallHorizon(){return ball.state==="PASSING"&&AIR_PASS_TYPES.includes(ball.passType)?3.84:2.88;}
+  function movingBallHorizon(){
+    if(ball.state!=="PASSING")return 2.88;
+    // Through-ball pursuit sees the same 3.6s flight as pass feasibility.
+    return AIR_PASS_TYPES.includes(ball.passType)?3.84:["THROUGH","KILL_PASS"].includes(ball.passType)?3.60:2.88;
+  }
   function bestPassRecoveryPlan(p,maxHorizon=movingBallHorizon()){
     if(!p||p.sentOff||p.turnoverStun>0||p.beatenTimer>0||!["PASSING","LOOSE"].includes(ball.state))return null;
     const read=decisionIntelligence(p),horizon=Math.max(maxHorizon,movingBallHorizon());
@@ -14368,7 +14372,11 @@
         // to LOOSE, a later sample can use its normal nominated recovery reach.
         if(dist(q.x,q.y,approachX,approachY)>=reach-.025)continue;
       }
-      const travel=dist(p.x,p.y,approachX,approachY),eta=estimatedArrivalTime(p,approachX,approachY,true),margin=t-eta;
+      const travel=dist(p.x,p.y,approachX,approachY),eta=estimatedArrivalTime(p,approachX,approachY,true);
+      // A nominated ground-pass receiver need not put their centre on the
+      // ball. Use conservative existing contact reach, never extra pace.
+      const receiveReach=ball.state==="PASSING"&&p.id===ball.intendedReceiverId&&q.z<.65&&!boundaryApproach?1.45:0;
+      const margin=t+receiveReach/Math.max(2,effectiveMaxSpeed(p))-eta;
       const ownDanger=inDangerZoneForTeam(q.x,q.y,p.team),boxDanger=inPenaltyAreaForTeam(q.x,q.y,p.team);
       const plan={x:q.x,y:q.y,z:q.z,approachX,approachY,boundaryApproach,t,eta,margin,ownDanger,boxDanger,corridorDistance:travel,score:-t*2.4-travel*.035+read*.3,anticipatory:false};
       if(margin>=-.12){if(!reachable||plan.score>reachable.score)reachable=plan;}
@@ -14395,11 +14403,17 @@
     const sameFlight=prior&&prior.passer===ball.passerId&&prior.state===ball.state&&dirDot>.86&&Math.abs(pace-prior.pace)<Math.max(4,prior.pace*.40);
     const retained=sameFlight?candidates.find(e=>e.p.playerUid===prior.uid):null;
     if(retained&&first&&retained.cost<=first.cost+.24)first=retained;
+    // Preserve a viable receiver's run; a clearly nearer recovery player still
+    // takes over a misplaced/deflected ball. Always use the current trajectory.
+    const intended=ball.state==="PASSING"&&ball.passTeam===teamName
+      ? candidates.find(e=>e.p.id===ball.intendedReceiverId&&!e.plan.anticipatory):null;
+    if(intended&&first&&intended.cost<=candidates[0].cost+.18)first=intended;
     const gk=ps.find(p=>p.role==="GK"&&!p.sentOff);
     const keeperPlan=gk?(ball.state==="PASSING"?goalkeeperMovingBallSweepTarget(gk):goalkeeperLooseClaimTarget(gk)):null;
     // Keeper and defender must not both be designated first to the same ball.
     if(keeperPlan&&(!first||keeperPlan.gkEta+.15<first.plan.eta))first={p:gk,plan:{...keeperPlan,eta:keeperPlan.gkEta,t:keeperPlan.t||keeperPlan.gkEta,z:0},cost:keeperPlan.gkEta};
-    const support=first?candidates.filter(e=>e.p.id!==first.p.id&&dist(e.p.x,e.p.y,first.plan.x,first.plan.y)<24).slice(0,2):[];
+    const support=first?candidates.filter(e=>e.p.id!==first.p.id&&dist(e.p.x,e.p.y,first.plan.x,first.plan.y)<18&&
+      (!isCentralDefender(e.p)||first.plan.ownDanger||first.plan.boxDanger)).slice(0,2):[];
     const value={primary:first?.p||null,plan:first?.plan||null,support,keeperPlan};
     if(first)ballResponseState.memory[teamName]={uid:first.p.playerUid,passer:ball.passerId,state:ball.state,vx:ball.vx,vy:ball.vy,pace};
     ballResponseState.cache.set(teamName,{key,value});return value;
@@ -15781,6 +15795,19 @@
       {x:clamp(base.x-dir*1.4,3,FIELD_W-3),y:base.y}
     ];
 
+    // Find a local diagonal outlet, rather than pull the whole midfield at
+    // the ball. Existing role/formation constraints still run afterwards.
+    const linkMid=isCentralMid(p)&&!supportPlanFixed(p)&&p.tacticalRole!=="ANCHOR"&&
+      !p.oneTwoTimer&&!isActiveMidfieldRun(p)&&!/RUN|BURST|SURGE|SECOND_WAVE|BUILDUP32_/.test(target.intent||"")&&
+      dist(p.x,p.y,owner.x,owner.y)>6&&dist(p.x,p.y,owner.x,owner.y)<28;
+    if(linkMid){
+      const holding=["DM","LDM","RDM"].includes(p.role);
+      for(const flank of [-1,1]){
+        const x=owner.x+dir*(holding?-6:4),y=owner.y+flank*10;
+        const dx=x-target.x,dy=y-target.y,len=Math.hypot(dx,dy)||1,scale=Math.min(1,5.5/len);
+        candidates.push({x:clamp(target.x+dx*scale,3,FIELD_W-3),y:clamp(target.y+dy*scale,3,FIELD_H-3)});
+      }
+    }
     let best=base,bestScore=-999;
 
     for(const c of candidates){
@@ -15795,6 +15822,10 @@
         lane*1.75+
         advance*.32;
 
+      if(linkMid&&lane<4.5&&space>2.8&&mateSpace>3.5){
+        const linkDistance=dist(owner.x,owner.y,c.x,c.y);
+        score+=clamp(1-Math.abs(linkDistance-13)/9,0,1)*2.4;
+      }
       if(isFullback(p)||isWinger(p)) score+=Math.abs(c.y-34)*.055;
       if(score>bestScore){bestScore=score;best=c;}
     }
@@ -19259,10 +19290,15 @@
     return q;
   }
   function candidateGeometryRank(o){const s=o.safetyData;return s.forward*.30+Math.min(8,s.receivingSpace)*1.3-s.laneRisk*.5-(s.distance>35?2:0)+(o.runOfferId?5:0)+(o.type==="CUTBACK"?5:0);}
+  function isOpenMidfieldLink(o){
+    const s=o.safetyData;
+    return o.type==="SHORT"&&isCentralMid(o.target)&&s.distance>=6&&s.distance<=24&&
+      s.forward>-3&&s.laneRisk<4.5&&s.receivingSpace>3;
+  }
   function retainPassCandidates(options,values){
     for(const c of values){if(!c)continue;const duplicate=options.find(o=>o.target===c.target&&o.type===c.type&&dist(o.aimX,o.aimY,c.aimX,c.aimY)<1);if(duplicate){if(c.runOfferId){duplicate.runOfferId=c.runOfferId;duplicate.planId=c.planId;duplicate.oneTwoReturn=!!c.oneTwoReturn||!!duplicate.oneTwoReturn;}continue;}
       Array.prototype.push.call(options,c);if(options.length<=32)continue;
-      const protectedSet=new Set();for(const accept of [o=>o.type==="SHORT",o=>!!o.runOfferId,o=>o.type==="CUTBACK",o=>o.type==="SWITCH",o=>o.aerialOutlet]){
+      const protectedSet=new Set();for(const accept of [o=>o.type==="SHORT",isOpenMidfieldLink,o=>!!o.runOfferId,o=>o.type==="CUTBACK",o=>o.type==="SWITCH",o=>o.aerialOutlet]){
         const best=options.filter(accept).sort((a,b)=>candidateGeometryRank(b)-candidateGeometryRank(a))[0];if(best)protectedSet.add(best);
       }
       const drop=options.filter(o=>!protectedSet.has(o)).sort((a,b)=>candidateGeometryRank(a)-candidateGeometryRank(b)).at(0);options.splice(options.indexOf(drop),1);
@@ -19317,7 +19353,10 @@
     const broken=teams[otherTeam(owner.team)].players.filter(p=>p.role!=="GK"&&!p.sentOff&&(p.x-owner.x)*attackDir(owner.team)>0&&(c.x-p.x)*attackDir(owner.team)>1.2).length;
     const escape=nearestOpponentDistance(owner)<3.1&&space>3;
     const carryOpen=forwardSpace(owner)>6&&nearestOpponentDistance(owner)>3.2;
-    const next=clamp(34+clamp(advance,-20,24)*.48+clamp(before-after,-16,20)*.40+Math.min(7,space)*1.6+shotWindow*26+Math.min(3,broken)*2.2+Math.min(3,nextOptions)*1.4+(escape?8:0),0,100);
+    // An open central link has modest value when at least two further
+    // teammates (besides the passer) can continue the move. No accuracy bonus.
+    const linkContinuation=isOpenMidfieldLink(o)&&nextOptions>=3&&space>3.5&&depth>22?4:0;
+    const next=clamp(34+linkContinuation+clamp(advance,-20,24)*.48+clamp(before-after,-16,20)*.40+Math.min(7,space)*1.6+shotWindow*26+Math.min(3,broken)*2.2+Math.min(3,nextOptions)*1.4+(escape?8:0),0,100);
     const exec=passExecutionSkill(owner,o.type)/100;
     const contest=clamp(flight.interceptMargin/.65,-1,1),aerialSkill=flight.aerial?(aerialDuelSkill(target)-aerialDuelSkill(getPlayerByUid(flight.defenderUid)||target))/100:0;
     const retain=clamp(.70+.13*contest+.10*(exec-.5)+.10*clamp((space-2)/6,-1,1)+aerialSkill*.10,.18,.97);
@@ -19330,7 +19369,7 @@
   function evaluatePassCandidates(owner){
     const arrivalModels=new Map(),options=generatePassCandidates(owner),ranked=options.slice().sort((a,b)=>candidateGeometryRank(b)-candidateGeometryRank(a));
     const chosen=[];const add=o=>{if(o&&!chosen.includes(o)&&chosen.length<12)chosen.push(o);};
-    for(const predicate of [o=>o.type==="SHORT",o=>!!o.runOfferId,o=>o.type==="CUTBACK",o=>o.type==="SWITCH",o=>o.aerialOutlet,o=>o.oneTwoReturn])add(ranked.find(predicate));
+    for(const predicate of [o=>o.type==="SHORT",isOpenMidfieldLink,o=>!!o.runOfferId,o=>o.type==="CUTBACK",o=>o.type==="SWITCH",o=>o.aerialOutlet,o=>o.oneTwoReturn])add(ranked.find(predicate));
     ranked.forEach(add);
     for(const o of options){if(!chosen.includes(o)){o.feasibility=false;o.rejectionReason="DETAIL_BUDGET";continue;}
       const flight=assessPassFlight(owner,o,arrivalModels);o.feasibility=flight.possible;o.rejectionReason=flight.reason;o.eta=flight.eta??null;o.interceptMargin=flight.interceptMargin??null;o.flight=flight;
@@ -20559,6 +20598,22 @@
       passUtility=Math.min(passUtility,Math.max(dribbleUtility,sprintUtility)-2);
     }
     if(passOption)passUtility=passUtilityToAction(passOption);
+    // A clean short reception can become a quick link, using the same scored
+    // outlet (no extra scan or automatic pass). Keep free carries and chances.
+    const quickLink=owner.receivePostureTimer>0&&owner.receiveOneTouchBias>0&&
+      ["SHORT","SHORT_GK","HEADER_LAYOFF"].includes(owner.recentReceiveType)&&
+      passOption?.type==="SHORT"&&safeRelease&&passOption.safetyData.distance<24&&
+      passOption.safetyData.laneRisk<4&&passOption.flight?.interceptMargin>=.10&&
+      (passOption.safetyData.forward>1.5||passOption.oneTwoReturn||
+        (pressure<3.2&&passOption.safetyData.forward>-2.5))&&
+      (pressure<3.5||teamState[owner.team].tacticalPhase==="COUNTER_ATTACK")&&
+      !inOwnPenaltyArea(owner)&&!inOpponentPenaltyArea(owner)&&!attackReview.decisive;
+    if(quickLink){
+      const readiness=owner.receiveOneTouchBias;
+      passUtility+=8+readiness*4;
+      shieldUtility-=5+readiness*2;
+      if(orchestrationUtility>-900)orchestrationUtility-=6+readiness*2;
+    }
     const best=Math.max(
       passUtility,dribbleUtility,sprintUtility,
       shieldUtility,shootScore,longShootScore,orchestrationUtility
@@ -20907,6 +20962,22 @@
           player.receiveMomentumX=lane.x;player.receiveMomentumY=lane.y;
           ownerDecisionTimer=Math.min(ownerDecisionTimer,lerp(.17,.09,read));
         }
+      }
+    }
+
+    // A midfielder who has already controlled a short ground pass can look
+    // up immediately. Difficult first touches, recoveries and running through
+    // balls retain their original timing and contact checks.
+    if(reason==="RECEIVE"&&wasPass&&player.team===oldPassTeam&&isCentralMid(player)&&
+      ["SHORT","SHORT_GK","HEADER_LAYOFF"].includes(receivedPassType)&&
+      player.receivePosture!=="RUNNING"&&!inOwnPenaltyArea(player)&&!inOpponentPenaltyArea(player)){
+      const pressure=nearestOpponentDistance(player);
+      if(pressure<3.5||teamState[player.team].tacticalPhase==="COUNTER_ATTACK"){
+        const readiness=clamp((decisionIntelligence(player)+techniqueImpact(player))*.5,0,1);
+        player.receiveOneTouchBias=lerp(.48,.80,readiness);
+        player.receivePostureTimer=Math.max(player.receivePostureTimer,.52);
+        player.controlGrace=Math.min(player.controlGrace,lerp(.17,.11,readiness));
+        ownerDecisionTimer=Math.min(ownerDecisionTimer,lerp(.12,.075,readiness));
       }
     }
 
@@ -22153,7 +22224,10 @@
           tx=target.x;ty=target.y;p.assignment=target.assignment;p.focus=target.focus;p.ballResponsePlan=target.plan;
         }else if(plan&&response?.support.some(e=>e.p.id===p.id)){
           const index=response.support.findIndex(e=>e.p.id===p.id),support=responseSupportTarget(p,plan,index);
-          tx=support.x;ty=support.y;p.assignment="SECOND_BALL_SUPPORT";p.focus=.78;
+          // One near support offers the next pass; the second holds shape.
+          const activeSupport=index===0,blend=activeSupport?.58:.34;
+          tx=lerp(p.offBallX,support.x,blend);ty=lerp(p.offBallY,support.y,blend);
+          p.assignment=activeSupport?"SECOND_BALL_SUPPORT":"SECOND_BALL_SHAPE";p.focus=activeSupport?.78:.50;
         }
       }
 
