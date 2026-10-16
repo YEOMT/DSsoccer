@@ -601,6 +601,12 @@
       padding:9px 12px;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;
     }
     .shootout-board.active{display:grid}
+    .shootout-order{grid-column:1/-1;font-size:12px;line-height:1.8;border-top:1px solid #34445c;padding-top:5px;overflow-wrap:anywhere}
+    .shootout-order .kick-name{display:inline-block;margin-right:9px;color:#b9c4d3}
+    .shootout-order .current{color:#ffe18c;font-weight:900;text-decoration:underline}
+    .shootout-order .blue{color:#83beff}.shootout-order .red{color:#ff8a92}
+    .fx-main.shootout-intro{font-size:clamp(25px,5vw,52px)}
+    .fx-main.shootout-intro + .fx-sub{white-space:pre-line;font-size:clamp(12px,1.6vw,19px);line-height:1.8;max-width:92%}
     .shootout-team{font-size:11px;font-weight:950;letter-spacing:.06em}
     .shootout-team.blue{text-align:right;color:#83beff}
     .shootout-team.red{text-align:left;color:#ff8a92}
@@ -609,7 +615,7 @@
     .shootout-marks .miss{color:#ff8a92}
     .shootout-center{text-align:center;min-width:130px}
     .shootout-center b{display:block;color:#ffd76a;font-size:11px}
-    .shootout-center span{color:#8f9bad;font-size:9px}
+    .shootout-center span{display:block;color:#bac7d6;font-size:12px;line-height:1.4;max-width:260px}
     .result-shootout{
       display:none;text-align:center;margin:-6px 0 14px;padding:9px 12px;
       border:1px solid #34445c;border-radius:9px;background:#0b121b;
@@ -1421,6 +1427,7 @@
         <div class="shootout-team blue">BLUE <span id="shootoutBlueMarks" class="shootout-marks"></span></div>
         <div class="shootout-center"><b id="shootoutScore">0 - 0</b><span id="shootoutStatus">PENALTY SHOOTOUT</span></div>
         <div class="shootout-team red"><span id="shootoutRedMarks" class="shootout-marks"></span> RED</div>
+        <div id="shootoutOrder" class="shootout-order"></div>
       </div>
 
       <div class="live-strip">
@@ -1537,7 +1544,7 @@
   // ============================================================
 
   // One build identity for display, links and the classroom protocol.
-  const DSSOCCER_BUILD="2.5.36";
+  const DSSOCCER_BUILD="2.5.37";
   const simulationRun={owner:null,aiTicks:0,ticks:0,seed:0,rngState:0,nextSeed:null};
   const passLedger={blue:{},red:{}};
   function setNextMatchSeed(seed){simulationRun.nextSeed=Number(seed)>>>0;}
@@ -9296,7 +9303,9 @@
       goalX:FIELD_W,
       shotResolved:false,
       suddenDeath:false,
-      kickSerial:0
+      kickSerial:0,
+      approach:null,
+      lastKick:null
     };
   }
 
@@ -9384,14 +9393,21 @@
     shootoutBlueMarks.innerHTML=shootoutMarks(s.blueKicks);
     shootoutRedMarks.innerHTML=shootoutMarks(s.redKicks);
     shootoutScore.textContent=`${s.blue} - ${s.red}`;
-
-    if(s.winner){
-      shootoutStatus.textContent=`${s.winner.toUpperCase()} WINS`;
-    }else if(s.suddenDeath){
-      shootoutStatus.textContent=`SUDDEN DEATH · ${s.turn.toUpperCase()} KICK`;
+    const orderBox=document.getElementById("shootoutOrder");
+    if(orderBox)orderBox.innerHTML=s.active?["blue","red"].map(team=>{
+      const order=s.order[team]||[],taken=s[team+"Kicks"].length;
+      const active=s.turn===team&&["ANNOUNCE","APPROACH","READY","SHOT"].includes(s.phase);
+      return `<div><strong class="${team}">${team.toUpperCase()}</strong> · `+order.map((p,i)=>
+        `<span class="kick-name${active&&i===taken%order.length?' current':''}">${i+1}. ${escapeLobbyHtml(playerName(p))}</span>`).join("")+`</div>`;
+    }).join(""):"";
+    if(s.phase==="INTRO")shootoutStatus.textContent=`키커 순서 확인 · ${s.firstTeam.toUpperCase()} 선축`;
+    else if(["RESULT","FINISH"].includes(s.phase)&&s.lastKick){
+      const k=s.lastKick,label=k.success?"성공":k.reason==="SAVE"?"선방":k.reason==="POST"?"골대":"실축";
+      shootoutStatus.textContent=`${k.team.toUpperCase()} ${k.number}번 · ${k.name} · ${label}${s.winner?' · '+s.winner.toUpperCase()+' 승리':''}`;
     }else{
-      const n=Math.max(s.blueKicks.length,s.redKicks.length)+1;
-      shootoutStatus.textContent=`ROUND ${Math.min(n,5)} · ${s.turn.toUpperCase()} KICK`;
+      const n=s[s.turn+"Kicks"].length+1,p=getPlayer(s.takerId);
+      const action=s.phase==="APPROACH"?"이동 중":s.phase==="SHOT"?"킥!":"준비";
+      shootoutStatus.textContent=`${s.suddenDeath?'서든데스 · ':''}${s.turn.toUpperCase()} ${n}번 · ${p?playerName(p):''} · ${action}`;
     }
   }
 
@@ -9446,7 +9462,7 @@
       }
 
       if(p.id===taker.id){
-        placeRestartPlayer(p,spotX,34,"SHOOTOUT_TAKER",true);
+        placeRestartPlayer(p,FIELD_W/2,34,"SHOOTOUT_TAKER",true);
         continue;
       }
       if(p.id===gk.id){
@@ -9504,8 +9520,9 @@
 
     s.takerId=taker.id;
     s.gkId=gk.id;
-    s.phase="READY";
-    s.timer=1.18;
+    s.phase="ANNOUNCE";
+    s.timer=1.10;
+    s.approach=null;
     s.shotResolved=false;
     s.kickSerial++;
     s.suddenDeath=s.blueKicks.length>=5&&s.redKicks.length>=5;
@@ -9513,9 +9530,9 @@
     prepareShootoutShape(teamName,taker,gk);
     renderShootoutBoard();
     setFx(
-      s.suddenDeath?"SUDDEN DEATH":"PENALTY SHOOTOUT",
+      `${kicks+1}번 키커`,
       `${teamName.toUpperCase()} · ${playerName(taker)} · 현재 ${s.blue}-${s.red}`,
-      "var",
+      "var shootout-intro",
       false
     );
     renderTicker(
@@ -9536,6 +9553,7 @@
     hideFx();
     s.phase="SHOT";
     s.shotResolved=false;
+    renderShootoutBoard();
 
     const goalX=s.goalX;
     const skill=shootoutSkill(taker)/100;
@@ -9643,7 +9661,8 @@
 
     s.winner=shootoutWinnerIfDecided();
     s.phase=s.winner?"FINISH":"RESULT";
-    s.timer=s.winner?1.55:1.05;
+    s.timer=s.winner?3.20:2.40;
+    s.lastKick={team:teamName,number:s[teamName+"Kicks"].length,name:playerName(taker),success:!!success,reason};
 
     if(!s.winner){
       s.turn=otherTeam(s.turn);
@@ -9676,21 +9695,27 @@
   function updatePenaltyShootout(dt){
     const s=match.shootout;
     if(!s?.active)return;
-
-    if(s.phase==="INTRO"||s.phase==="READY"||s.phase==="RESULT"||s.phase==="FINISH"){
+    if(s.phase==="APPROACH"){
+      const p=getPlayer(s.takerId),a=s.approach;if(!p||!a)return;
       s.timer=Math.max(0,s.timer-dt);
-      if(s.timer>0)return;
-
-      if(s.phase==="INTRO"){
-        prepareNextShootoutKick();
-      }else if(s.phase==="READY"){
-        attemptShootoutShot();
-      }else if(s.phase==="RESULT"){
-        hideFx();
-        prepareNextShootoutKick();
-      }else if(s.phase==="FINISH"){
-        finishPenaltyShootout();
-      }
+      const t=clamp(1-s.timer/a.duration,0,1),ease=t*t*(3-2*t);
+      // Dead-ball ceremony only: no running/fatigue/stat modifiers or RNG.
+      p.x=lerp(a.x,FIELD_W-11,ease);p.y=lerp(a.y,34,ease);
+      p.tx=FIELD_W-11;p.ty=34;p.vx=p.vy=0;
+      if(s.timer<=0){s.phase="READY";s.timer=.70;s.approach=null;renderShootoutBoard();}
+      return;
+    }
+    if(["INTRO","ANNOUNCE","READY","RESULT","FINISH"].includes(s.phase)){
+      s.timer=Math.max(0,s.timer-dt);if(s.timer>0)return;
+      if(s.phase==="INTRO")prepareNextShootoutKick();
+      else if(s.phase==="ANNOUNCE"){
+        const p=getPlayer(s.takerId);if(!p)return;
+        hideFx();s.phase="APPROACH";
+        s.timer=clamp(dist(p.x,p.y,FIELD_W-11,34)/18,1.1,2.6);
+        s.approach={x:p.x,y:p.y,duration:s.timer};renderShootoutBoard();
+      }else if(s.phase==="READY")attemptShootoutShot();
+      else if(s.phase==="RESULT"){hideFx();prepareNextShootoutKick();}
+      else if(s.phase==="FINISH")finishPenaltyShootout();
     }
   }
 
@@ -9715,7 +9740,7 @@
     const s=createShootoutState();
     s.active=true;
     s.phase="INTRO";
-    s.timer=1.55;
+    s.timer=4.8;
     s.firstTeam=matchRandom()<.5?"blue":"red";
     s.turn=s.firstTeam;
     match.shootout=s;
@@ -9741,7 +9766,8 @@
 
     shootoutBoard.classList.add("active");
     renderShootoutBoard();
-    setFx("PENALTY SHOOTOUT",`${s.firstTeam.toUpperCase()}가 먼저 찹니다.`,"var",false);
+    const openingOrder=["blue","red"].map(team=>`${team.toUpperCase()} · `+s.order[team].slice(0,5).map((p,i)=>`${i+1}. ${playerName(p)}`).join(" → ")).join("\n");
+    setFx("승부차기 순서",`${s.firstTeam.toUpperCase()} 선축\n${openingOrder}`,"var shootout-intro",false);
     addCommentary(`정규시간이 ${match.blueScore}-${match.redScore} 동점으로 끝났습니다. 승부차기로 승자를 가립니다!`,"major");
     renderTicker(`PENALTY SHOOTOUT · ${s.firstTeam.toUpperCase()} 선축`,"danger",{immediate:true});
     engineStatus.textContent="PENALTY SHOOTOUT";
@@ -10209,6 +10235,46 @@
     };
   }
 
+  function freeKickLegalPoint(sp,x,y){
+    const desired={x:clamp(x,1.5,FIELD_W-1.5),y:clamp(y,1.5,FIELD_H-1.5)};
+    if(dist(desired.x,desired.y,sp.x,sp.y)>=9.6)return desired;
+    const angle=Math.atan2(y-sp.y,x-sp.x),points=[];
+    for(let i=0;i<24;i++){
+      const a=angle+i*Math.PI/12,p={x:sp.x+Math.cos(a)*9.75,y:sp.y+Math.sin(a)*9.75};
+      if(p.x>=1.5&&p.x<=FIELD_W-1.5&&p.y>=1.5&&p.y<=FIELD_H-1.5)points.push(p);
+    }
+    return points.sort((a,b)=>dist(a.x,a.y,x,y)-dist(b.x,b.y,x,y))[0]||desired;
+  }
+  function prepareFreeKickDefence(sp,taker,instant=true){
+    const defending=otherTeam(sp.team),gx=opponentGoalX(sp.team),dir=attackDir(sp.team);
+    const defenders=teams[defending].players.filter(p=>p.role!=="GK"&&!p.sentOff);
+    const threats=teams[sp.team].players.filter(p=>p!==taker&&p.role!=="GK"&&!p.sentOff&&
+      Math.abs(gx-p.tx)<38&&Math.abs(p.ty-34)<27&&(p.tx-sp.x)*dir>-10)
+      .sort((a,b)=>dist(a.tx,a.ty,gx,34)-dist(b.tx,b.ty,gx,34));
+    const available=defenders.slice();
+    for(const attacker of threats){
+      if(!available.length)break;
+      const dx=gx-attacker.tx,dy=34-attacker.ty,len=Math.hypot(dx,dy)||1;
+      const target=freeKickLegalPoint(sp,attacker.tx+dx/len*1.6,attacker.ty+dy/len*1.6);
+      available.sort((a,b)=>
+        (dist(a.tx,a.ty,target.x,target.y)-(isCentralDefender(a)?1.5:0))-
+        (dist(b.tx,b.ty,target.x,target.y)-(isCentralDefender(b)?1.5:0)));
+      const marker=available.shift();
+      placeRestartPlayer(marker,target.x,target.y,"FREE_KICK_MARK",instant);
+    }
+    const depth=Math.abs(gx-sp.x),wide=Math.abs(sp.y-34),distance=dist(gx,34,sp.x,sp.y);
+    const desired=distance>=11&&depth<34&&wide<24?(wide<10&&distance<28?4:wide<17?3:2):0;
+    // A spare covering defender remains whenever numbers allow it.
+    const count=Math.min(desired,Math.max(0,available.length-1));
+    const nx=(gx-sp.x)/(distance||1),ny=(34-sp.y)/(distance||1);
+    available.sort((a,b)=>(defensivePositionSkill(b)-(isCentralDefender(b)?8:0))-(defensivePositionSkill(a)-(isCentralDefender(a)?8:0)));
+    available.slice(0,count).forEach((p,i)=>{
+      const offset=(i-(count-1)/2)*1.15;
+      const target=freeKickLegalPoint(sp,sp.x+nx*9.6-ny*offset,sp.y+ny*9.6+nx*offset);
+      placeRestartPlayer(p,target.x,target.y,"FREE_KICK_WALL",instant);
+    });
+  }
+
   function prepareSetPieceShape(sp,taker,instant=true){
     if(!sp)return;
 
@@ -10275,29 +10341,7 @@
     }
 
     if(sp.type==="FREE_KICK"||sp.type==="OFFSIDE"){
-      const goalDistance=Math.abs(opponentGoalX(teamName)-sp.x);
-      const wallNeeded=
-        sp.type==="FREE_KICK" &&
-        goalDistance<34 &&
-        Math.abs(sp.y-34)<24;
-
-      if(wallNeeded){
-        const wall=teams[defendingTeam].players
-          .filter(p=>p.role!=="GK")
-          .slice()
-          .sort((a,b)=>defensivePositionSkill(b)-defensivePositionSkill(a))
-          .slice(0,4);
-
-        wall.forEach((p,i)=>{
-          placeRestartPlayer(
-            p,
-            sp.x+dir*9.6,
-            clamp(sp.y+(i-1.5)*1.15,10,58),
-            "FREE_KICK_WALL",
-            instant
-          );
-        });
-      }
+      if(sp.type==="FREE_KICK")prepareFreeKickDefence(sp,taker,instant);
 
       // Enforce legal 9.15m distance for every other defender.
       for(const p of teams[defendingTeam].players){
@@ -19273,10 +19317,10 @@
     }
     return options;
   }
-  const jointPlay={epoch:0,ownerUid:null,team:null,tick:-1,planSerial:0,offerSerial:0,plans:[],offers:[],receipt:null,cache:null,trace:[],traceEnabled:false,pressure:null,lastReview:-1,reviewToken:null};
+  const jointPlay={epoch:0,ownerUid:null,team:null,tick:-1,planSerial:0,offerSerial:0,plans:[],offers:[],receipt:null,cache:null,trace:[],traceEnabled:false,pressure:null,hold:null,lastReview:-1,reviewToken:null};
   function simSeconds(){return (simulationRun.physicsTicks||0)*PHYSICS_DT;}
   function invalidateJointPlay(reason="PLAY_CHANGED"){
-    jointPlay.epoch++;jointPlay.ownerUid=null;jointPlay.team=null;jointPlay.plans=[];jointPlay.offers=[];jointPlay.receipt=null;jointPlay.cache=null;jointPlay.pressure=null;jointPlay.reviewToken=null;
+    jointPlay.epoch++;jointPlay.ownerUid=null;jointPlay.team=null;jointPlay.plans=[];jointPlay.offers=[];jointPlay.receipt=null;jointPlay.cache=null;jointPlay.pressure=null;jointPlay.hold=null;jointPlay.reviewToken=null;
     if(["startSetPiece","prepareKickoffShape","GOAL","PERIOD_END","LOBBY"].includes(reason)){identityDiagnostics.connections.blue=[];identityDiagnostics.connections.red=[];}
   }
   function buildPassLaunchState(owner,option,aimX=option.aimX,aimY=option.aimY){
@@ -19400,6 +19444,11 @@
     const owner=getPlayer(ball.ownerId),now=simSeconds();jointPlay.tick=simulationRun.physicsTicks||0;
     if(ball.state!=="CONTROLLED"||!owner||owner.role==="GK"||match.setPiece||match.pendingSetPiece){if(ball.state!=="PASSING")invalidateJointPlay();return;}
     if(jointPlay.ownerUid!==owner.playerUid){invalidateJointPlay();jointPlay.ownerUid=owner.playerUid;jointPlay.team=owner.team;}
+    const hold=jointPlay.hold,quiet=["CONTROL","SHIELD","ORCHESTRATE"].includes(owner.onBallAction);
+    const step=hold?clamp(now-hold.time,0,AI_DT*2):0;
+    const slow=hold&&step>0&&dist(owner.x,owner.y,hold.x,hold.y)<step*.95;
+    jointPlay.hold={x:owner.x,y:owner.y,time:now,
+      age:quiet&&slow&&owner.controlGrace<=0?Math.min(2,(hold?.age||0)+step):0};
     const team=teams[owner.team].players.filter(p=>!p.sentOff),dir=attackDir(owner.team),side=sideSignFromY(owner.y)||sideSignFromY(owner.homeY)||1;
     const signature=teams[owner.team].formation+JSON.stringify(teamTactic(owner.team));
     if(jointPlay.signature!==signature){jointPlay.plans=[];jointPlay.offers=[];jointPlay.signature=signature;}
@@ -19455,17 +19504,41 @@
     const plan=jointPlay.plans.find(q=>q.team===p.team&&q.possessionEpoch===jointPlay.epoch&&q.members.some(m=>m.uid===p.playerUid));return plan?.members.find(m=>m.uid===p.playerUid)||null;
   }
   function reconsiderCarry(owner){
-    if(!["DRIBBLE","SPRINT_DRIBBLE","SHIELD","ORCHESTRATE"].includes(owner.onBallAction)||owner.controlGrace>0||owner.turnoverStun>0||owner.beatenTimer>0||owner.gkSecureTimer>0)return false;
+    if(!["CONTROL","DRIBBLE","SPRINT_DRIBBLE","SHIELD","ORCHESTRATE"].includes(owner.onBallAction)||owner.role==="GK"||owner.controlGrace>0||owner.turnoverStun>0||owner.beatenTimer>0||owner.gkSecureTimer>0)return false;
     const now=simSeconds(),pressure=nearestOpponentDistance(owner),newTouch=(owner.touchWindowTick||0)>(owner.reviewedTouchTick||0),offer=jointPlay.offers.find(o=>o.originTick>(owner.reviewedOfferTick||-1));
-    const sudden=jointPlay.pressure!==null&&jointPlay.pressure-pressure>1.6;const gap=now-(owner.lastEventReviewSim??-99);
-    jointPlay.pressure=pressure;if((!newTouch&&!offer&&!sudden)||gap<(sudden?AI_DT:.20))return false;
+    const quiet=["CONTROL","SHIELD","ORCHESTRATE"].includes(owner.onBallAction);
+    const stalled=quiet&&(jointPlay.hold?.age||0)>=.45&&pressure<4.2;
+    const closing=quiet&&jointPlay.pressure!==null&&jointPlay.pressure>=3.2&&pressure<3.2;
+    const sudden=jointPlay.pressure!==null&&jointPlay.pressure-pressure>1.6;
+    const gap=now-(owner.lastEventReviewSim??-99);
+    jointPlay.pressure=pressure;
+    if(owner.onBallAction==="CONTROL"&&!stalled&&!closing)return false;
+    if((!newTouch&&!offer&&!sudden&&!stalled&&!closing)||gap<(stalled||closing ? .28 : sudden ? AI_DT : .20))return false;
     owner.lastEventReviewSim=now;owner.reviewedTouchTick=owner.touchWindowTick||0;owner.reviewedOfferTick=jointPlay.tick;
-    const option=choosePassOption(owner);if(!option)return false;
+    const option=choosePassOption(owner),context=attackingChoiceContext(owner),review=attackingPassReview(owner,option,context);
+    const wastesChance=!!option&&context?.open>.32&&context.carryPressure>3.2&&context.space>5.5&&
+      (option.safetyData.forward<1.5||option.lateralTransfer)&&!review.improvesShape&&!passKeepsAttackingValue(owner,option)&&
+      !(owner.receivePostureTimer>0&&owner.receivePosture==="BACK_TO_GOAL");
+    const safe=option?.feasibility&&option.safetyData.safety>6&&option.safetyData.receivingSpace>2.4&&option.safetyData.laneRisk<4.5;
     const carry=clamp(37+Math.min(11,forwardSpace(owner))*2.1+techniqueImpact(owner)*7-(pressure<2?9:0),0,100);
-    if(passUtilityToAction(option)<carry+8||(!newTouch&&["DRIBBLE","SPRINT_DRIBBLE"].includes(owner.onBallAction)))return false;
-    attemptPass(owner,option);return ball.state==="PASSING";
+    if(option&&!wastesChance&&((quiet&&(stalled||closing)&&safe)||
+      (passUtilityToAction(option)>=carry+8&&(newTouch||!["DRIBBLE","SPRINT_DRIBBLE"].includes(owner.onBallAction))))){
+      attemptPass(owner,option);return ball.state==="PASSING";
+    }
+    // An immobile carrier can move into an existing escape lane. This is an
+    // ordinary dribble, with the same speed, contact risk and execution rules.
+    if((stalled||closing)&&!inOwnPenaltyArea(owner)&&!isCentralDefender(owner)){
+      const preferred=dribbleDirection(owner),dir=attackDir(owner.team);
+      const choices=[preferred,{x:dir*.18,y:-.98},{x:dir*.18,y:.98}].map(d=>{
+        const len=Math.hypot(d.x,d.y)||1,x=d.x/len,y=d.y/len;
+        const px=owner.x+x*2,py=owner.y+y*2;
+        return {x,y,space:forwardSpace(owner,x,y),room:nearestOpponentDistanceAt(owner.team,px,py),inside:px>2&&px<FIELD_W-2&&py>3&&py<FIELD_H-3};
+      }).filter(d=>d.inside&&d.space>1.4&&d.room>Math.max(1.5,pressure-.2));
+      const d=choices.sort((a,b)=>(b.room+b.space*.25)-(a.room+a.space*.25))[0];
+      if(d){beginDribble(owner,d);return true;}
+    }
+    return false;
   }
-
 
   function attemptPass(owner,forcedOption=null){
     const option=forcedOption||choosePassOption(owner);
@@ -19768,14 +19841,14 @@
     return {eligible,release,gained,value,pressure,space,tech,intel,cover:cover.length};
   }
 
-  function beginDribble(owner){
+  function beginDribble(owner,plannedDirection=null){
     const carry=ballPlayingCarryContext(owner);
     if(carry?.eligible&&!owner.bpdCarry){
       owner.bpdCarry={uid:owner.playerUid,touches:owner.matchStats.touches||0,
         startX:owner.x,startY:owner.y,startedAt:(simulationRun.physicsTicks||0)*PHYSICS_DT,
         initialPressure:carry.pressure,limit:lerp(6.0,12.0,carry.tech*.55+carry.intel*.45),done:false};
     }
-    const d=dribbleDirection(owner);
+    const d=plannedDirection||dribbleDirection(owner);
     owner.onBallAction="DRIBBLE";
     owner.actionTimer=rand(.52,.88)*lerp(1.12,.78,dribbleSkill(owner)/100);
     owner.dribbleX=d.x;owner.dribbleY=d.y;
@@ -20588,15 +20661,6 @@
       }
       if(pressure<2.5&&closePressureCount<2&&!inOpponentPenaltyArea(owner))shieldUtility+=clamp((physicalImpact(owner)-.35)*7,0,4);
     }
-    // A tactical short-pass preference cannot cancel an obvious breakthrough.
-    // Genuine layoffs, cutbacks, one-twos and better forward receivers survive.
-    if(attackChoice?.open>.32&&attackChoice.carryPressure>3.2&&
-      attackChoice.space>5.5&&passOption&&
-      (passOption.safetyData.forward<1.5||passOption.lateralTransfer)&&
-      !attackReview.improvesShape&&!passKeepsAttackingValue(owner,passOption)&&
-      !(owner.receivePostureTimer>0&&owner.receivePosture==="BACK_TO_GOAL")){
-      passUtility=Math.min(passUtility,Math.max(dribbleUtility,sprintUtility)-2);
-    }
     if(passOption)passUtility=passUtilityToAction(passOption);
     // A clean short reception can become a quick link, using the same scored
     // outlet (no extra scan or automatic pass). Keep free carries and chances.
@@ -20613,6 +20677,15 @@
       passUtility+=8+readiness*4;
       shieldUtility-=5+readiness*2;
       if(orchestrationUtility>-900)orchestrationUtility-=6+readiness*2;
+    }
+    // A tactical short-pass preference cannot cancel an obvious breakthrough.
+    // Genuine layoffs, cutbacks, one-twos and better forward receivers survive.
+    if(attackChoice?.open>.32&&attackChoice.carryPressure>3.2&&
+      attackChoice.space>5.5&&passOption&&
+      (passOption.safetyData.forward<1.5||passOption.lateralTransfer)&&
+      !attackReview.improvesShape&&!passKeepsAttackingValue(owner,passOption)&&
+      !(owner.receivePostureTimer>0&&owner.receivePosture==="BACK_TO_GOAL")){
+      passUtility=Math.min(passUtility,Math.max(dribbleUtility,sprintUtility)-2);
     }
     const best=Math.max(
       passUtility,dribbleUtility,sprintUtility,
@@ -22652,8 +22725,8 @@
 
     if(owner.controlGrace>0||owner.playerUid!==decisionOwnerUid||decisionEpoch!==jointPlay.epoch)return;
 
+    if(reconsiderCarry(owner))return;
     if(owner.actionTimer>0){
-      if(reconsiderCarry(owner))return;
       owner.actionTimer=Math.max(0,owner.actionTimer-AI_DT);
 
       if(["DRIBBLE","SPRINT_DRIBBLE"].includes(owner.onBallAction)){
@@ -24314,12 +24387,12 @@
     }
 
     if((running||presentation.active||replay.active)&&!match.ended){
-      const phase=presentation.active?"presentation":replay.active?"replay":"play";
+      const phase=presentation.active?"presentation":replay.active?"replay":match.shootout?.active?"shootout":"play";
       physicsAccumulator+=elapsed*(phase==="play"?matchSpeedMultiplier:1);
       while(physicsAccumulator+1e-9>=PHYSICS_DT){
         physicsAccumulator-=PHYSICS_DT;
         advanceSimulationTick("frame",false);
-        const next=presentation.active?"presentation":replay.active?"replay":"play";
+        const next=presentation.active?"presentation":replay.active?"replay":match.shootout?.active?"shootout":"play";
         if(match.ended||(!running&&next==="play")||next!==phase){physicsAccumulator=0;break;}
       }
     }else physicsAccumulator=0;
