@@ -1009,6 +1009,11 @@
     @media(max-width:380px){.student-record-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.student-awards{grid-template-columns:1fr}.student-record-hero{grid-template-columns:72px minmax(0,1fr)}}
     @media(prefers-reduced-motion:reduce){.result-pom-hero:after,.student-pom-hero:after,.student-quiz-option.correct,.student-quiz-option.wrong,.student-quiz-feedback{animation:none}}
   .tactic-detail{margin-top:10px;min-width:0;font-size:13px}.tactic-detail summary{cursor:pointer;padding:8px 0;font-weight:700}.tactic-controls{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.tactic-controls label{display:flex;align-items:center;gap:5px}.tactic-controls select{max-width:180px;min-height:34px;background:#142b3d;color:#edf5ff;border:1px solid #496178;border-radius:6px}.quarter-report-card{min-width:0}.quarter-report-stats{flex-wrap:wrap}.tactic-detail .student-muted{font-size:12px;line-height:1.5}.build-version-notice{color:#ffdc85;font-size:13px;line-height:1.5;margin:8px 0}
+.custom-formation-shade{position:fixed;inset:0;background:#020917ba;z-index:10030;display:grid;place-items:center;padding:18px}
+.custom-formation-dialog{width:min(520px,100%);max-height:85dvh;overflow:auto;background:#101d30;border:1px solid #48617d;border-radius:16px;padding:22px;box-shadow:0 16px 50px #0006;text-align:left}
+.custom-formation-dialog h3{margin:0 0 12px;color:#eaf3ff}
+.custom-formation-dialog p{line-height:1.55}
+.custom-formation-dialog .student-vote-grid{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
 </style>
 </head>
 <body class="lobby-open">
@@ -1259,6 +1264,7 @@
             <option value="TIKI_TAKA">티키타카</option><option value="GEGENPRESS">강한 압박</option>
             <option value="COUNTER">빠른 역습</option><option value="DIRECT_WIDE">다이렉트 · 크로스</option>
             <option value="BUILDUP_32">3-2 빌드업</option><option value="OVERLOAD_SWITCH">한쪽 과부하 → 전환</option>
+            <option value="HOOFBALL">뻥축구</option><option value="STREET">동네축구</option>
             <option value="LOW_BLOCK">내려앉기</option><option value="CUSTOM" disabled>사용자 설정</option>
           </select></div>
           <div class="field-row"><label>성향</label><select id="blueMentality">
@@ -1291,6 +1297,7 @@
             <option value="TIKI_TAKA">티키타카</option><option value="GEGENPRESS">강한 압박</option>
             <option value="COUNTER">빠른 역습</option><option value="DIRECT_WIDE">다이렉트 · 크로스</option>
             <option value="BUILDUP_32">3-2 빌드업</option><option value="OVERLOAD_SWITCH">한쪽 과부하 → 전환</option>
+            <option value="HOOFBALL">뻥축구</option><option value="STREET">동네축구</option>
             <option value="LOW_BLOCK">내려앉기</option><option value="CUSTOM" disabled>사용자 설정</option>
           </select></div>
           <div class="field-row"><label>성향</label><select id="redMentality">
@@ -1544,7 +1551,7 @@
   // ============================================================
 
   // One build identity for display, links and the classroom protocol.
-  const DSSOCCER_BUILD="2.5.38";
+  const DSSOCCER_BUILD="2.5.39";
   const simulationRun={owner:null,aiTicks:0,ticks:0,seed:0,rngState:0,nextSeed:null};
   const passLedger={blue:{},red:{}};
   function setNextMatchSeed(seed){simulationRun.nextSeed=Number(seed)>>>0;}
@@ -2647,7 +2654,9 @@
     DIRECT_WIDE:{mentality:"ATTACKING",width:"WIDE",tempo:"FAST",passing:"DIRECT",pressing:"MID",line:"MID",transition:"COUNTER"},
     BUILDUP_32:{mentality:"BALANCED",width:"BALANCED",tempo:"BALANCED",passing:"SHORT",pressing:"MID",line:"HIGH",transition:"REGROUP"},
     OVERLOAD_SWITCH:{mentality:"ATTACKING",width:"WIDE",tempo:"FAST",passing:"MIXED",pressing:"MID",line:"MID",transition:"BALANCED"},
-    LOW_BLOCK:{mentality:"DEFENSIVE",width:"NARROW",tempo:"SLOW",passing:"DIRECT",pressing:"LOW",line:"LOW",transition:"REGROUP"}
+    LOW_BLOCK:{mentality:"DEFENSIVE",width:"NARROW",tempo:"SLOW",passing:"DIRECT",pressing:"LOW",line:"LOW",transition:"REGROUP"},
+    HOOFBALL:{mentality:"BALANCED",width:"BALANCED",tempo:"FAST",passing:"DIRECT",pressing:"MID",line:"MID",transition:"COUNTER"},
+    STREET:{mentality:"BALANCED",width:"BALANCED",tempo:"BALANCED",passing:"MIXED",pressing:"MID",line:"MID",transition:"BALANCED"}
   };
 
   const teamTactics = {
@@ -2929,7 +2938,7 @@
       BALANCED:"균형",POSSESSION:"점유·U자",TIKI_TAKA:"티키타카",
       GEGENPRESS:"강한 압박",COUNTER:"빠른 역습",
       DIRECT_WIDE:"다이렉트·크로스",BUILDUP_32:"3-2 빌드업",
-      OVERLOAD_SWITCH:"과부하 후 전환",LOW_BLOCK:"내려앉기",CUSTOM:"사용자"
+      OVERLOAD_SWITCH:"과부하 후 전환",LOW_BLOCK:"내려앉기",HOOFBALL:"뻥축구",STREET:"동네축구",CUSTOM:"사용자"
     }[teamTactic(teamName).preset]||"사용자";
   }
 
@@ -3381,7 +3390,7 @@
     TARGET_FORWARD:"몸으로 공을 지키며 동료에게 연결해요. 긴 패스와 크로스를 받아주는 공격의 중심이 돼요.",
     FALSE_NINE:"공을 받으러 중원 쪽으로 내려와요. 직접 돌진하기보다 패스로 연결하며 동료가 침투할 공간을 만들어요."
   };
-  const FORMATION_VOTE_PRESETS=["433","442","4231","352","3421","4222","4141"];
+  const FORMATION_VOTE_PRESETS=["433","442","4231","352","3421","4222","4141","CUSTOM"];
   const FORMATION_VOTE_LABELS={
     433:["4-3-3","폭넓은 3톱과 중원 균형"],
     442:["4-4-2","두 줄 수비와 투톱의 직선적인 공격"],
@@ -3389,10 +3398,92 @@
     352:["3-5-2","중앙 수적 우위와 윙백의 적극적인 전진"],
     3421:["3-4-2-1","두 명의 10번과 윙백으로 하프스페이스 공략"],
     4222:["4-2-2-2","더블 볼란치와 좁은 2선·투톱 연결"],
-    4141:["4-1-4-1","원 볼란치 뒤 안정과 중원 전방 압박"]
+    4141:["4-1-4-1","원 볼란치 뒤 안정과 중원 전방 압박"],
+    CUSTOM:["우리 팀만의 포메이션","공격 · 미드필더 · 수비 중 내가 뛸 곳 선택"]
   };
-  const TACTIC_VOTE_PRESETS=["BALANCED","POSSESSION","TIKI_TAKA","GEGENPRESS","COUNTER","DIRECT_WIDE","BUILDUP_32","OVERLOAD_SWITCH","LOW_BLOCK"];
-  const TACTIC_VOTE_LABELS={BALANCED:["균형","공수 밸런스를 유지"],POSSESSION:["점유","U자 빌드업으로 소유권 유지"],TIKI_TAKA:["티키타카","짧고 빠른 점유율 패스와 삼각 지원"],GEGENPRESS:["강한 압박","높은 압박과 빠른 탈환"],COUNTER:["빠른 역습","낮게 버티고 빠르게 전진"],DIRECT_WIDE:["측면 직선 공격","넓게 벌리고 빠른 크로스"],BUILDUP_32:["3-2 빌드업","한 풀백은 안으로, 반대 풀백은 후방 3명 구성"],OVERLOAD_SWITCH:["한쪽 과부하 후 전환","볼 쪽에 모은 뒤 반대 측면으로 크게 전환"],LOW_BLOCK:["수비 블록","라인을 낮추고 공간 차단"]};
+  // Custom votes encode the preference in the existing durable vote value.
+  // One atomic input/retry, with no second listener or per-frame payload.
+  let customFormationChoice=null;
+  let customStartingPlans={};
+  function formationVoteKind(value){return /^CUSTOM:(ATT|MID|DEF|GK)$/.test(value||"")?"CUSTOM":value;}
+  function validFormationVote(value){return value!=="CUSTOM"&&FORMATION_VOTE_PRESETS.includes(formationVoteKind(value));}
+  function formationBand(role){
+    if(role==="GK")return "GK";
+    if(["LB","RB","LWB","RWB","LCB","MCB","RCB"].includes(role))return "DEF";
+    return ["LW","RW","ST","LST","RST"].includes(role)?"ATT":"MID";
+  }
+  function ensureCustomFormation(key){
+    if(!/^OWN_[DMA]{10}$/.test(key||""))return false;
+    const order=key.slice(4).split(""),counts=Object.fromEntries(["D","M","A"].map(k=>[k,order.filter(x=>x===k).length]));
+    if(Object.values(counts).some(n=>!n))return false;
+    if(!FORMATIONS[key]){
+      const used={D:0,M:0,A:0};
+      FORMATIONS[key]=[{role:"GK",x:5,y:34},...order.map(band=>{
+        const n=counts[band],i=used[band]++,y=n===1?34:8+i*52/(n-1);
+        let role;
+        if(band==="D")role=n===1?"MCB":n>=4&&i===0?"LB":n>=4&&i===n-1?"RB":i<(n-1)/2?"LCB":i>(n-1)/2?"RCB":"MCB";
+        else if(band==="M")role=n>=4&&i===0?"LM":n>=4&&i===n-1?"RM":i%2?"RCM":"LCM";
+        else role=n===1?"ST":n>=3&&i===0?"LW":n>=3&&i===n-1?"RW":i%2?"RST":"LST";
+        // The same formation anchors and role AI drive play. Small row depth
+        // offsets keep very large lines readable without altering player pace.
+        const x=(band==="D"?23:band==="M"?47:72)+(n>=5?(i%2?1.8:-1.8):0);
+        return {role,x,y};
+      })];
+    }
+    FORMATION_VOTE_LABELS[key]=[`우리 팀 ${counts.D}-${counts.M}-${counts.A}`,"선발 10명의 희망 구역 · 각 구역 최소 1명 · GK 고정"];
+    return true;
+  }
+  function setFormationSelect(team,key){
+    const select=document.getElementById(team+"Formation");if(!select)return;
+    if(ensureCustomFormation(key)&&!Array.from(select.options).some(o=>o.value===key)){
+      const option=document.createElement("option");option.value=key;option.textContent=FORMATION_VOTE_LABELS[key][0];select.appendChild(option);
+    }
+    select.value=key;
+  }
+  function resolveCustomFormation(team,key){
+    const initial=key==="Q1",oldKey=document.getElementById(team+"Formation")?.value||teams[team].formation;
+    if(initial)autoAssignTeamLineup(team,customStartingPlans[team]?.formation!==oldKey);
+    const slots=FORMATIONS[oldKey]||FORMATIONS["433"],assigned=lineupState.assignments[team]||[];
+    const entries=Array.from({length:10},(_,j)=>{
+      const index=j+1,p=initial?null:teams[team].players.find(p=>p.id===team+"-"+index);
+      const st=lobbyState.students.find(s=>s.id===(initial?assigned[index]:p?.studentId));
+      const vote=st?.formationVotes?.[key],choice=typeof vote==="string"&&vote.startsWith("CUSTOM:")?vote.slice(7):null;
+      const previous=formationBand(p?.role||slots[index]?.role||"LCM");
+      const group=["ATT","MID","DEF"].includes(choice)?choice:previous==="GK"?"DEF":previous;
+      const statValues=p|| (st?studentBuildValues(st,"BREAK").current:statsForRole(defaultTacticalRole(slots[index]?.role||"LCM",oldKey,index),index,currentStatMode,slots[index]?.role||"LCM"));
+      return {index,group,score:GROWTH_STATS.reduce((n,k)=>n+(Number(statValues[k])||0),0),eligible:initial||!!p&&p.role!=="GK"&&!p.sentOff};
+    });
+    // Fill actual outfield vacancies; sent-off players never return or vote.
+    const active=entries.filter(e=>e.eligible);
+    if(active.length>=3)for(const group of ["DEF","MID","ATT"]){
+      if(active.some(e=>e.group===group))continue;
+      const candidates=active.filter(e=>active.filter(q=>q.group===e.group).length>1).sort((a,b)=>a.score-b.score||a.index-b.index);
+      if(candidates[0])candidates[0].group=group;
+    }
+    // A very short-handed side retains its former row for missing slots.
+    for(const group of ["DEF","MID","ATT"]){
+      if(entries.some(e=>e.group===group))continue;
+      const e=entries.filter(e=>!e.eligible&&entries.filter(q=>q.group===e.group).length>1).sort((a,b)=>a.index-b.index)[0];
+      if(e)e.group=group;
+    }
+    const formation="OWN_"+entries.map(e=>({DEF:"D",MID:"M",ATT:"A"})[e.group]).join("");
+    if(!ensureCustomFormation(formation))return oldKey;
+    if(initial)customStartingPlans[team]={formation,assignments:[...assigned],benches:[...lineupState.benches[team]]};
+    return formation;
+  }
+  function customFormationPopupHtml(room,data){
+    if(!customFormationChoice||customFormationChoice.session!==room.sessionId||customFormationChoice.key!==(room.breakKey||"Q1")||room.formationResults?.[room.breakKey||"Q1"]?.[data.team])return "";
+    const locked=(data.assignedRole||data.buildBase?.role)==="GK"||!data.assignedRole&&data.preferredPosition==="GK";
+    const labels={ATT:"공격수",MID:"미드필더",DEF:"수비수",GK:"골키퍼 유지"},selected=data.formationVotes?.[room.breakKey||"Q1"]?.split(":")[1];
+    return `<div class="custom-formation-shade"><section class="custom-formation-dialog" role="dialog" aria-modal="true" aria-labelledby="customFormationTitle"><h3 id="customFormationTitle">우리 팀만의 포메이션</h3><p>${locked?"골키퍼는 자리를 유지합니다.":"어느 구역에서 뛰고 싶나요?"}</p><div class="student-vote-grid">${(locked?["GK"]:["ATT","MID","DEF"]).map(v=>`<button class="student-vote-card ${selected===v?"selected":""}" data-custom-formation-band="${v}"><b>${labels[v]}</b><span>선택하고 투표</span></button>`).join("")}</div><p class="student-muted">이 선택지가 최다 득표하면 선발 10명의 희망 구역으로 대형을 만듭니다. 미선택 선수·AI는 현재 구역을 유지합니다. 빈 구역은 다른 구역에 2명 이상 있을 때 능력치 총합이 낮은 선수부터 이동합니다. 벤치 투표는 팀 선택에 포함되며 출전 배치는 호스트가 확정합니다.</p><button class="lobby-mini" data-custom-formation-cancel>취소</button></section></div>`;
+  }
+  function openCustomFormationChoice(){
+    const room=effectiveStudentRoomState();if(room.phase!=="FORMATION_VOTE"||manualInputsClosed(room)||room.formationResults?.[room.breakKey||"Q1"]?.[onlineRoomState.studentData?.team])return;
+    customFormationChoice={session:room.sessionId,key:room.breakKey||"Q1"};renderStudentStage();
+    studentStageArea.querySelector("[data-custom-formation-band]")?.focus();
+  }
+  const TACTIC_VOTE_PRESETS=["BALANCED","POSSESSION","TIKI_TAKA","GEGENPRESS","COUNTER","DIRECT_WIDE","BUILDUP_32","OVERLOAD_SWITCH","LOW_BLOCK","HOOFBALL","STREET"];
+  const TACTIC_VOTE_LABELS={BALANCED:["균형","공수 밸런스를 유지"],POSSESSION:["점유","U자 빌드업으로 소유권 유지"],TIKI_TAKA:["티키타카","짧고 빠른 점유율 패스와 삼각 지원"],GEGENPRESS:["강한 압박","높은 압박과 빠른 탈환"],COUNTER:["빠른 역습","낮게 버티고 빠르게 전진"],DIRECT_WIDE:["측면 직선 공격","넓게 벌리고 빠른 크로스"],BUILDUP_32:["3-2 빌드업","한 풀백은 안으로, 반대 풀백은 후방 3명 구성"],OVERLOAD_SWITCH:["한쪽 과부하 후 전환","볼 쪽에 모은 뒤 반대 측면으로 크게 전환"],LOW_BLOCK:["수비 블록","라인을 낮추고 공간 차단"],HOOFBALL:["뻥축구","빠른 전방 롱킥과 클리어링 · 높은 공으로 공격수에게 연결"],STREET:["동네축구","더 많은 선수가 공 쪽으로 모이고 패스보다 드리블을 선호"]};
   function detailedRoleLabel(role){return role==="AUTO"?"자동 역할":(PLAYER_ROLES?.[role]?.label||role||"자동 역할");}
   function detailedRoleChoices(pref="FLEX"){return DETAILED_ROLE_GROUPS[pref]||DETAILED_ROLE_GROUPS.FLEX;}
   function defaultDetailedRoleForPref(pref="FLEX"){return detailedRoleChoices(pref)[0]||"AUTO";}
@@ -4157,13 +4248,13 @@
       const prior=data.inputMeta?.[`${e.stamp.phase}:${e.stamp.key||''}`];if(prior&&Number(prior.seq)>=Number(e.stamp.seq))continue;
       const points=e.mode==="START"?Number(data.preQuizPoints)||0:Number(data.breakPoints?.[e.key])||0;
       if(studentProgressPending(view)||growthTotal(e.allocation)>points)continue;
-      const clean=fitStudentAllocation(data,points,e.allocation,e.mode);
       const preset=e.mode==="START"?{growthFocus:e.growthFocus in GROWTH_FOCUS_LABELS?e.growthFocus:data.growthFocus||"BALANCED",...(e.buildPresetVersion===1?{buildPresetVersion:1}:{})}:{};
+      const clean=fitStudentAllocation({...data,...preset},points,e.allocation,e.mode);
       e.allocation=clean;e.patch=e.mode==="START"?{...preset,startAllocation:clean,buildReady:!!e.ready}:{[`breakAllocations.${e.key}`]:clean,[`breakReady.${e.key}`]:!!e.ready};
       onlineRoomState.studentPendingAllocations[key]=e;stageFlow.inputSerial=Math.max(stageFlow.inputSerial,Number(e.stamp.seq)||0);
     }
     const role=record.rolePending;if(recoverable(role?.stamp)&&role.stamp.key===""&&detailedRoleChoices(data.preferredPosition||"FLEX").includes(role.role)&&!(Number(data.inputMeta?.["ROLE_SELECT:"]?.seq)>=Number(role.stamp.seq)))stageFlow.rolePending=role;
-    const vote=record.votePending;if(recoverable(vote?.meta)&&vote.meta.key===vote.key&&(vote.kind==="FORMATION"?FORMATION_VOTE_PRESETS:TACTIC_VOTE_PRESETS).includes(vote.value)&&vote.key===(view.breakKey||"Q1")&&!(Number(data.voteMeta?.[vote.key]?.[vote.kind]?.seq)>=Number(vote.meta.seq)))stageFlow.votePending=vote;
+    const vote=record.votePending;if(recoverable(vote?.meta)&&vote.meta.key===vote.key&&(vote.kind==="FORMATION"?validFormationVote(vote.value):TACTIC_VOTE_PRESETS.includes(vote.value))&&vote.key===(view.breakKey||"Q1")&&!(Number(data.voteMeta?.[vote.key]?.[vote.kind]?.seq)>=Number(vote.meta.seq)))stageFlow.votePending=vote;
     onlineRoomState.studentData=mergeStudentParticipantSnapshot(data);persistStudentResume();
     if(studentHasPendingInput(view)){if(close&&Date.now()>=close.endsAtMs)void flushStudentManualClose(close);else scheduleStudentInputRetry();}
   }
@@ -4461,7 +4552,7 @@
   function studentStatsHtml(snapshot,data){
     const vals=snapshot?.stats||(data?.buildBase?studentBuildValues(data,"TOTAL").current:null);
     const bonus=data?.statsBonus||{};
-    return `<div class="student-stat-grid">${GROWTH_STATS.map(k=>`<div class="student-stat"><span>${GROWTH_LABELS[k]}</span><b>${vals?Math.round(vals[k]||0):`+${Number(bonus[k])||0}`}</b></div>`).join("")}</div>`;
+    return `<div class="student-stat-grid">${GROWTH_STATS.map(k=>`<div class="student-stat"><span>${GROWTH_LABELS[k]}</span><b>${vals?Math.round(vals[k]||0):signedStatDelta(Number(bonus[k])||0)}</b></div>`).join("")}</div>`;
   }
   function awardThemeClass(award){
     const explicit=String(award?.theme||"").toLowerCase();
@@ -4565,7 +4656,7 @@
     return `<div class="student-build-cards">${GROWTH_STATS.map(k=>{
       const attrs=hostId?`data-build-student="${hostId}" data-build-stat="${k}"`:`data-student-build-stat="${k}"`;
       const controls=step=>`${attrs} data-stat-step="${step}" data-build-mode="${mode}" data-build-key="${key}"`;
-      return `<div class="student-build-card stat-editor"><div><span class="stat-key">${k.toUpperCase()}</span><span class="stat-effect">${GROWTH_EFFECTS[k]}</span><span class="stat-detail">기본 ${values.base[k]}${mode!=="START"?` · 누적 +${values.prior[k]}`:""} · <em>이번 +${allocation[k]||0}</em></span></div><b class="stat-current">${values.current[k]}</b><div class="stat-stepper"><button ${controls(-1)} aria-label="${k.toUpperCase()} 1포인트 회수" ${ready||!(allocation[k]>0)?"disabled":""}>−</button><button ${controls(1)} aria-label="${k.toUpperCase()} 1포인트 추가" ${ready||remain<=0||values.current[k]>=100?"disabled":""}>+</button></div></div>`;
+      return `<div class="student-build-card stat-editor"><div><span class="stat-key">${k.toUpperCase()}</span><span class="stat-effect">${GROWTH_EFFECTS[k]}</span><span class="stat-detail">프리셋 ${values.base[k]} · 최저 ${Math.max(1,values.base[k]-10)} · <em>최종 추가 ${signedStatDelta(values.current[k]-values.base[k])}</em></span></div><b class="stat-current">${values.current[k]}</b><div class="stat-stepper"><button ${controls(-1)} aria-label="${k.toUpperCase()} 1포인트 회수" ${ready||!canAdjustStudentStat(data,points,allocation,mode,k,-1)?"disabled":""}>−</button><button ${controls(1)} aria-label="${k.toUpperCase()} 1포인트 추가" ${ready||remain<=0||values.current[k]>=100?"disabled":""}>+</button></div></div>`;
     }).join("")}</div>`;
   }
   function buildPreviewNote(data){
@@ -4576,7 +4667,7 @@
     const spent=growthTotal(allocation),remain=Math.max(0,points-spent),focus=data.growthFocus in GROWTH_FOCUS_LABELS?data.growthFocus:"BALANCED";
     const typeButtons=Object.entries(GROWTH_FOCUS_LABELS).map(([value,label])=>`<button class="student-growth-type ${focus===value?"selected":""}" data-student-growth-focus="${value}" data-build-mode="${mode}" data-build-key="${key}" ${ready?"disabled":""}><b>${label}</b><span>${GROWTH_FOCUS_DESCRIPTIONS[value]||""}</span></button>`).join("");
     const complete=studentAllocationComplete(data,points,allocation,mode);
-    return `<div class="student-stage-title">${mode==="START"?"PLAYER BUILD":"BREAK GROWTH"}</div><div class="student-stage-head"><strong>추가 포인트 +${points}</strong><span class="student-stage-chip" role="status">남음 ${remain}</span></div>${mode==="START"?`<div class="student-growth-type-head"><b>① 기본 프리셋 선택</b><span>기본 스탯 총합은 같아요</span></div><div class="student-growth-type-grid">${typeButtons}</div><div class="student-growth-hint">프리셋을 바꾸면 기본 분포만 바뀝니다. 퀴즈 포인트는 소비하지 않고, 직접 배분한 포인트도 유지돼요.</div>`:`<div class="student-growth-hint">기본 프리셋 · ${GROWTH_FOCUS_LABELS[focus]} (경기 중 유지)<br>지난 쿼터까지의 성장은 유지됩니다. 이번 포인트만 자유롭게 더하고 회수하세요.</div>`}${buildPreviewNote(data)}<div class="student-growth-type-head"><b>${mode==="START"?"② ":""}추가 포인트 직접 배분</b><span>스탯 상한 100</span></div>${buildStatCardsHtml(data,points,allocation,ready,mode,key)}<div class="student-build-meta"><button class="lobby-mini" data-student-build-reset="${mode}" data-build-key="${key}" ${ready?"disabled":""}>↺ 이번 배분 초기화</button><span>${spent} / ${points} 사용</span></div><button class="primary student-ready ${ready?"done":""}" data-student-build-ready="${mode}" data-build-key="${key}" ${ready||!complete?"disabled":""}>${ready?"✓ READY 완료":complete?"이 능력치로 READY":"남은 포인트를 배분해주세요"}</button>`;
+    return `<div class="student-stage-title">${mode==="START"?"PLAYER BUILD":"BREAK GROWTH"}</div><div class="student-stage-head"><strong>추가 포인트 +${points}</strong><span class="student-stage-chip" role="status">남음 ${remain}</span></div>${mode==="START"?`<div class="student-growth-type-head"><b>① 기본 프리셋 선택</b><span>기본 스탯 총합은 같아요</span></div><div class="student-growth-type-grid">${typeButtons}</div><div class="student-growth-hint">−로 프리셋보다 각 스탯을 최대 10까지 낮추면 그만큼 포인트가 돌아와요. 프리셋 변경은 포인트를 소비하지 않아요.</div>`:`<div class="student-growth-hint">기본 프리셋 · ${GROWTH_FOCUS_LABELS[focus]} (경기 중 유지)<br>누적 성장도 다시 배분할 수 있어요. 각 스탯은 원래 프리셋보다 최대 10까지 낮출 수 있습니다.</div>`}${buildPreviewNote(data)}<div class="student-growth-type-head"><b>${mode==="START"?"② ":""}추가 포인트 직접 배분</b><span>스탯 상한 100</span></div>${buildStatCardsHtml(data,points,allocation,ready,mode,key)}<div class="student-build-meta"><button class="lobby-mini" data-student-build-reset="${mode}" data-build-key="${key}" ${ready?"disabled":""}>↺ 스탯 초기화</button><span>퀴즈 +${points} · 이번 순배분 ${signedStatDelta(spent)}</span></div><button class="primary student-ready ${ready?"done":""}" data-student-build-ready="${mode}" data-build-key="${key}" ${ready||!complete?"disabled":""}>${ready?"✓ READY 완료":complete?"이 능력치로 READY":"남은 포인트를 배분해주세요"}</button>`;
   }
   function effectiveStudentRoomState(){
     const room=onlineRoomState.studentRoomData||{};
@@ -4597,7 +4688,11 @@
     return retainStudentView(base);
   }
   function renderStudentStage(){
-    const room=effectiveStudentRoomState(),phase=room?.phase,stageKey=`${room.sessionId||''}:${phase}:${room.breakKey||''}`;
+    const room=effectiveStudentRoomState(),phase=room?.phase;
+    for(const team of ["blue","red"])ensureCustomFormation(room.lineups?.[team]?.formation);
+    for(const result of Object.values(room.formationResults||{}))for(const f of Object.values(result||{}))ensureCustomFormation(f);
+    if(phase!=="FORMATION_VOTE")customFormationChoice=null;
+    const stageKey=`${room.sessionId||''}:${phase}:${room.breakKey||''}`;
     const scroll=document.scrollingElement,top=scroll?.scrollTop||0,prior=reportViewState.get("lastStudentStage");
     const preserve=["FORMATION_VOTE","TACTIC_VOTE","RESULT"].includes(phase)&&prior===stageKey;
     try{return renderStudentStageContent();}
@@ -4698,14 +4793,14 @@
     }
     if(phase==="LINEUP"){
       const status=data.lineupStatus||"UNSET",starter=status==="STARTER",lineups=room.lineups||{};
-      const pitch=(team)=>{const ln=lineups[team],formation=ln?.formation||"-",slots=ln?.slots||[],ownTeam=data.team===team,formationLabel=({433:"4-3-3",442:"4-4-2",4231:"4-2-3-1",352:"3-5-2",3421:"3-4-2-1",4222:"4-2-2-2",4141:"4-1-4-1"})[formation]||formation;const shape=FORMATIONS[formation]||[];return `<div class="student-mini-team ${team} ${ownTeam?"own":""}"><div class="student-mini-team-head"><h4 style="color:${team==="blue"?"#8bc6ff":"#ff929a"}">${team.toUpperCase()} TEAM · ${formationLabel}</h4>${ownTeam?`<span class="student-own-team-chip">내 팀</span>`:""}</div><div class="student-mini-pitch">${slots.map((x,i)=>{const pos=shape[i]||{x:50,y:34};const left=team==="blue"?Math.min(90,Math.max(10,pos.x)):Math.min(90,Math.max(10,100-pos.x));const top=Math.min(92,Math.max(8,pos.y/68*100));return `<div class="student-mini-node ${x.participantId===onlineRoomState.studentParticipantId?"me":""}" style="left:${left}%;top:${top}%">${escapeLobbyHtml(x.name)}<br>${x.role}</div>`}).join("")}</div></div>`};
+      const pitch=(team)=>{const ln=lineups[team],formation=ln?.formation||"-",slots=ln?.slots||[],ownTeam=data.team===team,formationLabel=FORMATION_VOTE_LABELS[formation]?.[0]||formation;const shape=FORMATIONS[formation]||[];return `<div class="student-mini-team ${team} ${ownTeam?"own":""}"><div class="student-mini-team-head"><h4 style="color:${team==="blue"?"#8bc6ff":"#ff929a"}">${team.toUpperCase()} TEAM · ${formationLabel}</h4>${ownTeam?`<span class="student-own-team-chip">내 팀</span>`:""}</div><div class="student-mini-pitch">${slots.map((x,i)=>{const pos=shape[i]||{x:50,y:34};const left=team==="blue"?Math.min(90,Math.max(10,pos.x)):Math.min(90,Math.max(10,100-pos.x));const top=Math.min(92,Math.max(8,pos.y/68*100));return `<div class="student-mini-node ${x.participantId===onlineRoomState.studentParticipantId?"me":""}" style="left:${left}%;top:${top}%">${escapeLobbyHtml(x.name)}<br>${x.role}</div>`}).join("")}</div></div>`};
       studentWaitingText.textContent="선발 명단과 양 팀 포메이션이 확정되었습니다.";
       studentStageArea.innerHTML=`<div class="student-lineup-result"><div class="student-stage-title">MATCH READY</div><div class="big">${starter?"⚽ 선발 출전":"🪑 BENCH"}</div><div class="role">${starter?`${data.assignedRole||"-"} · #${data.shirtNumber||"-"} · ${detailedRoleLabel(data.assignedTacticalRole||data.preferredRole)}`:`${detailedRoleLabel(data.preferredRole)} · 교체 출전 준비`}</div>${studentStatsHtml(null,data)}</div><div class="student-formation-grid">${pitch("blue")}${pitch("red")}</div>`;return;
     }
     if(phase==="FORMATION_VOTE"){
       const key=room.breakKey||"Q1",selected=data.formationVotes?.[key]||null,team=data.team||"blue",result=room.formationResults?.[key]?.[team]||null;
       studentWaitingText.textContent=result?"팀 포메이션 투표가 마감되었습니다.":"같은 팀 친구들과 다음 쿼터 포메이션을 투표하세요.";
-      studentStageArea.innerHTML=`<div class="student-stage-title">FORMATION VOTE · ${team.toUpperCase()}</div><div class="student-stage-head"><strong>${result?`적용 · ${FORMATION_VOTE_LABELS[result]?.[0]||result}`:"다음 쿼터 포메이션"}</strong><span class="student-stage-chip">${selected?"투표 완료":"1표 선택"}</span></div>${studentQuarterTacticReportHtml(room,key,team)}${result?`<div class="student-tactic-banner">${FORMATION_VOTE_LABELS[result]?.[1]||""}</div>`:`<div class="student-vote-grid">${FORMATION_VOTE_PRESETS.map(v=>`<button class="student-vote-card ${selected===v?"selected":""}" data-student-formation-vote="${v}"><b class="formation-name">${FORMATION_VOTE_LABELS[v][0]}</b><span class="formation-shape">${FORMATION_VOTE_LABELS[v][1]}</span></button>`).join("")}</div>`}`;return;
+      studentStageArea.innerHTML=`<div class="student-stage-title">FORMATION VOTE · ${team.toUpperCase()}</div><div class="student-stage-head"><strong>${result?`적용 · ${FORMATION_VOTE_LABELS[result]?.[0]||result}`:"다음 쿼터 포메이션"}</strong><span class="student-stage-chip">${selected?"투표 완료":"1표 선택"}</span></div>${studentQuarterTacticReportHtml(room,key,team)}${result?`<div class="student-tactic-banner">${FORMATION_VOTE_LABELS[result]?.[1]||""}</div>`:`<div class="student-vote-grid">${FORMATION_VOTE_PRESETS.map(v=>`<button class="student-vote-card ${formationVoteKind(selected)===v?"selected":""}" data-student-formation-vote="${v}"><b class="formation-name">${FORMATION_VOTE_LABELS[v][0]}</b><span class="formation-shape">${FORMATION_VOTE_LABELS[v][1]}</span></button>`).join("")}</div>`}${selected?.startsWith("CUSTOM:")?`<div class="student-growth-hint">내 희망 구역 · ${{ATT:"공격수",MID:"미드필더",DEF:"수비수",GK:"골키퍼 유지"}[selected.split(":")[1]]}</div>`:""}${customFormationPopupHtml(room,data)}`;return;
     }
     if(phase==="TACTIC_VOTE"){
       const key=room.breakKey||"Q1",selected=data.tacticVotes?.[key]||null,team=data.team||"blue",result=room.tacticResults?.[key]?.[team]||null,formation=room.formationResults?.[key]?.[team]||null;
@@ -4816,10 +4911,14 @@
     persistStudentResume();return saved;
   }
   async function saveStudentFormationVote(formation){
+    if(formation==="CUSTOM"){openCustomFormationChoice();return false;}
     if(manualInputsClosed()||effectiveStudentRoomState().phase!=="FORMATION_VOTE")return false;
     const room=effectiveStudentRoomState(),key=room.breakKey||"Q1",data=onlineRoomState.studentData||(onlineRoomState.studentData={}),code=onlineRoomState.studentRoomCode,id=onlineRoomState.studentParticipantId;
-    if(!key||!code||!id||!FORMATION_VOTE_PRESETS.includes(formation))return;
+    if(!key||!code||!id||!validFormationVote(formation)||room.formationResults?.[key]?.[data.team])return false;
     stageFlow.studentRetryCount=0;
+    const locked=(data.assignedRole||data.buildBase?.role)==="GK"||!data.assignedRole&&data.preferredPosition==="GK";
+    if(formationVoteKind(formation)==="CUSTOM")formation=locked?"CUSTOM:GK":formation==="CUSTOM:GK"?"CUSTOM:MID":formation;
+    customFormationChoice=null;
     if(!data.formationVotes)data.formationVotes={};data.formationVotes[key]=formation;renderStudentStage();
     return saveStudentVote("FORMATION",key,formation);
   }
@@ -5846,7 +5945,7 @@
       if(phase==="ROLE_SELECT")return !st.roleReady;
       if(phase==="BUILD")return !st.buildReady;
       if(phase==="BREAK_BUILD")return !st.breakReady?.[key];
-      if(phase==="FORMATION_VOTE")return !FORMATION_VOTE_PRESETS.includes(st.formationVotes?.[key]);
+      if(phase==="FORMATION_VOTE")return !validFormationVote(st.formationVotes?.[key]);
       if(phase==="TACTIC_VOTE")return !TACTIC_VOTE_PRESETS.includes(st.tacticVotes?.[key]);
       return false;
     }).length;
@@ -5926,7 +6025,7 @@
     gameFlow.active=true;
     gameFlow.phase="PRE_QUIZ";
     gameFlow.currentBreak=null;
-    gameFlow.breakSerial=0;gameFlow.formationResults={};gameFlow.tacticResults={};gameFlow.quarterReports={};gameFlow.quarterStartSnapshot=null;gameFlow.breakGrowthApplied={};
+    gameFlow.breakSerial=0;gameFlow.formationResults={};customStartingPlans={};customFormationChoice=null;gameFlow.tacticResults={};gameFlow.quarterReports={};gameFlow.quarterStartSnapshot=null;gameFlow.breakGrowthApplied={};
     gameFlow.sessionSerial++;
     lineupState.prepared=false;
     lineupState.assignments={blue:Array(11).fill(null),red:Array(11).fill(null)};
@@ -5961,7 +6060,7 @@
     ).join("");
   }
   function growthSummaryHtml(growth){
-    return GROWTH_STATS.map(k=>`${GROWTH_LABELS[k]} <b>+${growth?.[k]||0}</b>`).join(" · ");
+    return GROWTH_STATS.map(k=>`${GROWTH_LABELS[k]} <b>${signedStatDelta(growth?.[k]||0)}</b>`).join(" · ");
   }
   function distributePoints(points,focus="BALANCED"){
     const out=blankGrowth();
@@ -6011,12 +6110,38 @@
     }
     return {profile,base,prior,before,current};
   }
-  function fitStudentAllocation(data,points,allocation,mode="START",fill=false){
-    const out=blankGrowth(),{before}=studentBuildValues(data,mode);
-    let remaining=Math.max(0,Math.floor(Number(points)||0));
+  // Signed stage deltas conserve the quiz budget. The floor belongs to the
+  // immutable personal preset, not to the previous quarter's allocation.
+  function statAllocationBounds(data,mode="START"){
+    const values=studentBuildValues(data,mode),min={},max={};
     for(const k of GROWTH_STATS){
-      out[k]=Math.min(remaining,Math.max(0,100-before[k]),Math.max(0,Math.floor(Number(allocation?.[k])||0)));
-      remaining-=out[k];
+      min[k]=Math.ceil(Math.max(1,values.base[k]-10)-values.before[k]);
+      max[k]=Math.floor(100-values.before[k]);
+    }
+    return {...values,min,max};
+  }
+  function resetStudentAllocation(data,mode="START"){
+    const {base,before}=statAllocationBounds(data,mode);
+    return Object.fromEntries(GROWTH_STATS.map(k=>[k,Math.round(base[k]-before[k])]));
+  }
+  function canAdjustStudentStat(data,points,allocation,mode,k,step){
+    if(!GROWTH_STATS.includes(k)||![-1,1].includes(step))return false;
+    const {min,max}=statAllocationBounds(data,mode),value=Number(allocation[k])||0;
+    return step<0?value>min[k]:value<max[k]&&growthTotal(allocation)<points;
+  }
+  function signedStatDelta(value){return value>0?"+"+value:String(value||0);}
+  function fitStudentAllocation(data,points,allocation,mode="START",fill=false){
+    const out=blankGrowth(),{before,min,max}=statAllocationBounds(data,mode);
+    const requested={};
+    let remaining=Math.max(0,Math.floor(Number(points)||0));
+    // All refunds are counted before purchases, independent of stat order.
+    for(const k of GROWTH_STATS){
+      const value=Number(allocation?.[k]);
+      requested[k]=clamp(Number.isFinite(value)?Math.trunc(value):0,min[k],max[k]);
+      out[k]=Math.min(0,requested[k]);remaining-=out[k];
+    }
+    for(const k of GROWTH_STATS){
+      if(requested[k]>0){out[k]=Math.min(remaining,requested[k]);remaining-=out[k];}
     }
     if(fill){
       const seq=GROWTH_FOCUS_SEQUENCES[data.growthFocus]||GROWTH_FOCUS_SEQUENCES.BALANCED;
@@ -6030,7 +6155,8 @@
   }
   function studentAllocationComplete(data,points,allocation,mode){
     const clean=fitStudentAllocation(data,points,allocation,mode);
-    return growthTotal(clean)===Math.min(points,growthTotal(fitStudentAllocation(data,points,clean,mode,true)));
+    return GROWTH_STATS.every(k=>clean[k]===(Number(allocation?.[k])||0))&&
+      growthTotal(clean)===growthTotal(fitStudentAllocation(data,points,clean,mode,true));
   }
   function addGrowthVector(target,delta){
     for(const k of GROWTH_STATS)target[k]=(target[k]||0)+(delta[k]||0);
@@ -6270,12 +6396,12 @@
   function buildCardHtml(st,mode="START",key=""){
     const points=mode==="START"?st.preQuizPoints:(st.breakPoints?.[key]||0),allocation=plainGrowth(mode==="START"?st.startAllocation:st.breakAllocations?.[key]);
     const spent=growthTotal(allocation),unspent=Math.max(0,points-spent);
-    return `<div class="participation-card ${st.team}" data-build-card="${st.id}"><div class="participation-card-head"><span class="participation-name">${escapeLobbyHtml(st.name)}</span><span class="participation-team">${st.team.toUpperCase()} · 추가 +${points}</span></div>${mode==="START"?`<label class="growth-summary">기본 프리셋<select class="growth-focus-select" data-focus-student="${st.id}">${growthFocusOptions(st.growthFocus)}</select></label>`:`<div class="growth-summary">기본 프리셋 · ${GROWTH_FOCUS_LABELS[st.growthFocus]||GROWTH_FOCUS_LABELS.BALANCED}</div>`}${buildPreviewNote(st)}${buildStatCardsHtml(st,points,allocation,false,mode,key,st.id)}<div class="build-footer"><span>남은 포인트 <b>${unspent}</b> · ${spent}/${points} 사용</span><button class="lobby-mini" data-build-reset="${st.id}" data-build-mode="${mode}" data-build-key="${key}">↺ 이번 배분 초기화</button></div></div>`;
+    return `<div class="participation-card ${st.team}" data-build-card="${st.id}"><div class="participation-card-head"><span class="participation-name">${escapeLobbyHtml(st.name)}</span><span class="participation-team">${st.team.toUpperCase()} · 추가 +${points}</span></div>${mode==="START"?`<label class="growth-summary">기본 프리셋<select class="growth-focus-select" data-focus-student="${st.id}">${growthFocusOptions(st.growthFocus)}</select></label>`:`<div class="growth-summary">기본 프리셋 · ${GROWTH_FOCUS_LABELS[st.growthFocus]||GROWTH_FOCUS_LABELS.BALANCED}</div>`}${buildPreviewNote(st)}${buildStatCardsHtml(st,points,allocation,false,mode,key,st.id)}<div class="build-footer"><span>남은 포인트 <b>${unspent}</b> · 퀴즈 +${points} · 이번 순배분 ${signedStatDelta(spent)}</span><button class="lobby-mini" data-build-reset="${st.id}" data-build-mode="${mode}" data-build-key="${key}">↺ 스탯 초기화</button></div></div>`;
   }
   function renderPlayerBuild(){
     if(remoteParticipationActive()){
       const students=participationStudents(),ready=students.filter(st=>st.buildReady).length;
-      participationContent.innerHTML=`${hostTeamDashboardHtml("build")}<div class="host-ready-summary">학생 휴대폰에서 성장 타입과 스탯을 직접 결정합니다. <b>${ready} / ${students.length}명 READY</b> · 미완료 학생은 선택한 타입에 따라 자동 배분됩니다.</div><div class="host-response-list">${students.map(st=>{const spent=growthTotal(st.startAllocation);return `<div class="host-response-item"><span>${escapeLobbyHtml(st.name)} · ${GROWTH_FOCUS_LABELS[st.growthFocus]||GROWTH_FOCUS_LABELS.BALANCED} · +${spent}/${st.preQuizPoints}</span><span class="${st.buildReady?"ok":"wait"}">${st.buildReady?"✓ READY":"배분 중"}</span></div>`}).join("")}</div>`;
+      participationContent.innerHTML=`${hostTeamDashboardHtml("build")}<div class="host-ready-summary">학생 휴대폰에서 성장 타입과 스탯을 직접 결정합니다. <b>${ready} / ${students.length}명 READY</b> · 미완료 학생은 선택한 타입에 따라 자동 배분됩니다.</div><div class="host-response-list">${students.map(st=>{const spent=growthTotal(st.startAllocation);return `<div class="host-response-item"><span>${escapeLobbyHtml(st.name)} · ${GROWTH_FOCUS_LABELS[st.growthFocus]||GROWTH_FOCUS_LABELS.BALANCED} · 남음 ${Math.max(0,st.preQuizPoints-spent)} / 퀴즈 +${st.preQuizPoints}</span><span class="${st.buildReady?"ok":"wait"}">${st.buildReady?"✓ READY":"배분 중"}</span></div>`}).join("")}</div>`;
       return;
     }
     participationContent.innerHTML=`<div class="participation-grid">${participationStudents().map(st=>buildCardHtml(st)).join("")}</div>`;
@@ -6327,7 +6453,11 @@
     showFormationVote("Q1");
   }
 
-  function autoAssignTeamLineup(teamName){
+  function autoAssignTeamLineup(teamName,force=false){
+    const plan=customStartingPlans[teamName];
+    if(!force&&plan?.formation===document.getElementById(teamName+"Formation")?.value){
+      lineupState.assignments[teamName]=[...plan.assignments];lineupState.benches[teamName]=[...plan.benches];return;
+    }
     const formationKey=document.getElementById(teamName+"Formation").value;
     const slots=FORMATIONS[formationKey];
     const candidates=lobbyTeamStudents(teamName).slice();
@@ -6381,7 +6511,7 @@
     }).join("");
     const bench=lineupState.benches[teamName].map(id=>lobbyState.students.find(s=>s.id===id)).filter(Boolean);
     const manual=bench.length?`<div class="bench-wrap"><div class="bench-title">HOST OVERRIDE · 선발 ↔ 벤치</div><div class="sub-select-row"><select class="sub-select" data-lineup-slot="${teamName}">${slots.map((slot,i)=>{const sid=lineupState.assignments[teamName][i];const st=sid?lobbyState.students.find(x=>x.id===sid):null;return `<option value="${i}">${slot.role} · ${st?escapeLobbyHtml(st.name):"AI"}</option>`}).join("")}</select><div class="sub-arrow">↔</div><select class="sub-select" data-lineup-bench="${teamName}">${bench.map(st=>`<option value="${st.id}">${escapeLobbyHtml(st.name)} · ${POSITION_PREFS[st.preferredPosition||"FLEX"]}</option>`).join("")}</select></div><button class="sub-apply" data-lineup-swap="${teamName}">수동 맞교환</button></div>`:"";
-    return `<div class="lineup-box"><h3 style="color:${teamName==="blue"?"#77b8ff":"#ff858d"}">${teamName.toUpperCase()} · ${formationKey}</h3>${rows}<div class="bench-wrap"><div class="bench-title">BENCH</div>${bench.length?bench.map(st=>`<span class="bench-chip">${escapeLobbyHtml(st.name)} · ${POSITION_PREFS[st.preferredPosition||"FLEX"]} · ${st.preQuizCorrect}/20</span>`).join(""):`<span class="bench-chip">벤치 학생 없음</span>`}</div>${manual}</div>`;
+    return `<div class="lineup-box"><h3 style="color:${teamName==="blue"?"#77b8ff":"#ff858d"}">${teamName.toUpperCase()} · ${FORMATION_VOTE_LABELS[formationKey]?.[0]||formationKey}</h3>${rows}<div class="bench-wrap"><div class="bench-title">BENCH</div>${bench.length?bench.map(st=>`<span class="bench-chip">${escapeLobbyHtml(st.name)} · ${POSITION_PREFS[st.preferredPosition||"FLEX"]} · ${st.preQuizCorrect}/20</span>`).join(""):`<span class="bench-chip">벤치 학생 없음</span>`}</div>${manual}</div>`;
   }
   function manualLineupSwap(teamName,slotIndex,benchStudentId){
     slotIndex=Number(slotIndex);
@@ -6585,7 +6715,7 @@
   }
   function breakBuildCardHost(st,key){
     const pts=Number(st.breakPoints?.[key])||0,alloc=plainGrowth(st.breakAllocations?.[key]),spent=growthTotal(alloc),ready=!!st.breakReady?.[key];
-    return `<div class="host-response-item"><span>${escapeLobbyHtml(st.name)} · ${GROWTH_FOCUS_LABELS[st.growthFocus]||GROWTH_FOCUS_LABELS.BALANCED} · +${spent}/${pts}</span><span class="${ready?"ok":"wait"}">${ready?"✓ READY":"배분 중"}</span></div>`;
+    return `<div class="host-response-item"><span>${escapeLobbyHtml(st.name)} · ${GROWTH_FOCUS_LABELS[st.growthFocus]||GROWTH_FOCUS_LABELS.BALANCED} · 남음 ${Math.max(0,pts-spent)} / 퀴즈 +${pts}</span><span class="${ready?"ok":"wait"}">${ready?"✓ READY":"배분 중"}</span></div>`;
   }
   function renderBreakBuild(){
     const key=gameFlow.currentBreak,students=participationStudents(),ready=students.filter(st=>st.breakReady?.[key]).length;
@@ -6603,7 +6733,7 @@
     if(remoteParticipationActive()&&!(await batchParticipantPatches(participationStudents().map(st=>[st,{buildBase:st.buildBase,breakPoints:{...(st.breakPoints||{})},breakAllocations:{...(st.breakAllocations||{})},breakReady:{...(st.breakReady||{})}}]))))throw new Error("중간 성장 포인트를 참가자에게 전송하지 못했습니다.");
     gameFlow.phase="BREAK_BUILD";gameFlow.currentBreak=key;quizSystem.current=null;showParticipationOverlay();
     participationKicker.textContent="PLAYER GROWTH · STUDENT DEVICES";participationTitle.textContent=`${breakTitle(key)} · 성장 배분`;
-    participationDesc.textContent="기본 프리셋과 누적 성장은 유지됩니다. 이번 퀴즈 포인트를 + / −로 배분하세요. 미완료 학생의 남은 포인트만 기존 타입에 따라 자동 배분됩니다.";
+    participationDesc.textContent="프리셋 기준 각 스탯 −10까지 회수하고 누적 성장도 다시 배분할 수 있습니다. 스탯 초기화는 프리셋으로 돌리고 성장 포인트를 반환합니다. 미완료 학생의 남은 포인트만 자동 배분됩니다.";
     participationPhaseChip.textContent="GROWTH";participationRoadmap.innerHTML=phaseRoadmapHtml(key);participationBackBtn.style.display="none";participationAutoBtn.style.display="none";participationPrimaryBtn.textContent="스탯 분배 마감 → 포메이션 투표";renderBreakBuild();
     if(remoteParticipationActive())syncRoomState({status:"LIVE",phase:"BREAK_BUILD",breakKey:key,quiz:null});
   }
@@ -6848,14 +6978,14 @@
   function formationVoteCounts(teamName,key){
     const counts=Object.fromEntries(FORMATION_VOTE_PRESETS.map(x=>[x,0]));
     for(const st of participationStudents().filter(s=>s.team===teamName)){
-      const v=st.formationVotes?.[key];if(v in counts)counts[v]++;
+      const v=formationVoteKind(st.formationVotes?.[key]);if(validFormationVote(st.formationVotes?.[key])&&v in counts)counts[v]++;
     }
     return counts;
   }
   function renderFormationVote(){
     const key=gameFlow.currentBreak;
     const teamHtml=team=>{
-      const sts=participationStudents().filter(s=>s.team===team),counts=formationVoteCounts(team,key),voted=sts.filter(s=>FORMATION_VOTE_PRESETS.includes(s.formationVotes?.[key])).length;
+      const sts=participationStudents().filter(s=>s.team===team),counts=formationVoteCounts(team,key),voted=sts.filter(s=>validFormationVote(s.formationVotes?.[key])).length;
       return `<div class="host-vote-team"><h3 style="color:${team==="blue"?"#8bc6ff":"#ff929a"}">${team.toUpperCase()} · ${voted}/${sts.length} 투표</h3>${FORMATION_VOTE_PRESETS.map(v=>{const n=counts[v],pct=sts.length?Math.round(n/sts.length*100):0;return `<div class="host-vote-row"><div><b>${FORMATION_VOTE_LABELS[v][0]}</b> · ${FORMATION_VOTE_LABELS[v][1]}<div class="host-vote-bar" style="color:${team==="blue"?"#5caeff":"#ff6973"}"><i style="width:${pct}%"></i></div></div><b>${n}</b></div>`}).join("")}</div>`;
     };
     participationContent.innerHTML=`${hostTeamDashboardHtml("formationVote")}${quarterTacticReportHtml(key)}<div class="host-stage-section"><h3>TEAM FORMATION VOTE · ${voteRoundTitle(key)}</h3><div class="host-vote-grid">${teamHtml("blue")}${teamHtml("red")}</div></div>`;
@@ -6870,13 +7000,13 @@
   }
   function winningFormationFor(teamName,key){
     const counts=formationVoteCounts(teamName,key),max=Math.max(...Object.values(counts));
-    const current=document.getElementById(teamName+"Formation")?.value||"433";
-    if(max<=0)return FORMATION_VOTE_PRESETS.includes(current)?current:"433";
+    const actual=document.getElementById(teamName+"Formation")?.value||"433",current=ensureCustomFormation(actual)?"CUSTOM":actual;
+    if(max<=0)return actual;
     const tied=FORMATION_VOTE_PRESETS.filter(v=>counts[v]===max);
     return tied.includes(current)?current:tied[0];
   }
   function applyFormationVoteResult(teamName,key,formation){
-    const select=document.getElementById(teamName+"Formation");if(select)select.value=formation;
+    setFormationSelect(teamName,formation);
     if(key==="Q1"){lineupState.prepared=false;return;}
     if(teams?.[teamName]?.players?.length)changeFormation(teamName,formation);
   }
@@ -6884,7 +7014,7 @@
     const key=gameFlow.currentBreak;if(!key)return;
     if(remoteParticipationActive()&&!(await refreshRemoteProgressBeforeGrade()))throw new Error("학생 포메이션 투표를 불러오지 못했습니다.");
     const results={};
-    for(const team of ["blue","red"]){const winner=winningFormationFor(team,key);results[team]=winner;applyFormationVoteResult(team,key,winner);}
+    for(const team of ["blue","red"]){const winner=winningFormationFor(team,key),formation=winner==="CUSTOM"?resolveCustomFormation(team,key):winner;results[team]=formation;applyFormationVoteResult(team,key,formation);}
     gameFlow.formationResults=gameFlow.formationResults||{};gameFlow.formationResults[key]=results;
     if(remoteParticipationActive()){
       const formationOk=await syncRoomState({formationResults:{...(onlineRoomState.clientBroadcastState?.formationResults||{}),...(gameFlow.formationResults||{})},breakKey:key});
@@ -12794,7 +12924,7 @@
       s.gkPossessionMode=true;
       const footSweep=gk?.tacticalRole==="SWEEPER_KEEPER" && !inPenaltyAreaForTeam(gk.x,gk.y,teamName);
       // An exposed foot recovery needs the available outlet, not a full-box reset.
-      s.gkResetTimer=footSweep?lerp(.48,.30,decisionIntelligence(gk)):
+      s.gkResetTimer=teamTactic(teamName).preset==="HOOFBALL"?.45:footSweep?lerp(.48,.30,decisionIntelligence(gk)):
         gk?.tacticalRole==="SWEEPER_KEEPER"?.95:1.55;
     }
 
@@ -12809,6 +12939,7 @@
   }
 
   function goalkeeperDistributionReady(gk){
+    if(teamTactic(gk.team).preset==="HOOFBALL")return !(gk.gkSecureTimer>0);
     const team=teams[gk.team].players;
 
     // Require most defenders/mids to be reasonably close to their intended reset positions.
@@ -12838,7 +12969,35 @@
     return clamp((base??custom)+teamState[teamName].counterOpportunity*.14,.04,.64);
   }
 
+  function chooseHoofballOutlet(owner){
+    const dir=attackDir(owner.team),type=owner.role==="GK"?"LONG_GK":"LONG";
+    const targets=teams[owner.team].players.filter(p=>p.id!==owner.id&&p.role!=="GK"&&!p.sentOff&&
+      (p.x-owner.x)*dir>14&&dist(owner.x,owner.y,p.x,p.y)>=20&&dist(owner.x,owner.y,p.x,p.y)<=68)
+      .sort((a,b)=>{
+        const rank=p=>(p.x-owner.x)*dir*.25+aerialDuelSkill(p)*.20+(isStriker(p)?8:0)+(p.tacticalRole==="TARGET_FORWARD"?6:0);
+        return rank(b)-rank(a);
+      }).slice(0,3);
+    for(const target of targets){
+      const d=dist(owner.x,owner.y,target.x,target.y),lead=clamp((target.vx||0)*dir*.40,0,2.4);
+      const option=makePassOption(owner,target,type,clamp(target.x+dir*lead,2,FIELD_W-2),clamp(target.y+(target.vy||0)*.2,4,FIELD_H-4),clamp(25+d*.10,27,32),0);
+      option.aerialOutlet=true;
+      if(passOptionIsViable(owner,option))return option;
+    }
+    return null;
+  }
+  function tryHoofballRelease(owner){
+    if(teamTactic(owner.team).preset!=="HOOFBALL"||(teamState[owner.team].kickoffCalmTimer||0)>0||
+      inOpponentPenaltyArea(owner)||shootingDistance(owner)<24)return false;
+    const option=chooseHoofballOutlet(owner);
+    if(option){attemptPass(owner,option);return ball.state==="PASSING";}
+    // With no contestable receiver, clear upfield from the rear/middle third.
+    // Advanced attackers still keep their existing finish/carry decisions.
+    if(attackProgressFor(owner)<.68)return attemptClearance(owner,"HOOFBALL");
+    return false;
+  }
   function chooseGoalkeeperDistribution(gk){
+    const hoof=teamTactic(gk.team).preset==="HOOFBALL",direct=hoof?chooseHoofballOutlet(gk):null;
+    if(direct)return direct;
     const dir=attackDir(gk.team);
     const teammates=teams[gk.team].players.filter(p=>p.id!==gk.id&&!p.sentOff);
     const sweeper=gk.tacticalRole==="SWEEPER_KEEPER";
@@ -12882,14 +13041,14 @@
     const shortSafety=shortTargets[0]?.safety.safety??-Infinity;
     // Short safe recirculation after a foot sweep takes precedence; a longer
     // switch needs a clearly better open outlet, not merely a high KICK stat.
-    if(buildOutlet&&((exposed&&buildOutlet.type==="SHORT_GK")||
+    if(!hoof&&buildOutlet&&((exposed&&buildOutlet.type==="SHORT_GK")||
       buildOutlet.score>shortSafety+1.1)){
       return {type:buildOutlet.type,target:buildOutlet.p,aimX:buildOutlet.aimX,aimY:buildOutlet.aimY,
         speed:buildOutlet.type==="LONG_GK"?25.5:17.5,aerialOutlet:buildOutlet.type==="LONG_GK"};
     }
 
     const goLong=!!longTargets.length&&(
-      !shortTargets.length||(!exposed&&matchRandom()<goalkeeperLongMix(gk.team)*lerp(.88,1.08,kickImpact(gk)))
+      !shortTargets.length||hoof||(!exposed&&matchRandom()<goalkeeperLongMix(gk.team)*lerp(.88,1.08,kickImpact(gk)))
     );
 
     if(!goLong){
@@ -14437,7 +14596,7 @@
   function movingBallTeamResponse(teamName){
     if(!["PASSING","LOOSE"].includes(ball.state)){ballResponseState.cache.clear();ballResponseState.memory[teamName]=null;return null;}
     const ps=teams[teamName].players;
-    const key=JSON.stringify([simulationRun.physicsTicks,trajectoryState(),ball.passerId,ball.intendedReceiverId,ps.map(p=>[p.playerUid,p.x,p.y,p.turnoverStun>0,p.beatenTimer>0])]);
+    const key=JSON.stringify([simulationRun.physicsTicks,trajectoryState(),ball.passerId,ball.intendedReceiverId,teamTactic(teamName).preset,ps.map(p=>[p.playerUid,p.x,p.y,p.turnoverStun>0,p.beatenTimer>0])]);
     const cached=ballResponseState.cache.get(teamName);if(cached?.key===key)return cached.value;
     const candidates=ps.filter(p=>p.role!=="GK"&&!p.sentOff&&p.turnoverStun<=0&&p.beatenTimer<=0)
       .map(p=>{const plan=bestPassRecoveryPlan(p);return {p,plan,cost:plan?Math.max(plan.t,plan.eta)+(plan.anticipatory?.45:0)+(p.id===ball.intendedReceiverId?-.10:0):Infinity};})
@@ -14456,8 +14615,9 @@
     const keeperPlan=gk?(ball.state==="PASSING"?goalkeeperMovingBallSweepTarget(gk):goalkeeperLooseClaimTarget(gk)):null;
     // Keeper and defender must not both be designated first to the same ball.
     if(keeperPlan&&(!first||keeperPlan.gkEta+.15<first.plan.eta))first={p:gk,plan:{...keeperPlan,eta:keeperPlan.gkEta,t:keeperPlan.t||keeperPlan.gkEta,z:0},cost:keeperPlan.gkEta};
-    const support=first?candidates.filter(e=>e.p.id!==first.p.id&&dist(e.p.x,e.p.y,first.plan.x,first.plan.y)<18&&
-      (!isCentralDefender(e.p)||first.plan.ownDanger||first.plan.boxDanger)).slice(0,2):[];
+    const street=teamTactic(teamName).preset==="STREET",anchor=street?streetCoverPlayer(teamName):null;
+    const support=first?candidates.filter(e=>e.p.id!==first.p.id&&dist(e.p.x,e.p.y,first.plan.x,first.plan.y)<(street?28:18)&&
+      (street?e.p.id!==anchor?.id:!isCentralDefender(e.p)||first.plan.ownDanger||first.plan.boxDanger)).slice(0,street?4:2):[];
     const value={primary:first?.p||null,plan:first?.plan||null,support,keeperPlan};
     if(first)ballResponseState.memory[teamName]={uid:first.p.playerUid,passer:ball.passerId,state:ball.state,vx:ball.vx,vy:ball.vy,pace};
     ballResponseState.cache.set(teamName,{key,value});return value;
@@ -16205,7 +16365,7 @@
         : player.category==="DEF"
           ? DEF_MID_DECISION_TEMPO_BONUS
           : 1;
-    const tikiTempo=teamTactic(player.team).preset==="TIKI_TAKA"?.86:1;
+    const tikiTempo=teamTactic(player.team).preset==="TIKI_TAKA"?.86:teamTactic(player.team).preset==="HOOFBALL"?.70:1;
     return rand(min,max)*scale*tikiTempo*(1+fatigueLoad(player)*.08)/(tempoFactor(player.team)*AI_DECISION_TEMPO_MULTIPLIER*positionalTempo);
   }
 
@@ -19585,6 +19745,7 @@
     if(owner.onBallAction==="CONTROL"&&!stalled&&!closing)return false;
     if((!newTouch&&!offer&&!sudden&&!stalled&&!closing)||gap<(stalled||closing ? lerp(.38,.27,read) : sudden ? AI_DT : .20))return false;
     owner.lastEventReviewSim=now;owner.reviewedTouchTick=owner.touchWindowTick||0;owner.reviewedOfferTick=jointPlay.tick;
+    if(tryHoofballRelease(owner))return true;
     const option=choosePassOption(owner),context=attackingChoiceContext(owner),review=attackingPassReview(owner,option,context);
     const wastesChance=!!option&&context?.open>.32&&context.carryPressure>3.2&&context.space>5.5&&
       (option.safetyData.forward<1.5||option.lateralTransfer)&&!review.improvesShape&&!passKeepsAttackingValue(owner,option)&&
@@ -19593,7 +19754,8 @@
     const carry=clamp(37+Math.min(11,forwardSpace(owner))*2.1+techniqueImpact(owner)*7-(pressure<2?9:0),0,100);
     const escape=(stalled||closing)?pressureEscapeLane(owner):null;
     const release=option?passUtilityToAction(option)+(safe?3+read*2:0):-999;
-    if(option&&!wastesChance&&(((stalled||closing)&&safe&&
+    const streetCarry=teamTactic(owner.team).preset==="STREET"&&(escape||forwardSpace(owner)>2.2)&&dribblePressureCount(owner,3.25)<3&&!review.decisive&&!option?.oneTwoReturn;
+    if(option&&!streetCarry&&!wastesChance&&(((stalled||closing)&&safe&&
       (!escape||release>=escape.utility||review.decisive||option.oneTwoReturn))||
       (!stalled&&!closing&&passUtilityToAction(option)>=carry+8&&(newTouch||!["DRIBBLE","SPRINT_DRIBBLE"].includes(owner.onBallAction))))){
       attemptPass(owner,option);return ball.state==="PASSING";
@@ -20087,6 +20249,7 @@
     // A real breakaway or clean shooting lane must not be cancelled by a
     // defensive mentality or a possession preset.
     if(handleDecisiveAttackerAction(owner,scanPass))return;
+    if(tryHoofballRelease(owner))return;
 
     // Inside-forward signature finish: after cutting inside from a wing,
     // high TECH+KICK players can bend the ball toward the far post.
@@ -20763,6 +20926,13 @@
       !attackReview.improvesShape&&!passKeepsAttackingValue(owner,passOption)&&
       !(owner.receivePostureTimer>0&&owner.receivePosture==="BACK_TO_GOAL")){
       passUtility=Math.min(passUtility,Math.max(dribbleUtility,sprintUtility)-2);
+    }
+    if(preset==="STREET"&&!kickoffCalm){
+      // An explicit playful tactic: choose carries more often, while existing
+      // finishing and emergency-clearance branches retain priority.
+      dribbleUtility+=24;passUtility-=14;shieldUtility-=8;
+      if(sprintUtility>-900)sprintUtility+=12;
+      if(orchestrationUtility>-900)orchestrationUtility-=10;
     }
     const best=Math.max(
       passUtility,dribbleUtility,sprintUtility,
@@ -22151,6 +22321,10 @@
   // ------------------------------------------------------------
   // 팀 움직임 AI
   // ------------------------------------------------------------
+  function streetCoverPlayer(team){
+    return teams[team].players.filter(p=>p.role!=="GK"&&!p.sentOff&&p.category==="DEF")
+      .sort((a,b)=>Math.abs(a.x-ownGoalX(team))-Math.abs(b.x-ownGoalX(team))||a.id.localeCompare(b.id))[0]||null;
+  }
   function updateTeamAI(teamName){
     const players=teams[teamName].players;
     const dir=attackDir(teamName);
@@ -22196,6 +22370,11 @@
           .sort((a,b)=>dist(a.x,a.y,owner.x,owner.y)-dist(b.x,b.y,owner.x,owner.y)).slice(0,3).map(p=>p.id))
       : null;
 
+    const street=teamTactic(teamName).preset==="STREET";
+    const streetAnchor=street?streetCoverPlayer(teamName):null;
+    const streetFollowers=street&&ball.state==="CONTROLLED"&&owner&&owner.role!=="GK"
+      ? players.filter(p=>p.role!=="GK"&&p.id!==owner.id&&p.id!==streetAnchor?.id&&!p.sentOff&&dist(p.x,p.y,owner.x,owner.y)<28)
+        .sort((a,b)=>dist(a.x,a.y,owner.x,owner.y)-dist(b.x,b.y,owner.x,owner.y)).slice(0,3):[];
     const defensiveAssignments =
       defending && owner
         ? buildDefensiveAssignments(teamName,owner)
@@ -22603,6 +22782,30 @@
           tx=r.x;ty=r.y;
           p.assignment="REBOUND_CLEAR";
           p.focus=p.category==="DEF"?.88:.68;
+        }
+      }
+
+      // STREET alone draws additional nearby players toward the ball.
+      // The shared physical forecast still determines the primary receiver;
+      // extras approach separate second-ball lanes, with one defender holding.
+      if(street&&p.role!=="GK"&&p.id!==owner?.id&&p.id!==streetAnchor?.id&&
+        !ownGKReset&&!opponentGKReset&&!shooting&&!match.setPiece&&!match.pendingSetPiece&&
+        !(teamState[teamName].kickoffCalmTimer>0)){
+        if(ball.state==="PASSING"||loose){
+          const response=movingBallTeamResponse(teamName),i=response?.support.findIndex(e=>e.p.id===p.id)??-1;
+          if(i>=0&&response.plan){
+            const angle=(i%2?-1:1)*(.65+Math.floor(i/2)*.55),side=p.homeY<34?-1:1;
+            tx=lerp(tx,response.plan.x-dir*(2.1+Math.floor(i/2)),.86);
+            ty=lerp(ty,response.plan.y+side*(2.0+i*.65)+angle,.86);
+            p.assignment="SECOND_BALL_SUPPORT";p.focus=.78;
+          }
+        }else{
+          const i=streetFollowers.indexOf(p);
+          if(i>=0&&!['TACKLE_PRESS','PRESS_PRIMARY','DOUBLE_TEAM'].includes(p.assignment)){
+            tx=lerp(tx,owner.x-dir*(attacking?2.8:2.0),.74);
+            ty=lerp(ty,owner.y+(i-1)*3.0,.74);
+            p.assignment=attacking?"SECOND_BALL_SUPPORT":"COVER_AROUND_PRESS";p.focus=Math.max(p.focus,.78);
+          }
         }
       }
 
@@ -24139,7 +24342,7 @@
       const s=lobbyState.students.find(x=>x.id===statBtn.dataset.buildStudent);if(!s)return;
       const mode=statBtn.dataset.buildMode||"START",key=statBtn.dataset.buildKey||"",k=statBtn.dataset.buildStat,step=Number(statBtn.dataset.statStep)||1;
       const points=mode==="START"?s.preQuizPoints:(s.breakPoints?.[key]||0),alloc=plainGrowth(mode==="START"?s.startAllocation:s.breakAllocations?.[key]);
-      if(!GROWTH_STATS.includes(k)||(step>0&&(growthTotal(alloc)>=points||studentBuildValues(s,mode,alloc).current[k]>=100))||(step<0&&alloc[k]<=0))return;
+      if(!canAdjustStudentStat(s,points,alloc,mode,k,step))return;
       alloc[k]+=step>0?1:-1;
       if(mode==="START"){s.startAllocation=alloc;renderPlayerBuild();}
       else{s.breakAllocations[key]=alloc;renderBreakBuild();}return;
@@ -24147,8 +24350,8 @@
     const resetBtn=e.target.closest("[data-build-reset]");
     if(resetBtn){
       const s=lobbyState.students.find(x=>x.id===resetBtn.dataset.buildReset);if(!s)return;
-      if(resetBtn.dataset.buildMode==="BREAK"){s.breakAllocations[resetBtn.dataset.buildKey]=blankGrowth();renderBreakBuild();}
-      else{s.startAllocation=blankGrowth();renderPlayerBuild();}return;
+      if(resetBtn.dataset.buildMode==="BREAK"){s.breakAllocations[resetBtn.dataset.buildKey]=resetStudentAllocation(s,"BREAK");renderBreakBuild();}
+      else{s.startAllocation=resetStudentAllocation(s,"START");renderPlayerBuild();}return;
     }
     const lineupBtn=e.target.closest("[data-lineup-swap]");
     if(lineupBtn){
@@ -24233,6 +24436,8 @@
   studentJoinBtn?.addEventListener("click",joinStudentRoom);
   studentNameInput?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();joinStudentRoom();}});
   studentStageArea?.addEventListener("click",e=>{
+    const customCancel=e.target.closest("[data-custom-formation-cancel]");if(customCancel){customFormationChoice=null;renderStudentStage();return;}
+    const customBand=e.target.closest("[data-custom-formation-band]");if(customBand){saveStudentFormationVote("CUSTOM:"+customBand.dataset.customFormationBand);return;}
     const quizBtn=e.target.closest("[data-student-quiz-answer]");if(quizBtn){submitStudentQuizAnswer(Number(quizBtn.dataset.studentQuizAnswer),Number(quizBtn.dataset.quizQuestionIndex));return;}
     const roleBtn=e.target.closest("[data-student-role]");if(roleBtn){saveStudentRole(roleBtn.dataset.studentRole,false);return;}
     const roleReady=e.target.closest("[data-student-role-ready]");if(roleReady){const data=onlineRoomState.studentData||{};saveStudentRole(data.preferredRole||defaultDetailedRoleForPref(data.preferredPosition),true);return;}
@@ -24245,17 +24450,26 @@
       const points=mode==="START"?(Number(data.preQuizPoints)||0):(Number(data.breakPoints?.[key])||0);
       const alloc=mode==="START"?plainGrowth(data.startAllocation):plainGrowth(data.breakAllocations?.[key]);
       const k=statBtn.dataset.studentBuildStat,step=Number(statBtn.dataset.statStep)||1;
-      if(!GROWTH_STATS.includes(k)||(step>0&&(growthTotal(alloc)>=points||studentBuildValues(data,mode,alloc).current[k]>=100))||(step<0&&alloc[k]<=0))return;
+      if(!canAdjustStudentStat(data,points,alloc,mode,k,step))return;
       alloc[k]+=step>0?1:-1;
       saveStudentAllocation(mode,key,alloc,false);return;
     }
     const reset=e.target.closest("[data-student-build-reset]");
-    if(reset){saveStudentAllocation(reset.dataset.studentBuildReset,reset.dataset.buildKey||"",blankGrowth(),false);return;}
+    if(reset){saveStudentAllocation(reset.dataset.studentBuildReset,reset.dataset.buildKey||"",resetStudentAllocation(onlineRoomState.studentData||{},reset.dataset.studentBuildReset),false);return;}
     const ready=e.target.closest("[data-student-build-ready]");
     if(ready){
       const mode=ready.dataset.studentBuildReady,key=ready.dataset.buildKey||"",data=onlineRoomState.studentData||{};
       const points=mode==="START"?(Number(data.preQuizPoints)||0):(Number(data.breakPoints?.[key])||0),alloc=mode==="START"?plainGrowth(data.startAllocation):plainGrowth(data.breakAllocations?.[key]);
       if(!studentAllocationComplete(data,points,alloc,mode))return;saveStudentAllocation(mode,key,alloc,true);return;
+    }
+  });
+  studentStageArea?.addEventListener("keydown",e=>{
+    const dialog=studentStageArea.querySelector(".custom-formation-dialog");if(!dialog)return;
+    if(e.key==="Escape"){e.preventDefault();customFormationChoice=null;renderStudentStage();studentStageArea.querySelector('[data-student-formation-vote="CUSTOM"]')?.focus();}
+    if(e.key==="Tab"){
+      const buttons=Array.from(dialog.querySelectorAll("button:not(:disabled)")),first=buttons[0],last=buttons.at(-1);
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
     }
   });
   document.getElementById("studentHomeBtn")?.addEventListener("click",()=>{location.href=DSSOCCER_DEPLOY_URL;});
