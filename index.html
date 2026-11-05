@@ -1551,7 +1551,7 @@
   // ============================================================
 
   // One build identity for display, links and the classroom protocol.
-  const DSSOCCER_BUILD="2.5.39";
+  const DSSOCCER_BUILD="2.5.40";
   const simulationRun={owner:null,aiTicks:0,ticks:0,seed:0,rngState:0,nextSeed:null};
   const passLedger={blue:{},red:{}};
   function setNextMatchSeed(seed){simulationRun.nextSeed=Number(seed)>>>0;}
@@ -3417,13 +3417,22 @@
     const order=key.slice(4).split(""),counts=Object.fromEntries(["D","M","A"].map(k=>[k,order.filter(x=>x===k).length]));
     if(Object.values(counts).some(n=>!n))return false;
     if(!FORMATIONS[key]){
-      const used={D:0,M:0,A:0};
+      const used={D:0,M:0,A:0},lanes={};
+      for(const band of ["D","M","A"]){
+        const n=counts[band];
+        // Fill the central channel first. A two-player line is a CB/CM/ST
+        // pair, not two touchline players with an empty centre.
+        const span=n===1?0:n===2?6.5:band==="D"&&n===3?12:band==="M"&&n===3?16:band==="D"&&n===4?21:26;
+        lanes[band]=Array.from({length:n},(_,i)=>n===1?34:34-span+2*span*i/(n-1))
+          .sort((a,b)=>Math.abs(a-34)-Math.abs(b-34)||a-b);
+      }
       FORMATIONS[key]=[{role:"GK",x:5,y:34},...order.map(band=>{
-        const n=counts[band],i=used[band]++,y=n===1?34:8+i*52/(n-1);
+        const n=counts[band],i=used[band]++,y=lanes[band][i];
+        const left=Math.min(...lanes[band]),right=Math.max(...lanes[band]);
         let role;
-        if(band==="D")role=n===1?"MCB":n>=4&&i===0?"LB":n>=4&&i===n-1?"RB":i<(n-1)/2?"LCB":i>(n-1)/2?"RCB":"MCB";
-        else if(band==="M")role=n>=4&&i===0?"LM":n>=4&&i===n-1?"RM":i%2?"RCM":"LCM";
-        else role=n===1?"ST":n>=3&&i===0?"LW":n>=3&&i===n-1?"RW":i%2?"RST":"LST";
+        if(band==="D")role=n===1||Math.abs(y-34)<.1?"MCB":n>=4&&y===left?"LB":n>=4&&y===right?"RB":y<34?"LCB":"RCB";
+        else if(band==="M")role=n>=4&&y===left?"LM":n>=4&&y===right?"RM":y<=34?"LCM":"RCM";
+        else role=n===1||Math.abs(y-34)<.1?"ST":n>=3&&y===left?"LW":n>=3&&y===right?"RW":y<34?"LST":"RST";
         // The same formation anchors and role AI drive play. Small row depth
         // offsets keep very large lines readable without altering player pace.
         const x=(band==="D"?23:band==="M"?47:72)+(n>=5?(i%2?1.8:-1.8):0);
@@ -12786,7 +12795,10 @@
     // Read an actual run, rather than granting perfect knowledge of an
     // opponent's destination. Anticipation is short and bounded (up to 1.6 m forward).
     const advancing=(attacker.vx||0)*attackDir(attacker.team)>.6;
-    const horizon=advancing?lerp(.06,.28,decisionIntelligence(defender)):0;
+    const read=decisionIntelligence(defender);
+    // Good defenders read a moving runner a little earlier; this changes the
+    // interception line, never the defender's running speed or contact radius.
+    const horizon=advancing?lerp(.06,defender.category==="DEF"?.34:.28,read):0;
     const leadX=clamp((attacker.vx||0)*horizon,-1.6,1.6);
     const leadY=clamp((attacker.vy||0)*horizon,-1.2,1.2);
     const readX=attacker.x+leadX,readY=attacker.y+leadY;
@@ -12988,11 +13000,18 @@
   function tryHoofballRelease(owner){
     if(teamTactic(owner.team).preset!=="HOOFBALL"||(teamState[owner.team].kickoffCalmTimer||0)>0||
       inOpponentPenaltyArea(owner)||shootingDistance(owner)<24)return false;
+    const progress=attackProgressFor(owner),holding=["DM","LDM","RDM"].includes(owner.role);
+    // Hoofball bypasses the first build-up lines; it does not order forwards
+    // to throw away a won attacking position. Their normal chance evaluation
+    // (carry, shot, cutback or a better pass) takes over in the front half.
+    if(owner.category==="ATT"||owner.role==="AM"||progress>.60||
+      owner.category==="MID"&&!holding&&progress>.48||
+      attackingAdvantageProfile(owner)>.35&&nearestOpponentDistance(owner)>2.5)return false;
     const option=chooseHoofballOutlet(owner);
     if(option){attemptPass(owner,option);return ball.state==="PASSING";}
-    // With no contestable receiver, clear upfield from the rear/middle third.
-    // Advanced attackers still keep their existing finish/carry decisions.
-    if(attackProgressFor(owner)<.68)return attemptClearance(owner,"HOOFBALL");
+    // Only a rear defender has the clearance fallback. A calm midfielder
+    // without a genuine long outlet keeps normal possession choices.
+    if(owner.category==="DEF"&&progress<.55)return attemptClearance(owner,"HOOFBALL");
     return false;
   }
   function chooseGoalkeeperDistribution(gk){
@@ -16003,12 +16022,15 @@
     // the ball. Existing role/formation constraints still run afterwards.
     const linkMid=isCentralMid(p)&&!supportPlanFixed(p)&&p.tacticalRole!=="ANCHOR"&&
       !p.oneTwoTimer&&!isActiveMidfieldRun(p)&&!/RUN|BURST|SURGE|SECOND_WAVE|BUILDUP32_/.test(target.intent||"")&&
-      dist(p.x,p.y,owner.x,owner.y)>6&&dist(p.x,p.y,owner.x,owner.y)<28;
+      dist(p.x,p.y,owner.x,owner.y)>6&&dist(p.x,p.y,owner.x,owner.y)<31;
     if(linkMid){
       const holding=["DM","LDM","RDM"].includes(p.role);
+      // Take a slightly wider local diagonal to become a reachable next link,
+      // not another body around the carrier. The formation leash still applies.
+      const pocketRadius=lerp(5.8,6.8,intel*.65+movement*.35);
       for(const flank of [-1,1]){
-        const x=owner.x+dir*(holding?-6:4),y=owner.y+flank*10;
-        const dx=x-target.x,dy=y-target.y,len=Math.hypot(dx,dy)||1,scale=Math.min(1,5.5/len);
+        const x=owner.x+dir*(holding?-6:5),y=owner.y+flank*10;
+        const dx=x-target.x,dy=y-target.y,len=Math.hypot(dx,dy)||1,scale=Math.min(1,pocketRadius/len);
         candidates.push({x:clamp(target.x+dx*scale,3,FIELD_W-3),y:clamp(target.y+dy*scale,3,FIELD_H-3)});
       }
     }
@@ -16028,7 +16050,7 @@
 
       if(linkMid&&lane<4.5&&space>2.8&&mateSpace>3.5){
         const linkDistance=dist(owner.x,owner.y,c.x,c.y);
-        score+=clamp(1-Math.abs(linkDistance-13)/9,0,1)*2.4;
+        score+=clamp(1-Math.abs(linkDistance-13)/9,0,1)*lerp(2.6,3.8,intel);
       }
       if(isFullback(p)||isWinger(p)) score+=Math.abs(c.y-34)*.055;
       if(score>bestScore){bestScore=score;best=c;}
@@ -16306,6 +16328,10 @@
       dy=side*.72;
     }
 
+    // Under an approaching press the existing escape scan has a better view
+    // than the decorative left/right scan phase. Carry through its clear lane.
+    const escape=open<4.2?pressureEscapeLane(owner):null;
+    if(escape){dx=escape.x;dy=escape.y;}
     const len=Math.hypot(dx,dy)||1;
     owner.dribbleX=dx/len;
     owner.dribbleY=dy/len;
@@ -16634,6 +16660,26 @@
     };
   }
 
+  function goalkeeperDribbleLane(owner,profile){
+    const gk=profile?.gk;
+    if(!gk||gk.sentOff||gk.beatenTimer>0||profile.distance<6.8||profile.distance>17||
+      Math.abs(gk.x-ownGoalX(gk.team))<2.8)return null;
+    const dir=attackDir(owner.team),ahead=(gk.x-owner.x)*dir,d=dist(owner.x,owner.y,gk.x,gk.y);
+    if(ahead<.7||d<2.0||d>6.6||Math.abs(gk.y-owner.y)>3.4)return null;
+    const tech=techniqueImpact(owner),candidates=[];
+    for(const side of [-1,1]){
+      const x=gk.x-dir*.45,y=gk.y+side*(2.7+tech*.45);
+      if(y<7||y>FIELD_H-7||shootingAngleQuality({...owner,x,y})<.26)continue;
+      const cover=teams[gk.team].players.filter(p=>p.role!=="GK"&&!p.sentOff).reduce((v,p)=>Math.min(v,dist(p.x,p.y,x,y)),99);
+      if(cover<3.6)continue;
+      const dx=x-owner.x,dy=y-owner.y,len=Math.hypot(dx,dy)||1;
+      const keeperLane=pointToSegmentDistance(gk.x,gk.y,owner.x,owner.y,x,y);
+      if(keeperLane<1.65)continue;
+      candidates.push({x:dx/len,y:dy/len,value:Math.min(cover,8)+keeperLane*.7-Math.abs(y-34)*.035});
+    }
+    return candidates.sort((a,b)=>b.value-a.value)[0]||null;
+  }
+
   // Decisive chances outrank the selected team/personal mentality. Tactical
   // identity still shapes how the chance is created, but once the defence is
   // broken the forward judges only distance, angle, pressure and composure.
@@ -16647,7 +16693,12 @@
     const distance=shootingDistance(owner);
     const angle=shootingAngleQuality(owner);
     const open=nearestOpponentDistance(owner);
-    if(distance<4.2||distance>24||angle<.20||open<2.25)return false;
+    if(distance<4.2||distance>24||angle<.20)return false;
+    const oneOnOne=oneOnOneProfile(owner),roundLane=goalkeeperDribbleLane(owner,oneOnOne);
+    if(roundLane&&matchRandom()<clamp(.13+techniqueImpact(owner)*.20+oneOnOne.composure*.10,.16,.43)){
+      beginOneOnOneCarry(owner,{...oneOnOne,roundLane});return true;
+    }
+    if(open<2.25)return false;
 
     const connection=scanPass?scanPass():null;
     if(connection&&passKeepsAttackingValue(owner,connection)&&connection.safetyData.laneRisk<3.2&&
@@ -16655,7 +16706,6 @@
       shootingDistance(connection.target)+5<distance&&nearestOpponentDistance(connection.target)>3){
       attemptPass(owner,connection);return true;
     }
-    const oneOnOne=oneOnOneProfile(owner);
     if(oneOnOne){
       reactiveDiagnostics.decisiveAttackerActions++;
       if(
@@ -16938,6 +16988,12 @@
       pressureLoad*.22-
       clamp((d-12)/28,0,.15);
 
+    // Beyond the box the old distance term had already saturated at 16.2m.
+    // Keep close finishing/set pieces intact; a 28m attempt is now genuinely
+    // harder to put on target than an equally clean 18m attempt.
+    if(!["PENALTY","FREE_KICK"].includes(variant)){
+      chance-=clamp((d-17)/22,0,1)*.23;
+    }
     if(variant==="PLACED")chance+=.10;
     if(variant==="LOW_DRIVEN")chance+=.035;
     if(variant==="CURLED")chance+=.025;
@@ -18208,8 +18264,16 @@
     const paceDifficulty=clamp((pace-20)/19,0,1.2);
     const edgeDifficulty=clamp(d/Math.max(radius,.01),0,1);
 
+    // This benefit applies only after a real, height-valid contact window.
+    // Keep existing reach/pace and penalty/free-kick policy: ordinary keepers
+    // are slightly steadier, with more time to read a shot from outside.
+    const openPlaySave=!['PENALTY','FREE_KICK'].includes(ball.shotVariant);
+    const origin=currentShotEvent()?.origin;
+    const releaseDistance=origin?dist(origin.x,origin.y,ownGoalX(defendingTeam),34):shooter?shootingDistance(shooter):17;
+    const readableFlight=clamp((releaseDistance-17)/18,0,1);
+    const setBenefit=openPlaySave?.055+readableFlight*.045:0;
     let saveChance=
-      .59+
+      .59+setBenefit+
       (saveSkill-60)*.0105+
       (gk.gkState==="DIVE"?.08:gk.gkState==="SET"?.025:0)-
       placement*.25-
@@ -19560,7 +19624,13 @@
     // An open central link has modest value when at least two further
     // teammates (besides the passer) can continue the move. No accuracy bonus.
     const linkContinuation=isOpenMidfieldLink(o)&&nextOptions>=3&&space>3.5&&depth>22?4:0;
-    const next=clamp(34+linkContinuation+clamp(advance,-20,24)*.48+clamp(before-after,-16,20)*.40+Math.min(7,space)*1.6+shotWindow*26+Math.min(3,broken)*2.2+Math.min(3,nextOptions)*1.4+(escape?8:0),0,100);
+    // Reward a midfielder who actually sees a reachable, timed forward run.
+    // This changes choice value, never pass speed, accuracy or the arrival gate.
+    const timedRelease=owner.category==="MID"&&isMidfieldController(owner)&&["THROUGH","KILL_PASS"].includes(o.type)&&
+      (o.runOfferId||isActiveMidfieldRun(target)||isActiveFullbackRun(target)||/BURST|CHANNEL|LINE_BREAK/.test(target.offBallIntent||""))&&
+      advance>5&&space>2.8&&flight.interceptMargin>.10
+      ? lerp(1.2,4.2,decisionIntelligence(owner))*clamp((flight.interceptMargin-.10)/.60,0,1):0;
+    const next=clamp(34+linkContinuation+timedRelease+clamp(advance,-20,24)*.48+clamp(before-after,-16,20)*.40+Math.min(7,space)*1.6+shotWindow*26+Math.min(3,broken)*2.2+Math.min(3,nextOptions)*1.4+(escape?8:0),0,100);
     const exec=passExecutionSkill(owner,o.type)/100;
     const contest=clamp(flight.interceptMargin/.65,-1,1),aerialSkill=flight.aerial?(aerialDuelSkill(target)-aerialDuelSkill(getPlayerByUid(flight.defenderUid)||target))/100:0;
     const retain=clamp(.70+.13*contest+.10*(exec-.5)+.10*clamp((space-2)/6,-1,1)+aerialSkill*.10,.18,.97);
@@ -20105,11 +20175,11 @@
     const towardCenter=clamp((34-owner.y)*.035,-.18,.18);
     const dx=dir;
     const dy=clamp(towardCenter+side*.16,-.30,.30);
-    const len=Math.hypot(dx,dy)||1;
+    const len=Math.hypot(dx,dy)||1,lane=profile.roundLane;
 
     owner.onBallAction="DRIBBLE";
     owner.actionTimer=rand(.38,.62)*lerp(1.04,.76,profile.composure);
-    owner.dribbleX=dx/len;owner.dribbleY=dy/len;
+    owner.dribbleX=lane?.x??dx/len;owner.dribbleY=lane?.y??dy/len;
     owner.dribbleStartX=owner.x;owner.dribbleStartY=owner.y;
     owner.dribbleMarked=true;
     owner.controlGrace=Math.max(owner.controlGrace,.10+profile.composure*.06);
@@ -20117,7 +20187,7 @@
     owner.matchStats.dribblesAttempted++;
     teamState[owner.team].nonProgressivePasses=0;
     recordCreativePattern(owner.team,"ONE_ON_ONE_CARRY");
-    showEvent(`${owner.team.toUpperCase()} · ${playerName(owner)}, 골키퍼를 보며 한 번 더 몰고 갑니다!`,"danger");
+    showEvent(lane?`${owner.team.toUpperCase()} · ${playerName(owner)}, 나온 골키퍼 옆 공간으로 돌파를 시도합니다!`:`${owner.team.toUpperCase()} · ${playerName(owner)}, 골키퍼를 보며 한 번 더 몰고 갑니다!`,"danger");
   }
 
 
@@ -21590,7 +21660,8 @@
     const d=dist(defender.x,defender.y,attacker.x,attacker.y);
     if(d>1.35)return;
 
-    defender.tackleCooldown=rand(.58,.86);
+    const challengeRead=clamp(weightedSkill([defensivePositionSkill(defender),.56],[tackleSkill(defender),.44])/100,0,1);
+    defender.tackleCooldown=rand(.58,.86)*(defender.category==="DEF"?lerp(1.02,.90,challengeRead):1);
     stats[defender.team].tackleAttempts++;
     defender.matchStats.tacklesAttempted++;
 
@@ -21768,10 +21839,17 @@
     )return;
 
     const d=dist(defender.x,defender.y,attacker.x,attacker.y);
-    if(d>.92)return;
+    // Disc spacing holds a live contest at about 1.04m. In a crowd, use
+    // that physical body contact (+6cm tolerance), not an unreachable 0.92m.
+    // Single-opponent duels keep their original reach and all ball/GK contact
+    // radii remain unchanged.
+    if(d>(dribblePressureCount(attacker,3.0)>=2?1.10:.92))return;
 
+    const crowd=dribblePressureCount(attacker,3.0);
     defender.duelCooldown=.72;
-    attacker.duelCooldown=.58;
+    // Keep a beaten opponent's recovery window, but a nearby SECOND opponent
+    // need not wait for an unrelated body challenge before engaging.
+    attacker.duelCooldown=crowd>=2?.38:.58;
 
     const forwardDuelFactor=defender.category==="ATT"?.77:1;
     const defPower=(
@@ -21781,7 +21859,6 @@
       rand(0,11)*lerp(1.08,.55,defender.intelligence/100)
     )*forwardDuelFactor;
 
-    const crowd=dribblePressureCount(attacker,3.0);
     const crowdPenalty=
       crowd>=3 ? 11 :
       crowd>=2 ? 6 : 0;
@@ -21851,6 +21928,13 @@
 
       attacker.actionTimer=Math.min(attacker.actionTimer,.18);
       ownerDecisionTimer=.05;
+      // Winning while planted should create a real next touch when a lane is
+      // available, rather than immediately returning to the same shield spot.
+      // Reuse the existing three-metre escape scan and normal dribble action.
+      if(["CONTROL","SHIELD","ORCHESTRATE"].includes(attacker.onBallAction)){
+        const escape=pressureEscapeLane(attacker);
+        if(escape)beginDribble(attacker,escape);
+      }
 
       showEvent(`${attacker.team.toUpperCase()} · ${playerName(attacker)}, 몸싸움을 이겨내고 전진합니다!`);
       return;
@@ -21977,8 +22061,9 @@
       ].includes(defender.assignment);
 
       if(
-        d<.86 &&
-        ["SHIELD","DRIBBLE","SPRINT_DRIBBLE"].includes(owner.onBallAction) &&
+        d<(dribblePressureCount(owner,3.0)>=2?1.10:.86) &&
+        (["SHIELD","DRIBBLE","SPRINT_DRIBBLE"].includes(owner.onBallAction)||
+          (["CONTROL","ORCHESTRATE"].includes(owner.onBallAction)&&dribblePressureCount(owner,3.0)>=2)) &&
         defender.duelCooldown<=0
       ){
         shoulderDuel(defender,owner);
