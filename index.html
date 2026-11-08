@@ -1551,7 +1551,7 @@
   // ============================================================
 
   // One build identity for display, links and the classroom protocol.
-  const DSSOCCER_BUILD="2.5.40";
+  const DSSOCCER_BUILD="2.5.41";
   const simulationRun={owner:null,aiTicks:0,ticks:0,seed:0,rngState:0,nextSeed:null};
   const passLedger={blue:{},red:{}};
   function setNextMatchSeed(seed){simulationRun.nextSeed=Number(seed)>>>0;}
@@ -19755,6 +19755,14 @@
     const dir=attackDir(owner.team),tech=techniqueImpact(owner),read=decisionIntelligence(owner),power=physicalImpact(owner);
     const choices=[{x:dir,y:0},{x:dir*.8,y:-.6},{x:dir*.8,y:.6},{x:dir*.18,y:-.98},{x:dir*.18,y:.98}];
     if(pressure<2.8)choices.push({x:owner.x-near.player.x,y:owner.y-near.player.y});
+    // A close-control player can turn across the presser's approach instead
+    // of using only pitch-aligned directions. Every touch still has to clear
+    // the same real three-metre path; this grants no speed or contact immunity.
+    if(tech>.55&&pressure<3.6){
+      const px=(near.player.x-owner.x)/Math.max(.01,pressure);
+      const py=(near.player.y-owner.y)/Math.max(.01,pressure);
+      for(const side of [-1,1])choices.push({x:dir*.38-py*side*.92,y:px*side*.92,cut:true});
+    }
     const opponents=teams[otherTeam(owner.team)].players.filter(p=>!p.sentOff);
     let best=null;
     for(const c of choices){
@@ -19774,7 +19782,8 @@
       const style=role==="WINGER"?(Math.abs(owner.y+y*3-34)>19?1.4:0):role==="INSIDE_FORWARD"?-y*side*1.6:role==="WIDE_FORWARD"||role==="ADVANCED_FORWARD"?Math.max(0,forward)*1.2:0;
       const utility=44+Math.min(5,room)*1.8+tech*10+power*2.5+
         Math.max(0,forward)*speedImpact(owner)*2+style-
-        Math.max(0,-forward)*3+(read-.5)*Math.min(2,room-pressure);
+        Math.max(0,-forward)*3+(read-.5)*Math.min(2,room-pressure)+
+        Math.max(0,tech-.5)*4*clamp((room-pressure)/2,0,1);
       if(!best||utility>best.utility)best={x,y,room,clearance,utility:clamp(utility,0,76)};
     }
     return best;
@@ -19784,7 +19793,15 @@
     if(!owner||p.oneTwoTimer>0||supportPlanFixed(p)||p.tacticalRole==="ANCHOR"||isCentralDefender(p)||p.role==="GK")return target;
     const intent=(p.offBallIntent||"").replace(/^(ATTACKING_|DEFENSIVE_)/,"");
     if(activeMovementAssignment(intent)||/COVER|SCREEN/.test(intent))return target;
-    if(nearestOpponentDistance(owner)>4.2)return target;
+    const ownerPressure=nearestOpponentDistance(owner),receipt=owner.roleReceipt;
+    const carryingMid=(isCentralMid(owner)||owner.role==="AM")&&
+      ["DRIBBLE","SPRINT_DRIBBLE","ORCHESTRATE"].includes(owner.onBallAction)&&
+      receipt?.uid===owner.playerUid&&((simulationRun.physicsTicks||0)-receipt.tick)*PHYSICS_DT<6&&
+      dist(owner.x,owner.y,receipt.x,receipt.y)>1.6&&receipt.pressure>ownerPressure+1;
+    // Only the existing nearest support group adjusts a local passing angle.
+    // Anticipate the press on a carrying midfielder, without moving screens,
+    // timed runners or the entire team towards the ball.
+    if(ownerPressure>(carryingMid?5.2:4.2))return target;
     const read=decisionIntelligence(p),dir=attackDir(p.team),radius=lerp(1.9,3.0,read);
     const laneAt=(x,y)=>passLaneRiskFromPoint(p.team,owner.x,owner.y,x,y);
     const oldLane=laneAt(target.x,target.y),oldRoom=nearestOpponentDistanceAt(p.team,target.x,target.y);
@@ -19807,13 +19824,25 @@
     const now=simSeconds(),pressure=nearestOpponentDistance(owner),newTouch=(owner.touchWindowTick||0)>(owner.reviewedTouchTick||0),offer=jointPlay.offers.find(o=>o.originTick>(owner.reviewedOfferTick||-1));
     const quiet=["CONTROL","SHIELD","ORCHESTRATE"].includes(owner.onBallAction);
     const read=decisionIntelligence(owner);
+    const receipt=owner.roleReceipt,dir=attackDir(owner.team);
+    const carryingMid=(isCentralMid(owner)||owner.role==="AM")&&
+      ["DRIBBLE","SPRINT_DRIBBLE","ORCHESTRATE"].includes(owner.onBallAction);
+    const drawnCarry=carryingMid&&receipt?.uid===owner.playerUid&&
+      ((simulationRun.physicsTicks||0)-receipt.tick)*PHYSICS_DT<6&&
+      dist(owner.x,owner.y,receipt.x,receipt.y)>=lerp(2.6,1.6,read)&&
+      (owner.x-receipt.x)*dir>-.5&&pressure<4.8&&
+      receipt.opponents?.some(q=>q.d>4.8&&teams[otherTeam(owner.team)].players.some(p=>
+        !p.sentOff&&p.role!=="GK"&&(q.uid?p.playerUid===q.uid:p.id===q.id)&&
+        dist(p.x,p.y,owner.x,owner.y)<4.5));
+    const liveRun=drawnCarry&&jointPlay.offers.some(o=>o.team===owner.team&&
+      o.possessionEpoch===jointPlay.epoch&&o.opensAtSim<=now&&o.expiresAtSim>=now);
     const stalled=(jointPlay.hold?.age||0)>=lerp(.66,.42,read)&&pressure<4.2;
     const closing=quiet&&jointPlay.pressure!==null&&jointPlay.pressure>=3.2&&pressure<3.2;
     const sudden=jointPlay.pressure!==null&&jointPlay.pressure-pressure>1.6;
     const gap=now-(owner.lastEventReviewSim??-99);
     jointPlay.pressure=pressure;
     if(owner.onBallAction==="CONTROL"&&!stalled&&!closing)return false;
-    if((!newTouch&&!offer&&!sudden&&!stalled&&!closing)||gap<(stalled||closing ? lerp(.38,.27,read) : sudden ? AI_DT : .20))return false;
+    if((!newTouch&&!offer&&!sudden&&!stalled&&!closing&&!liveRun)||gap<(stalled||closing ? lerp(.38,.27,read) : sudden ? AI_DT : .20))return false;
     owner.lastEventReviewSim=now;owner.reviewedTouchTick=owner.touchWindowTick||0;owner.reviewedOfferTick=jointPlay.tick;
     if(tryHoofballRelease(owner))return true;
     const option=choosePassOption(owner),context=attackingChoiceContext(owner),review=attackingPassReview(owner,option,context);
@@ -19824,8 +19853,13 @@
     const carry=clamp(37+Math.min(11,forwardSpace(owner))*2.1+techniqueImpact(owner)*7-(pressure<2?9:0),0,100);
     const escape=(stalled||closing)?pressureEscapeLane(owner):null;
     const release=option?passUtilityToAction(option)+(safe?3+read*2:0):-999;
+    const timedOutlet=liveRun&&safe&&["SHORT","THROUGH","KILL_PASS"].includes(option?.type)&&
+      option.safetyData.forward>3&&option.safetyData.receivingSpace>2.8&&
+      option.flight?.interceptMargin>lerp(.25,.12,read)&&
+      jointPlay.offers.some(o=>o.id===option.runOfferId&&o.receiverUid===option.target.playerUid&&
+        o.team===owner.team&&o.possessionEpoch===jointPlay.epoch&&o.opensAtSim<=now&&o.expiresAtSim>=now);
     const streetCarry=teamTactic(owner.team).preset==="STREET"&&(escape||forwardSpace(owner)>2.2)&&dribblePressureCount(owner,3.25)<3&&!review.decisive&&!option?.oneTwoReturn;
-    if(option&&!streetCarry&&!wastesChance&&(((stalled||closing)&&safe&&
+    if(option&&!streetCarry&&!wastesChance&&((timedOutlet&&release>=carry-lerp(0,5,read))||((stalled||closing)&&safe&&
       (!escape||release>=escape.utility||review.decisive||option.oneTwoReturn))||
       (!stalled&&!closing&&passUtilityToAction(option)>=carry+8&&(newTouch||!["DRIBBLE","SPRINT_DRIBBLE"].includes(owner.onBallAction))))){
       attemptPass(owner,option);return ball.state==="PASSING";
@@ -21712,7 +21746,10 @@
     );
     const roll=matchRandom();
 
-    if(roll<success*.76){
+    // TECH improves the precision of a won challenge, rather than stacking
+    // another general ball-winning bonus on the existing tackle/duel skills.
+    const cleanShare=.76+clamp((defender.technique-50)/50,0,1)*.06;
+    if(roll<success*cleanShare){
       // 완전 탈취
       stats[defender.team].tackleWon++;
       defender.matchStats.tacklesWon++;
@@ -21816,6 +21853,18 @@
     }
 
     markAttackAdvantage(attacker,1);
+
+    // A missed challenge opens a real turning lane. Use it for the next
+    // controlled touch rather than leaving a skilled carrier shielding on
+    // the same spot. Existing dribbles retain their timer and attempt count.
+    const escape=pressureEscapeLane(attacker),tech=techniqueImpact(attacker);
+    if(escape&&escape.clearance>lerp(1.25,.70,tech)&&
+      ["CONTROL","SHIELD","ORCHESTRATE","DRIBBLE","SPRINT_DRIBBLE"].includes(attacker.onBallAction)){
+      if(["DRIBBLE","SPRINT_DRIBBLE"].includes(attacker.onBallAction)){
+        attacker.dribbleX=escape.x;attacker.dribbleY=escape.y;
+        attacker.onBallAction="DRIBBLE";
+      }else beginDribble(attacker,escape);
+    }
 
     showEvent(`${attacker.team.toUpperCase()} · ${playerName(attacker)}, 태클을 벗겨냅니다!`);
   }
