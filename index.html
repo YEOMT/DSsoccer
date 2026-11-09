@@ -1551,7 +1551,7 @@
   // ============================================================
 
   // One build identity for display, links and the classroom protocol.
-  const DSSOCCER_BUILD="2.5.41";
+  const DSSOCCER_BUILD="2.5.42";
   const simulationRun={owner:null,aiTicks:0,ticks:0,seed:0,rngState:0,nextSeed:null};
   const passLedger={blue:{},red:{}};
   function setNextMatchSeed(seed){simulationRun.nextSeed=Number(seed)>>>0;}
@@ -3972,7 +3972,12 @@
           const liveStudent=livePlayer.studentId?lobbyState.students.find(x=>x.id===livePlayer.studentId):null;
           return {role:livePlayer.role,name:playerName(livePlayer),participantId:liveStudent?.remoteId||null,ai:!liveStudent,tacticalRole:livePlayer.tacticalRole||defaultTacticalRole(slot.role,formation,i)};
         }
-        if(live)return {role:slot.role,name:"퇴장으로 공석",participantId:null,ai:true,tacticalRole:defaultTacticalRole(slot.role,formation,i)};
+        if(live){
+          const dismissed=dismissedPlayers.find(p=>p.team===teamName&&p.id===`${teamName}-${i}`&&p.sentOff);
+          // Retain the name of the player who was sent off: a real ten-player
+          // side must not look like a student silently vanished at the break.
+          return {role:slot.role,name:dismissed?`${playerName(dismissed)} · 퇴장`:"선수 정보 확인 중",participantId:null,ai:true,tacticalRole:defaultTacticalRole(slot.role,formation,i)};
+        }
         const sid=lineupState.assignments[teamName]?.[i],st=sid?lobbyState.students.find(x=>x.id===sid):null;
         return {role:slot.role,name:st?.name||aiNameForSlot(teamName,i),participantId:st?.remoteId||null,ai:!st,tacticalRole:st?resolvedStudentTacticalRole(st,slot.role,formation,i):defaultTacticalRole(slot.role,formation,i)};
       })};
@@ -4819,7 +4824,7 @@
     if(phase==="SUBSTITUTION"){
       studentWaitingText.textContent=room.breakKey==="HALF"?"호스트가 하프타임 포지션과 교체를 결정하고 있습니다.":"호스트가 교체를 결정하고 있습니다.";
       const voteKey=room.breakKey||"",applied=room.tacticResults?.[voteKey]?.[data.team||"blue"]||null,formation=room.formationResults?.[voteKey]?.[data.team||"blue"]||null;
-      studentStageArea.innerHTML=`<div class="student-lineup-result"><div class="student-stage-title">TEAM MANAGEMENT</div><div class="big">${data.lineupStatus==="SUBBED_OUT"?"교체 아웃":data.lineupStatus==="SUB"?"교체 투입":"교체 대기"}</div><div class="role">${data.assignedRole||""}${data.assignedTacticalRole?` · ${detailedRoleLabel(data.assignedTacticalRole)}`:""}</div>${studentStatsHtml(null,data)}${formation?`<div class="student-tactic-banner">다음 포메이션 · <b>${FORMATION_VOTE_LABELS[formation]?.[0]||formation}</b></div>`:""}${applied?`<div class="student-tactic-banner">다음 전술 · <b>${TACTIC_VOTE_LABELS[applied]?.[0]||applied}</b><br>${TACTIC_VOTE_LABELS[applied]?.[1]||""}</div>`:""}</div>`;return;
+      studentStageArea.innerHTML=`<div class="student-lineup-result"><div class="student-stage-title">TEAM MANAGEMENT</div><div class="big">${data.lineupStatus==="SENT_OFF"?"퇴장 · 출전 종료":data.lineupStatus==="SUBBED_OUT"?"교체 아웃":data.lineupStatus==="SUB"?"교체 투입":"교체 대기"}</div><div class="role">${data.assignedRole||""}${data.assignedTacticalRole?` · ${detailedRoleLabel(data.assignedTacticalRole)}`:""}</div>${studentStatsHtml(null,data)}${formation?`<div class="student-tactic-banner">다음 포메이션 · <b>${FORMATION_VOTE_LABELS[formation]?.[0]||formation}</b></div>`:""}${applied?`<div class="student-tactic-banner">다음 전술 · <b>${TACTIC_VOTE_LABELS[applied]?.[0]||applied}</b><br>${TACTIC_VOTE_LABELS[applied]?.[1]||""}</div>`:""}</div>`;return;
     }
     if(phase==="RESULT"){
       const m=room.match||{},snap=room.playerSnapshots?.[onlineRoomState.studentParticipantId]||{},res=room.result||{};
@@ -6435,7 +6440,9 @@
       for(const st of lobbyTeamStudents(teamName)){
         if(livePhase){
           const active=teams?.[teamName]?.players?.find(p=>p.studentId===st.id&&!p.sentOff);
+          const dismissed=dismissedPlayers.find(p=>p.team===teamName&&p.studentId===st.id&&p.sentOff);
           if(active){st.lineupStatus=st.hasEntered&&st.startingSlot!=null&&st.lineupStatus==="SUB"?"SUB":"STARTER";st.assignedRole=active.role;st.shirtNumber=active.number;}
+          else if(dismissed){st.lineupStatus="SENT_OFF";st.assignedRole=dismissed.role;st.shirtNumber=dismissed.number;}
           else if(st.hasExited)st.lineupStatus="SUBBED_OUT";
           else st.lineupStatus="BENCH";
         }else{
@@ -16698,12 +16705,26 @@
     if(roundLane&&matchRandom()<clamp(.13+techniqueImpact(owner)*.20+oneOnOne.composure*.10,.16,.43)){
       beginOneOnOneCarry(owner,{...oneOnOne,roundLane});return true;
     }
-    if(open<2.25)return false;
+    if(open<2.25&&!oneOnOne)return false;
 
     const connection=scanPass?scanPass():null;
+    const laneBlock=defendersBlockingShot(owner);
+    const cleanFinish=distance<16.5&&angle>.27&&open>2.75&&laneBlock<5.3;
+    const receivePoint=connection?{...connection.target,
+      x:connection.flight?.contact?.x??connection.aimX,
+      y:connection.flight?.contact?.y??connection.aimY}:null;
+    // A nearer teammate on the flank is not a better finish than a clear
+    // central chance. Keep only an actual open central tap-in as a superior
+    // pass when the carrier has already beaten the defensive line.
+    const tapIn=receivePoint&&shootingDistance(receivePoint)<11&&
+      shootingAngleQuality(receivePoint)>.72&&
+      shootingAngleQuality(receivePoint)>angle-.08&&
+      connection.feasibility&&connection.flight?.interceptMargin>.18&&
+      connection.safetyData.receivingSpace>3.5&&defendersBlockingShot(receivePoint)<3.6;
     if(connection&&passKeepsAttackingValue(owner,connection)&&connection.safetyData.laneRisk<3.2&&
       connection.safetyData.safety>5&&shootingDistance(connection.target)<17&&
-      shootingDistance(connection.target)+5<distance&&nearestOpponentDistance(connection.target)>3){
+      shootingDistance(connection.target)+5<distance&&nearestOpponentDistance(connection.target)>3&&
+      (!(oneOnOne||cleanFinish)||tapIn)){
       attemptPass(owner,connection);return true;
     }
     if(oneOnOne){
@@ -16719,9 +16740,6 @@
       return true;
     }
 
-    const laneBlock=defendersBlockingShot(owner);
-    const cleanFinish=
-      distance<16.5&&angle>.27&&open>2.75&&laneBlock<5.3;
     if(cleanFinish){
       reactiveDiagnostics.decisiveAttackerActions++;
       attemptShot(owner,chooseOpenPlayShotVariant(owner,open<3.1,false));
@@ -16849,7 +16867,20 @@
 
     const defendingTeam=otherTeam(shooter.team);
     const gx=opponentGoalX(shooter.team);
+    const longScreen=shootingDistance(shooter)>18&&!match.shootout?.active&&
+      !["FREE_KICK","PENALTY"].includes(ball.shotVariant);
+    const lookAhead=longScreen?.68:.48;
     const candidates=[];
+
+    // A commitment belongs to one shot. A quick rebound/new shooter must not
+    // reactivate an unselected defender's target from the preceding flight.
+    for(const p of teams[defendingTeam].players){
+      p.shotBlockTimer=0;
+      if(p.assignment==="SHOT_BLOCK_DIVE"){
+        p.assignment="SHAPE";p.focus=.24;
+        p.tx=p.x;p.ty=p.y;
+      }
+    }
 
     for(const p of teams[defendingTeam].players){
       if(
@@ -16860,10 +16891,13 @@
       )continue;
 
       const shooterDistance=dist(p.x,p.y,shooter.x,shooter.y);
-      if(shooterDistance>7.2)continue;
+      if(!longScreen&&shooterDistance>7.2)continue;
+      // A deeper screen has time to step into a long shot. It still has to
+      // reach the real flight below; a defender behind the kick cannot block it.
+      if(longScreen&&(p.x-shooter.x)*attackDir(shooter.team)<.5)continue;
 
       let cp=null;
-      for(let t=PHYSICS_DT;t<=.48;t+=PHYSICS_DT){
+      for(let t=PHYSICS_DT;t<=lookAhead;t+=PHYSICS_DT){
         const q=predictMovingBallAt(t);
         if(q.trajectoryBoundary)break;
         if(q.z>playerContactHeight(p)+.11)continue;
@@ -16904,10 +16938,12 @@
     for(const item of candidates.slice(0,2)){
       const {p,cp,blockSkill}=item;
       const reaction=clamp(blockSkill/100,0,1);
-      const towardShooterX=lerp(cp.x,shooter.x,.10);
-      const towardShooterY=lerp(cp.y,shooter.y,.10);
+      const towardShooterX=longScreen?cp.x:lerp(cp.x,shooter.x,.10);
+      const towardShooterY=longScreen?cp.y:lerp(cp.y,shooter.y,.10);
 
-      p.shotBlockTimer=lerp(.28,.46,reaction);
+      p.shotBlockTimer=longScreen
+        ? Math.max(lerp(.28,.46,reaction),Math.min(.76,cp.t+.08))
+        : lerp(.28,.46,reaction);
       p.shotBlockTargetX=clamp(towardShooterX,1.5,FIELD_W-1.5);
       p.shotBlockTargetY=clamp(towardShooterY,1.5,FIELD_H-1.5);
       p.assignment="SHOT_BLOCK_DIVE";
@@ -19676,11 +19712,16 @@
     if(jointPlay.ownerUid!==owner.playerUid){invalidateJointPlay();jointPlay.ownerUid=owner.playerUid;jointPlay.team=owner.team;}
     const hold=jointPlay.hold,carrying=["CONTROL","SHIELD","ORCHESTRATE","DRIBBLE","SPRINT_DRIBBLE"].includes(owner.onBallAction);
     const step=hold?clamp(now-hold.time,0,AI_DT*2):0,pressure=nearestOpponentDistance(owner);
-    const slow=hold&&step>0&&dist(owner.x,owner.y,hold.x,hold.y)<step*1.8;
+    const anchorMoved=hold&&dist(owner.x,owner.y,hold.anchorX??hold.x,hold.anchorY??hold.y)>1.4;
+    const anchorAt=!hold||anchorMoved?now:hold.anchorAt??hold.time;
+    const anchored=hold&&!anchorMoved&&now-anchorAt>=.45;
+    const slow=hold&&step>0&&(dist(owner.x,owner.y,hold.x,hold.y)<step*1.8||anchored);
     // Small contact shuffles and an obstructed dribble are still a stalled
     // possession. First-touch protection remains in the action gate below.
     jointPlay.hold={x:owner.x,y:owner.y,time:now,
-      age:carrying&&pressure<4.2&&slow?Math.min(2,(hold?.age||0)+step):Math.max(0,(hold?.age||0)-step*2)};
+      age:carrying&&pressure<4.2&&slow?Math.min(2,(hold?.age||0)+step):Math.max(0,(hold?.age||0)-step*2),
+      anchorX:!hold||anchorMoved?owner.x:hold.anchorX??hold.x,
+      anchorY:!hold||anchorMoved?owner.y:hold.anchorY??hold.y,anchorAt};
     const team=teams[owner.team].players.filter(p=>!p.sentOff),dir=attackDir(owner.team),side=sideSignFromY(owner.y)||sideSignFromY(owner.homeY)||1;
     const signature=teams[owner.team].formation+JSON.stringify(teamTactic(owner.team));
     if(jointPlay.signature!==signature){jointPlay.plans=[];jointPlay.offers=[];jointPlay.signature=signature;}
@@ -19764,6 +19805,7 @@
       for(const side of [-1,1])choices.push({x:dir*.38-py*side*.92,y:px*side*.92,cut:true});
     }
     const opponents=teams[otherTeam(owner.team)].players.filter(p=>!p.sentOff);
+    const teammates=teams[owner.team].players.filter(p=>p!==owner&&!p.sentOff);
     let best=null;
     for(const c of choices){
       const len=Math.hypot(c.x,c.y);if(len<.01)continue;
@@ -19773,6 +19815,9 @@
       for(const step of [.9,1.9,3.0]){
         const px=owner.x+x*step,py=owner.y+y*step;
         if(px<2||px>FIELD_W-2||py<3||py>FIELD_H-3){inside=false;break;}
+        // Disc spacing is real for teammates too. A route through a friendly
+        // body is not an escape, even when opponents leave its far end open.
+        if(teammates.some(p=>dist(px,py,p.x+clamp((p.vx||0)*.12,-.6,.6),p.y+clamp((p.vy||0)*.12,-.6,.6))<1.08)){inside=false;break;}
         const d=Math.min(...opponents.map(p=>dist(px,py,p.x+clamp((p.vx||0)*.12,-.6,.6),p.y+clamp((p.vy||0)*.12,-.6,.6))));
         clearance=Math.min(clearance,d);room=d;
       }
@@ -19844,6 +19889,10 @@
     if(owner.onBallAction==="CONTROL"&&!stalled&&!closing)return false;
     if((!newTouch&&!offer&&!sudden&&!stalled&&!closing&&!liveRun)||gap<(stalled||closing ? lerp(.38,.27,read) : sudden ? AI_DT : .20))return false;
     owner.lastEventReviewSim=now;owner.reviewedTouchTick=owner.touchWindowTick||0;owner.reviewedOfferTick=jointPlay.tick;
+    // Reconsideration is a live decision too: a newly clean finish must not
+    // be bypassed by the generic safe-pass branch while a carry is active.
+    if(["DRIBBLE","SPRINT_DRIBBLE"].includes(owner.onBallAction)&&oneOnOneProfile(owner))return false;
+    if(handleDecisiveAttackerAction(owner,()=>choosePassOption(owner)))return true;
     if(tryHoofballRelease(owner))return true;
     const option=choosePassOption(owner),context=attackingChoiceContext(owner),review=attackingPassReview(owner,option,context);
     const wastesChance=!!option&&context?.open>.32&&context.carryPressure>3.2&&context.space>5.5&&
@@ -19853,13 +19902,17 @@
     const carry=clamp(37+Math.min(11,forwardSpace(owner))*2.1+techniqueImpact(owner)*7-(pressure<2?9:0),0,100);
     const escape=(stalled||closing)?pressureEscapeLane(owner):null;
     const release=option?passUtilityToAction(option)+(safe?3+read*2:0):-999;
+    const escapeFirst=escape&&techniqueImpact(owner)>.60&&escape.clearance>1.0&&
+      escape.room>pressure+.8&&dribblePressureCount(owner,3.25)<=2&&
+      !review.decisive&&!option?.oneTwoReturn&&
+      (!option||(option.safetyData.forward<2.5&&option.type!=="CUTBACK"));
     const timedOutlet=liveRun&&safe&&["SHORT","THROUGH","KILL_PASS"].includes(option?.type)&&
       option.safetyData.forward>3&&option.safetyData.receivingSpace>2.8&&
       option.flight?.interceptMargin>lerp(.25,.12,read)&&
       jointPlay.offers.some(o=>o.id===option.runOfferId&&o.receiverUid===option.target.playerUid&&
         o.team===owner.team&&o.possessionEpoch===jointPlay.epoch&&o.opensAtSim<=now&&o.expiresAtSim>=now);
     const streetCarry=teamTactic(owner.team).preset==="STREET"&&(escape||forwardSpace(owner)>2.2)&&dribblePressureCount(owner,3.25)<3&&!review.decisive&&!option?.oneTwoReturn;
-    if(option&&!streetCarry&&!wastesChance&&((timedOutlet&&release>=carry-lerp(0,5,read))||((stalled||closing)&&safe&&
+    if(option&&!streetCarry&&!wastesChance&&!escapeFirst&&((timedOutlet&&release>=carry-lerp(0,5,read))||((stalled||closing)&&safe&&
       (!escape||release>=escape.utility||review.decisive||option.oneTwoReturn))||
       (!stalled&&!closing&&passUtilityToAction(option)>=carry+8&&(newTouch||!["DRIBBLE","SPRINT_DRIBBLE"].includes(owner.onBallAction))))){
       attemptPass(owner,option);return ball.state==="PASSING";
